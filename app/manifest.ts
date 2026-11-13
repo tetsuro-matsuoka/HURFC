@@ -6,13 +6,20 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "ALL-IN",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    background_color: "#0b111e",
+    theme_color: "#0b111e",
     icons: [
       {
         src: "/icon.png.jpg",
         sizes: "512x512",
         type: "image/jpeg",
+        purpose: "any",
+      },
+      {
+        src: "/icon.png.jpg",
+        sizes: "512x512",
+        type: "image/jpeg",
+        purpose: "maskable",
       },
     ],
   };
