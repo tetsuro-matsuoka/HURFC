@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NUMBERS — フィジカル・モチベーション管理",
+  title: "ALL-IN",
   description: "数字を意識して、強くなる。選手向けフィジカル・モチベーション管理アプリ",
 };
 
