@@ -1,7 +1,7 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { Attendance, Members, PhysRec, Role } from "./types";
+import type { Attendance, Members, PhysRec, Position, Role } from "./types";
 
 function sb() {
   if (!supabase) throw new Error("Supabase の設定がありません");
@@ -34,19 +34,31 @@ async function fetchAll<T>(table: string, columns: string): Promise<T[]> {
   return out;
 }
 
-type UserRow = { id: string; name: string; role: Role };
+type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null };
 type DailyRow = { user_id: string; date: string; attendance: Attendance | null; weight: number | null };
 type PhysRow = { user_id: string; date: string } & PhysRec;
 
 // 全メンバーと記録を読み込み、画面で使う形に変換する
 export async function loadAll(): Promise<Members> {
   const [users, daily, physical] = await Promise.all([
-    fetchAll<UserRow>("users", "id,name,role"),
+    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order"),
     fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight"),
     fetchAll<PhysRow>("physical_records", "id,user_id,date,bench_press,squat,deadlift"),
   ]);
   const m: Members = {};
-  users.forEach((u) => (m[u.id] = { id: u.id, name: u.name, role: u.role, daily: {}, physical: {} }));
+  users.forEach(
+    (u) =>
+      (m[u.id] = {
+        id: u.id,
+        name: u.name,
+        role: u.role,
+        grade: u.grade,
+        position: u.position,
+        sort_order: u.sort_order,
+        daily: {},
+        physical: {},
+      }),
+  );
   daily.forEach((r) => {
     if (m[r.user_id])
       m[r.user_id].daily[r.date] = {
@@ -81,7 +93,7 @@ export async function savePhysical(userId: string, date: string, rec: PhysRec) {
   if (error) throw error;
 }
 
-// コーチ専用の操作（メンバー追加・合言葉リセット・削除・初期設定）はサーバー側で実行
+// コーチ専用の操作（メンバー追加・編集・並び替え・削除・初期設定）と選手のログインはサーバー側で実行
 export async function adminCall(action: string, payload: Record<string, unknown>) {
   const { data } = await sb().auth.getSession();
   const token = data.session?.access_token;

@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { LiftKey, Member, Members, MetricKey } from "./types";
+import type { LiftKey, Member, Members, MetricKey, Position } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -36,11 +36,26 @@ export const METRICS: [MetricKey, string][] = [
 
 export type Point = { d: string; v: number };
 
-// 選手一覧（名前順）
+export const GRADES = [1, 2, 3, 4];
+export const POSITIONS: Position[] = ["フロント", "バックロー", "バックス"];
+
+// 選手の並び順：コーチが決めた順 → 学年が上の人 → 名前順
+type Sortable = { name: string; grade: number | null; sort_order: number | null };
+export function byOrder(a: Sortable, b: Sortable) {
+  const sa = a.sort_order ?? Infinity,
+    sb = b.sort_order ?? Infinity;
+  if (sa !== sb) return sa - sb;
+  const ga = a.grade ?? 0,
+    gb = b.grade ?? 0;
+  if (ga !== gb) return gb - ga;
+  return a.name.localeCompare(b.name, "ja");
+}
+
+// 選手一覧（選手管理で決めた並び順）
 export const playersOf = (members: Members) =>
   Object.values(members)
     .filter((m) => m.role === "player")
-    .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+    .sort(byOrder);
 
 // 出席率（%）。days を指定すると直近◯日だけで計算
 export function attendRate(m: Member, days?: number): number | null {

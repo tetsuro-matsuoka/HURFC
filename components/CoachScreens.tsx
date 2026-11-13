@@ -1,12 +1,12 @@
 "use client";
 
 // コーチ・管理者向け画面
-//  S04 チームダッシュボード / S05 フィジカル管理・ランキング / 選手管理（合言葉リセット等）
+//  S04 チームダッシュボード / S05 フィジカル管理・ランキング
+//  （選手管理は ManageScreen.tsx）
 
 import { useState } from "react";
-import type { FormEvent } from "react";
 import LineChart from "./LineChart";
-import { RankList, Sheet, type Ctx } from "./Shared";
+import { RankList, type Ctx } from "./Shared";
 import {
   LIFTS,
   METRICS,
@@ -16,7 +16,6 @@ import {
   latestWeight,
   maxes,
   md,
-  normName,
   phys,
   playersOf,
   today,
@@ -24,8 +23,7 @@ import {
   weightAgo,
   weights,
 } from "@/lib/calc";
-import { adminCall } from "@/lib/data";
-import type { MetricKey, Role } from "@/lib/types";
+import type { MetricKey } from "@/lib/types";
 
 /* ---------- S04 チームダッシュボード ---------- */
 export function TeamScreen({ ctx }: { ctx: Ctx }) {
@@ -37,7 +35,8 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
   const none = rows.length - yes - no;
   // 未入力 → 欠席 → 出席 の順に並べる（確認が必要な人を上に）
   const order = (x: (typeof rows)[number]) => (!x.r ? 2 : x.r.attendance === "欠席" ? 1 : 0);
-  const sorted = [...rows].sort((a, b) => order(b) - order(a) || a.m.name.localeCompare(b.m.name, "ja"));
+  // 同じ状態の中は、選手管理で決めた並び順（ps の順）
+  const sorted = rows.map((x, i) => ({ ...x, i })).sort((a, b) => order(b) - order(a) || a.i - b.i);
   const diffCell = (v: number | null) =>
     v == null ? (
       <span className="muted">—</span>
@@ -205,168 +204,6 @@ export function PhysicalScreen({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
       </div>
-    </>
-  );
-}
-
-/* ---------- 選手管理（追加・合言葉リセット・削除） ---------- */
-export function ManageScreen({ ctx }: { ctx: Ctx }) {
-  const [name, setName] = useState("");
-  const [pw, setPw] = useState("");
-  const [role, setRole] = useState<Role>("player");
-  const [busy, setBusy] = useState(false);
-  const [dialog, setDialog] = useState<{ type: "reset" | "del"; id: string } | null>(null);
-  const [newPw, setNewPw] = useState("");
-
-  const all = Object.values(ctx.members).sort((a, b) =>
-    a.role === b.role ? a.name.localeCompare(b.name, "ja") : a.role === "coach" ? -1 : 1,
-  );
-
-  const run = async (fn: () => Promise<unknown>, okMsg: string) => {
-    setBusy(true);
-    try {
-      await fn();
-      await ctx.reload();
-      ctx.toast(okMsg);
-      return true;
-    } catch (e) {
-      ctx.toast(e instanceof Error ? e.message : "処理に失敗しました");
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const add = async (e: FormEvent) => {
-    e.preventDefault();
-    const n = name.trim();
-    if (Object.values(ctx.members).some((m) => normName(m.name) === normName(n))) return ctx.toast("同じ名前のメンバーがいます");
-    if (pw.length < 6) return ctx.toast("合言葉は6文字以上にしてください");
-    const ok = await run(() => adminCall("add", { name: n, password: pw, role }), `${n} さんを追加しました`);
-    if (ok) {
-      setName("");
-      setPw("");
-    }
-  };
-
-  const target = dialog ? ctx.members[dialog.id] : null;
-
-  return (
-    <>
-      <h2 className="page">選手管理</h2>
-      <div className="card">
-        <h3>メンバーを追加</h3>
-        <form onSubmit={add} className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div>
-            <label className="f" style={{ marginTop: 0 }}>
-              名前
-            </label>
-            <input className="t" value={name} onChange={(e) => setName(e.target.value)} required placeholder="例：山田 太郎" />
-          </div>
-          <div>
-            <label className="f" style={{ marginTop: 0 }}>
-              合言葉（6文字以上）
-            </label>
-            <input className="t" value={pw} onChange={(e) => setPw(e.target.value)} required placeholder="例：rugby1" />
-          </div>
-          <div>
-            <label className="f" style={{ marginTop: 0 }}>
-              権限
-            </label>
-            <select className="t" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              <option value="player">選手</option>
-              <option value="coach">コーチ</option>
-            </select>
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-end" }}>
-            <button className="btn navy" style={{ margin: 0 }} type="submit" disabled={busy}>
-              {busy ? "処理中…" : "追加"}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="card">
-        <h3>
-          メンバー一覧 <small>{all.length}名</small>
-        </h3>
-        <table className="tbl">
-          <tbody>
-            <tr>
-              <th>名前</th>
-              <th>権限</th>
-              <th className="r">操作</th>
-            </tr>
-            {all.map((m) => (
-              <tr key={m.id}>
-                <td>{m.name}</td>
-                <td>
-                  <span className={`chip ${m.role === "coach" ? "no" : "none"}`}>{m.role === "coach" ? "コーチ" : "選手"}</span>
-                </td>
-                <td className="r" style={{ whiteSpace: "nowrap" }}>
-                  <button
-                    className="btn ghost small"
-                    onClick={() => {
-                      setNewPw("");
-                      setDialog({ type: "reset", id: m.id });
-                    }}
-                  >
-                    合言葉リセット
-                  </button>{" "}
-                  {m.id !== ctx.me.id && (
-                    <button
-                      className="btn ghost small"
-                      style={{ borderColor: "var(--ng)", color: "var(--ng)" }}
-                      onClick={() => setDialog({ type: "del", id: m.id })}
-                    >
-                      削除
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {dialog?.type === "reset" && target && (
-        <Sheet title="合言葉リセット" onClose={() => setDialog(null)}>
-          <p>{target.name} さんの新しい合言葉を入力してください（6文字以上）。</p>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (newPw.length < 6) return ctx.toast("合言葉は6文字以上にしてください");
-              const ok = await run(() => adminCall("reset", { id: target.id, password: newPw }), "合言葉を変更しました");
-              if (ok) setDialog(null);
-            }}
-          >
-            <input className="t" value={newPw} onChange={(e) => setNewPw(e.target.value)} required style={{ marginTop: 12 }} placeholder="新しい合言葉" />
-            <button className="btn navy" type="submit" disabled={busy}>
-              {busy ? "処理中…" : "変更する"}
-            </button>
-          </form>
-        </Sheet>
-      )}
-
-      {dialog?.type === "del" && target && (
-        <Sheet title="メンバーを削除" onClose={() => setDialog(null)}>
-          <p>{target.name} さんと、その記録をすべて削除します。元に戻せません。</p>
-          <button
-            className="btn"
-            style={{ background: "var(--ng)" }}
-            disabled={busy}
-            onClick={async () => {
-              const ok = await run(() => adminCall("delete", { id: target.id }), `${target.name} さんを削除しました`);
-              if (ok) setDialog(null);
-            }}
-          >
-            {busy ? "処理中…" : "削除する"}
-          </button>
-          <button className="btn ghost" onClick={() => setDialog(null)}>
-            やめる
-          </button>
-        </Sheet>
-      )}
     </>
   );
 }
