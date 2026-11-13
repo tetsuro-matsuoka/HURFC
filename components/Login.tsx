@@ -1,6 +1,6 @@
 "use client";
 
-// S01 ログイン画面（選手名 ＋ 合言葉）
+// S01 ログイン画面（選手は名前を選ぶだけ。コーチは名前 ＋ 合言葉）
 // メンバーが1人もいないときは「初期設定」（最初のコーチ作成）を表示します。
 
 import { useEffect, useState } from "react";
@@ -35,12 +35,20 @@ export default function Login() {
     e.preventDefault();
     setErr("");
     const hit = (list ?? []).find((m) => normName(m.name) === normName(name));
-    if (!hit) return setErr("名前または合言葉が違います");
+    if (!hit) return setErr("名前を選んでください");
     setBusy(true);
     try {
-      await signIn(hit.login_email, pw);
+      if (hit.role === "player") {
+        // 選手：合言葉なし。サーバーで発行したログイン用の鍵でログインする
+        const r = (await adminCall("player_login", { name: hit.name })) as { token_hash?: string; type?: string };
+        if (!supabase || !r.token_hash) throw new Error();
+        const { error } = await supabase.auth.verifyOtp({ token_hash: r.token_hash, type: (r.type ?? "magiclink") as "magiclink" });
+        if (error) throw error;
+      } else {
+        await signIn(hit.login_email, pw);
+      }
     } catch {
-      setErr("名前または合言葉が違います");
+      setErr(hit.role === "player" ? "ログインに失敗しました。もう一度お試しください" : "名前または合言葉が違います");
       setBusy(false);
     }
   };
@@ -61,9 +69,10 @@ export default function Login() {
     }
   };
 
-  const sorted = (list ?? []).slice().sort((a, b) =>
-    a.role === b.role ? a.name.localeCompare(b.name, "ja") : a.role === "coach" ? -1 : 1,
-  );
+  // 並び順はサーバー側（コーチ → 選手管理で決めた順）で整えて届く
+  const sorted = list ?? [];
+  const selected = sorted.find((m) => m.name === name);
+  const needPw = selected?.role === "coach";
 
   return (
     <div className="login">
@@ -109,10 +118,14 @@ export default function Login() {
               <option key={m.login_email}>{m.name}</option>
             ))}
           </select>
-          <label className="f" htmlFor="lp">
-            合言葉
-          </label>
-          <input className="t" id="lp" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" required />
+          {needPw && (
+            <>
+              <label className="f" htmlFor="lp">
+                合言葉（コーチ）
+              </label>
+              <input className="t" id="lp" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" required />
+            </>
+          )}
           <button className="btn" type="submit" disabled={busy}>
             {busy ? "ログイン中…" : "ログイン"}
           </button>

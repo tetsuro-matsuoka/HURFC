@@ -2,6 +2,7 @@
 
 export type Role = "player" | "coach";
 export type Attendance = "出席" | "欠席";
+export type Position = "フロント" | "バックロー" | "バックス";
 
 // 日次データ（DailyRecords）
 export type DailyRec = { attendance: Attendance | null; weight: number | null };
@@ -14,6 +15,9 @@ export type Member = {
   id: string;
   name: string;
   role: Role;
+  grade: number | null; // 学年（1〜6）
+  position: Position | null; // ポジション
+  sort_order: number | null; // 一覧での並び順（小さいほど上）
   daily: Record<string, DailyRec>; // キーは日付 "YYYY-MM-DD"
   physical: Record<string, PhysRec>;
 };

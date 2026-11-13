@@ -11,7 +11,8 @@ import type { Members } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
 import { InputScreen, PlayerHome, RankScreen } from "./PlayerScreens";
-import { ManageScreen, PhysicalScreen, TeamScreen } from "./CoachScreens";
+import { PhysicalScreen, TeamScreen } from "./CoachScreens";
+import { ManageScreen } from "./ManageScreen";
 
 const ICON = {
   home: (

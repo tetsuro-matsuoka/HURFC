@@ -1,10 +1,12 @@
 // プレビュー用のサンプルデータ（要件定義書「サンプルデータ投入」）
 // 初期設定で「サンプル選手を入れる」を選んだときだけ使います。
 
-import type { Attendance, PhysRec } from "./types";
+import type { Attendance, PhysRec, Position } from "./types";
 
 export const SAMPLE_NAMES = ["佐藤 健太", "鈴木 大輝", "高橋 翔", "田中 蓮", "伊藤 悠真", "渡辺 海斗", "山本 颯", "中村 陸"];
-export const SAMPLE_PASSWORD = "123456"; // サンプル選手の合言葉（本番運用前に選手ごと削除してください）
+// サンプル選手の学年・ポジション（上の名前と同じ順番）
+const SAMPLE_GRADES = [4, 4, 3, 3, 2, 2, 1, 1];
+const SAMPLE_POSITIONS: Position[] = ["フロント", "バックス", "バックロー", "フロント", "バックス", "バックロー", "フロント", "バックス"];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 function addDaysUTC(base: string, n: number) {
@@ -15,6 +17,8 @@ function addDaysUTC(base: string, n: number) {
 
 export type SamplePlayer = {
   name: string;
+  grade: number;
+  position: Position;
   daily: { date: string; attendance: Attendance; weight: number }[];
   physical: ({ date: string } & PhysRec)[];
 };
@@ -49,6 +53,6 @@ export function generateSample(base: string): SamplePlayer[] {
         deadlift: r25(d0 + g * (2 + rnd() * 4)),
       });
     }
-    return { name, daily, physical };
+    return { name, grade: SAMPLE_GRADES[i], position: SAMPLE_POSITIONS[i], daily, physical };
   });
 }

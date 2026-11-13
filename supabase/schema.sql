@@ -6,7 +6,7 @@
 -- 何度実行しても壊れないように作ってあります。
 --
 -- テーブル構成は要件定義書 4章に対応：
---   users            … ユーザー情報（名前・権限）。合言葉は Supabase Auth が暗号化して保管
+--   users            … ユーザー情報（名前・権限・学年・ポジション・並び順）。コーチの合言葉は Supabase Auth が暗号化して保管
 --   daily_records    … 日次データ（出欠・体重）
 --   physical_records … フィジカルデータ（Big3）
 -- =============================================================
@@ -41,6 +41,11 @@ create table if not exists public.physical_records (
   unique (user_id, date)
 );
 
+-- 選手の学年・ポジション・並び順（あとから追加した列。既存のデータベースにも追加されます）
+alter table public.users add column if not exists grade smallint check (grade between 1 and 6);                         -- 学年（画面では1〜4年を選択）
+alter table public.users add column if not exists position text check (position in ('フロント', 'バックロー', 'バックス')); -- ポジション
+alter table public.users add column if not exists sort_order integer;                                                  -- 一覧での並び順（小さいほど上）
+
 create index if not exists daily_records_date_idx on public.daily_records (date);
 
 -- ---------- 補助関数 ----------
@@ -59,7 +64,8 @@ returns table (name text, login_email text, role text)
 language sql stable security definer
 set search_path = public
 as $$
-  select name, login_email, role from public.users order by role, name;
+  select name, login_email, role from public.users
+  order by role, sort_order nulls last, grade desc nulls last, name;
 $$;
 
 revoke all on function public.is_member() from public;
