@@ -69,7 +69,7 @@ export default function Login() {
     <div className="login">
       <div className="hero">
         <div className="brand">
-          NUM<b>B</b>ERS
+          ALL-<b>IN</b>
         </div>
         <p>数字を意識して、強くなる。</p>
       </div>
