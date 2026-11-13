@@ -196,7 +196,7 @@ export default function App() {
     <div className="app">
       <header className="top">
         <div className="brand">
-          NUM<b>B</b>ERS
+          ALL-<b>IN</b>
         </div>
         <div className="who">
           {me.name}
