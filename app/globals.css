@@ -381,3 +381,9 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .mrow2>div{background:var(--bg);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column}
 .mrow2 .l{font-size:11px;color:var(--sub);font-weight:700}
 .mrow2 b{font-size:17px}
+
+/* 4つのボタンで開いた詳細のカード：上辺に選んでいるボタンと同じ色の線（選手・コーチ共通） */
+.panel-attend .card{border-top:4px solid #1f8a5b}
+.panel-training .card{border-top:4px solid #a96a00}
+.panel-body .card{border-top:4px solid #2563a8}
+.panel-physical .card{border-top:4px solid #e8432b}
