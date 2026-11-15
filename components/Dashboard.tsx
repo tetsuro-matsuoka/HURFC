@@ -9,6 +9,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import LineChart from "./LineChart";
 import PlayerTable from "./PlayerTable";
+import BodyPanel from "./BodyPanel";
 import { RankBoard, type Ctx } from "./Shared";
 import {
   addDays,
@@ -20,7 +21,6 @@ import {
   maxes,
   md,
   metricBest,
-  metricLatest,
   metricsOf,
   monthAttendance,
   absenceSummary,
@@ -35,8 +35,6 @@ import {
   trainingAvg,
   wd,
   weekStart,
-  weightAgo,
-  weights,
   ymLabel,
   ymOf,
   unitOf,
@@ -332,69 +330,6 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         </div>
       </div>
     </>
-  );
-}
-
-/* ---------- 体組成 ---------- */
-// 列は「項目設定」の体組成の項目（並び順どおり）。最新値を表示
-function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
-  const defs = metricsOf(ctx.metrics, "体組成");
-  const diffCell = (v: number | null) =>
-    v == null ? (
-      <span className="muted">—</span>
-    ) : (
-      <span className={v >= 0 ? "up" : "down"}>
-        {v >= 0 ? "+" : ""}
-        {fmt1(v)}
-      </span>
-    );
-  return (
-    <div className="card">
-      <h3>
-        体組成 <small>最新値 ・ 名前をタップで推移グラフ</small>
-      </h3>
-      <div className="scroll">
-        <table className="tbl">
-          <tbody>
-            <tr>
-              <th>選手</th>
-              <th>体重の推移（30日）</th>
-              <th className="r">体重7日差</th>
-              <th className="r">体重30日差</th>
-              {defs.map((x) => (
-                <th className="r" key={x.id}>
-                  {x.name}
-                  {unitOf(x) && `(${unitOf(x)})`}
-                </th>
-              ))}
-            </tr>
-            {ps.map((m) => {
-              const lw = latestWeight(m),
-                a7 = weightAgo(m, 7),
-                a30 = weightAgo(m, 30);
-              return (
-                <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
-                  <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
-                  <td>
-                    <LineChart pts={weights(m, 30)} h={30} width={110} label={false} color="var(--navy)" />
-                  </td>
-                  <td className="r num">{diffCell(lw && a7 ? lw.v - a7.v : null)}</td>
-                  <td className="r num">{diffCell(lw && a30 ? lw.v - a30.v : null)}</td>
-                  {defs.map((x) => (
-                    <td className="r num" key={x.id}>
-                      {fmt2(metricLatest(m, x)?.v)}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <p className="muted" style={{ marginTop: 8 }}>
-        表示する項目と並び順は「項目設定」で変更できます。
-      </p>
-    </div>
   );
 }
 
