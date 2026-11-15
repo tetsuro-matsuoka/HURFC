@@ -321,6 +321,10 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .tbl td.ratio{color:#4a5563;background:#fafbfc}
 .rk-ratio{font-family:"Noto Sans JP",sans-serif;font-size:11px;color:var(--sub);margin-left:2px;font-weight:500}
 /* フィジカル：最新値 / 自己ベストの切り替え（小さめ） */
-.modebar2{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+/* フィジカル：カード最上段の「種目プルダウン」と「最新値 / 自己ベスト」を横並び（スマホでも1行に収める） */
+.phys-top{display:flex;align-items:center;gap:8px}
+.phys-sel{flex:1;min-width:0;width:auto;padding:10px 12px;font-size:15px;font-weight:700}
+.phys-top .seg.mini{flex-shrink:0}
+@media(max-width:380px){.phys-top .seg.mini button{padding:6px 8px;font-size:12px}}
 .seg.mini{margin:0;padding:3px;border-radius:10px}
 .seg.mini button{flex:none;padding:6px 12px;font-size:13px;border-radius:8px}

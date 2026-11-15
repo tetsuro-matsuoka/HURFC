@@ -1,8 +1,8 @@
 "use client";
 
 // チームダッシュボード『フィジカル』（見た目は『体組成』と共通：GroupStats.tsx）
-//  1. 最上部：種目の選択（項目設定のフィジカル項目。体重比が ON の項目は「〇〇体重比」も）＋「最新値 / 自己ベスト」切り替え
-//  2. 全体・FW・BK の平均カード（基準日時点の平均、7日・30日前比、人数）
+//  1. 最上部のカード：種目のプルダウン（体重比が ON の項目は「〇〇体重比」も）＋「最新値 / 自己ベスト」→ 日付 →
+//     全体・FW・BK の平均カード（基準日時点の平均、7日・30日前比、人数）を1枚にまとめて表示
 //  3. 全体・FW・BK の推移グラフ（30日 / 90日 / 全期間）
 //  4. 選手別ランキング（選んだ種目・基準。体重比が ON なら併記）と、自己ベスト一覧
 //
@@ -130,7 +130,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
     );
   };
 
-  const chips: [string, string][] = defs.flatMap((x) => {
+  const options: [string, string][] = defs.flatMap((x) => {
     const c: [string, string][] = [["m" + x.id, x.name]];
     if (x.show_ratio) c.push(["r" + x.id, `${x.name}体重比`]);
     return c;
@@ -138,17 +138,17 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
 
   return (
     <>
+      {/* 1枚のカードに：最上段に「種目（プルダウン）」と「最新値 / 自己ベスト」→ 日付 → 全体・FW・BK の平均カード */}
       <div className="card">
-        <div className="chips">
-          {chips.map(([k, l]) => (
-            <button key={k} className={key === k ? "on" : ""} onClick={() => setSel(k)}>
-              {l}
-            </button>
-          ))}
-        </div>
-        <div className="modebar2">
-          <span className="muted">集計の基準</span>
-          <div className="seg mini">
+        <div className="phys-top">
+          <select className="t phys-sel" value={key} onChange={(e) => setSel(e.target.value)} aria-label="種目を選ぶ">
+            {options.map(([k, l]) => (
+              <option key={k} value={k}>
+                {l}
+              </option>
+            ))}
+          </select>
+          <div className="seg mini" role="group" aria-label="集計の基準">
             <button className={mode === "latest" ? "on" : ""} onClick={() => setMode("latest")}>
               最新値
             </button>
@@ -157,10 +157,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="card">
-        <h3>{label}の平均</h3>
+        <h3 style={{ marginTop: 12 }}>{label}の平均</h3>
         <DateBar d={d} setD={setD} />
         <GroupCards groups={groups} d={d} label={label} unit={unit} at={at} fmt={fmtV} />
         <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>
