@@ -5,13 +5,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { md, type Point } from "@/lib/calc";
+import { TipBox, useChartTip } from "./ChartTip";
 
 // dash：点線で描く（平均の基準線など）
 export type Series = { label: string; color: string; pts: Point[]; dash?: boolean };
 
 // minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
-export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1 }: { series: Series[]; h?: number; digits?: number; minRange?: number }) {
+// unit：吹き出しの単位 / note：吹き出しで1本目の線（自分）に添える文（例：「練習後 18:30」）
+type Props = { series: Series[]; h?: number; digits?: number; minRange?: number; unit?: string; note?: (d: string) => string };
+export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const tip = useChartTip(ref);
   const [w, setW] = useState(600);
 
   useEffect(() => {
@@ -40,13 +44,35 @@ export default function MultiLineChart({ series, h = 200, digits = 1, minRange =
       {all.length < 2 || dates[0] === dates[dates.length - 1] ? (
         <div className="empty">データが2日分以上になるとグラフを表示します</div>
       ) : (
-        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} />
+        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} />
       )}
     </div>
   );
 }
 
-function Chart({ series, w, h, digits, minRange, first, last }: { series: Series[]; w: number; h: number; digits: number; minRange: number; first: string; last: string }) {
+function Chart({
+  series,
+  w,
+  h,
+  digits,
+  minRange,
+  first,
+  last,
+  tip,
+  unit,
+  note,
+}: {
+  series: Series[];
+  w: number;
+  h: number;
+  digits: number;
+  minRange: number;
+  first: string;
+  last: string;
+  tip: ReturnType<typeof useChartTip>;
+  unit: string;
+  note?: (d: string) => string;
+}) {
   const vs = series.flatMap((s) => s.pts.map((p) => p.v));
   let lo = Math.min(...vs),
     hi = Math.max(...vs);
@@ -70,7 +96,13 @@ function Chart({ series, w, h, digits, minRange, first, last }: { series: Series
   const mid = new Date((t0 + t1) / 2);
   const midStr = `${mid.getFullYear()}-${String(mid.getMonth() + 1).padStart(2, "0")}-${String(mid.getDate()).padStart(2, "0")}`;
 
+  // 吹き出しで選べる日付（どれかの線に値がある日）
+  const allDates = [...new Set(series.flatMap((s) => s.pts.map((p) => p.d)))].sort();
+  const act = tip.active;
+  const at = (s: Series) => (act ? s.pts.find((p) => p.d === act) ?? null : null);
+  const fmtV = (v: number) => v.toFixed(Math.max(digits, 1));
   return (
+    <div style={{ position: "relative" }}>
     <svg className="chart" viewBox={`0 0 ${w} ${h}`} width="100%" style={{ display: "block", height: h }}>
       {ticks.map((v, i) => (
         <g key={i}>
@@ -108,6 +140,38 @@ function Chart({ series, w, h, digits, minRange, first, last }: { series: Series
           </g>
         );
       })}
+      {/* 選んだ日：縦の破線と、各線の強調の点 */}
+      {act && (
+        <g pointerEvents="none">
+          <line x1={X(act)} x2={X(act)} y1={T} y2={h - B} stroke="#8a929c" strokeWidth={1} strokeDasharray="4 3" />
+          {series.map((s) => {
+            const p = at(s);
+            return p ? <circle key={s.label} cx={X(p.d)} cy={Y(p.v)} r={5.5} fill="#fff" stroke={s.color} strokeWidth={3} /> : null;
+          })}
+        </g>
+      )}
+      {/* 透明な判定エリア（グラフ全体。縦の列のどこを触っても、その日付が選ばれる） */}
+      <rect x={L} y={0} width={Math.max(0, w - L - R)} height={h} fill="transparent" style={{ cursor: "pointer" }} {...tip.handlers(w, allDates, X)} />
     </svg>
+    {act && (
+      <TipBox x={X(act)} w={w}>
+        <div className="tip-d">{md(act)}</div>
+        {series.map((s, i) => {
+          const p = at(s);
+          if (!p) return null;
+          return (
+            // 1本目（自分・全体など）は大きく、2本目以降は小さく。名前は凡例の最初の言葉（「BK平均 72.5kg」→「BK平均」）
+            <div key={s.label} className={i === 0 ? "tip-v" : "tip-s"}>
+              <i style={{ background: s.color }} />
+              <span className="tip-l">{s.label.split(" ")[0]}</span>
+              {fmtV(p.v)}
+              {unit && ` ${unit}`}
+            </div>
+          );
+        })}
+        {note?.(act) && <div className="tip-n">{note(act)}</div>}
+      </TipBox>
+    )}
+    </div>
   );
 }

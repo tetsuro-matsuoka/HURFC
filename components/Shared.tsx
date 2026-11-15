@@ -12,6 +12,7 @@ import {
   fmtRatio,
   weightAt,
   weightNote,
+  timingText,
   fmt2,
   metricSeries,
   recentWeeks,
@@ -113,7 +114,7 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
           <h3>
             体重の推移 <small>直近60日</small>
           </h3>
-          <LineChart pts={weights(m, 60)} color="var(--navy)" />
+          <LineChart pts={weights(m, 60)} color="var(--navy)" unit="kg" note={(d) => timingText(m.daily[d])} />
         </div>
         <div className="card">
           <h3>Big3 自己ベスト</h3>

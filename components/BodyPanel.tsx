@@ -40,7 +40,7 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       <div className="card">
         <h3>全体・FW・BK の{weightName}推移（kg）</h3>
         <PeriodSeg period={period} setPeriod={setPeriod} />
-        <MultiLineChart series={chart} />
+        <MultiLineChart series={chart} unit="kg" />
       </div>
 
       <PlayerBodyTable ctx={ctx} ps={ps} />

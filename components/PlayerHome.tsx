@@ -42,6 +42,7 @@ import {
   unitOfPosition,
   wd,
   weightNote,
+  timingText,
   weekStart,
   weightAgo,
   weights,
@@ -164,7 +165,8 @@ function WeightChart({ ctx, days }: { ctx: Ctx; days: number }) {
     }
     return out;
   }, [ctx.members, m, unit, days]);
-  return <MultiLineChart series={series} h={180} />;
+  // 吹き出し：日付・自分の体重・測ったタイミングと時刻（例：練習後 18:30）
+  return <MultiLineChart series={series} h={180} unit="kg" note={(d) => timingText(m.daily[d])} />;
 }
 
 /* ---------- 詳細：出欠席率 ---------- */
