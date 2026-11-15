@@ -9,6 +9,9 @@ import {
   LIFTS,
   addDays,
   ABSENCE_REASONS,
+  DEFAULT_MENU,
+  menuItems,
+  menuLabel,
   WEIGHT_TIMINGS,
   dayKind,
   fmt2,
@@ -252,6 +255,16 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
         <p className="muted" style={{ textAlign: "center" }}>
           {weekLabel(ws)} ・ {score == null ? "未入力" : `記録済み：${score}`}
         </p>
+        {/* コーチが「日程調整」で設定したその週の筋トレメニュー（未設定は A〜C） */}
+        <div className="menu-of-week">
+          今週のメニュー
+          <div className="mw-items">
+            {menuItems(ctx.weeks[ws]?.menu ?? DEFAULT_MENU).map((x) => (
+              <span key={x}>{x}</span>
+            ))}
+          </div>
+          <small>{menuLabel(ctx.weeks[ws]?.menu ?? DEFAULT_MENU)} をどれだけやり切れたかを 0〜10 で選んでください</small>
+        </div>
         <div className="score11">
           {Array.from({ length: 11 }, (_, n) => (
             <button key={n} className={score === n ? "on" : ""} onClick={() => pick(n)} disabled={busy}>

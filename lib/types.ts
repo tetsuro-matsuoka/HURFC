@@ -55,7 +55,12 @@ export type MetricDef = {
 export type Members = Record<string, Member>;
 
 // 練習日（日程調整）。days＝練習日の一覧、months＝練習日が1日以上ある月 "YYYY-MM"
-export type Practice = { days: Set<string>; months: Set<string> };
+// weekDays＝コーチが週ごとに設定した練習日数 { その週の月曜日: 日数 }（設定した週はこちらを優先）
+export type Practice = { days: Set<string>; months: Set<string>; weekDays: Map<string, number> };
+
+// 週ごとの設定（日程調整）。null＝未設定（練習日数はカレンダーから自動、メニューは A〜C）
+export type Menu = "A〜B" | "A〜C" | "A〜D";
+export type WeekSetting = { days: number | null; menu: Menu | null };
 
 export type LiftKey = "bench_press" | "squat" | "deadlift";
 export type MetricKey = LiftKey | "total" | "ratio";

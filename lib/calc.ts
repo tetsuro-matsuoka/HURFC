@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { AbsenceReason, Category, WeightTiming, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
+import type { AbsenceReason, Category, Menu, WeightTiming, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -100,8 +100,9 @@ export const playersOf = (members: Members) =>
     .sort(byOrder);
 
 /* ---------- 練習日と出欠席率 ---------- */
-export function makePractice(days: string[]): Practice {
-  return { days: new Set(days), months: new Set(days.map((d) => d.slice(0, 7))) };
+// weekDays：コーチが週ごとに設定した練習日数 { その週の月曜日: 日数 }
+export function makePractice(days: string[], weekDays: Map<string, number> = new Map()): Practice {
+  return { days: new Set(days), months: new Set(days.map((d) => d.slice(0, 7))), weekDays };
 }
 export const EMPTY_PRACTICE: Practice = makePractice([]);
 
@@ -109,15 +110,34 @@ export const EMPTY_PRACTICE: Practice = makePractice([]);
 export type DayKind = "practice" | "off" | "unset";
 export function dayKind(d: string, p: Practice): DayKind {
   if (p.days.has(d)) return "practice";
+  // 週の練習日数を設定した週は、どの日でも出欠を入力できるようにする（オフ扱いにしない）
+  if (p.weekDays.has(weekStart(d))) return "unset";
   return p.months.has(d.slice(0, 7)) ? "off" : "unset";
 }
 
+// 筋トレメニュー構成（未設定の週は A〜C）
+export const MENUS: Menu[] = ["A〜B", "A〜C", "A〜D"];
+export const DEFAULT_MENU: Menu = "A〜C";
+export const menuItems = (menu: Menu) => ["A", "B", "C", "D"].slice(0, menu === "A〜B" ? 2 : menu === "A〜C" ? 3 : 4);
+export const menuLabel = (menu: Menu) => `${menuItems(menu).join("・")}（${menuItems(menu).length}種目）`;
+
+// その週の練習日数（コーチが設定していればその日数、なければカレンダーの練習日の数）
+export function weekPracticeCount(p: Practice, ws: string): number {
+  const set = p.weekDays.get(ws);
+  if (set != null) return set;
+  let n = 0;
+  for (let i = 0; i < 7; i++) if (p.days.has(addDays(ws, i))) n++;
+  return n;
+}
+
 // 出欠の集計（from〜to の期間。今日より後と、その選手の登録前は数えない）
+//  ・コーチが「週の練習日数」を設定した週：その日数が分母（下の attendStats を参照）
 //  ・練習日を設定した月：練習日すべてが対象（出席 / 欠席 / 未入力）
 //  ・練習日が未設定の月：今までどおり、出欠を記録した日だけが対象
 //  出席率＝出席日数÷対象日数、欠席率＝欠席日数÷対象日数（未入力は出席に含めない）
 export type AttendStats = { yes: number; no: number; none: number; days: number; rate: number | null; absentRate: number | null };
-// 出欠の対象日（日付順）。attendStats と同じルール
+// 出欠の対象日（日付順。出欠の履歴・連続出席に使う）
+// 週の練習日数を設定した週は、カレンダーの練習日＋出欠を記録した日
 export function attendTargets(m: Member, p: Practice, from: string, to: string): string[] {
   const end = to < today() ? to : today();
   const start = from > m.joined ? from : m.joined;
@@ -142,8 +162,12 @@ export function attendStreak(m: Member, p: Practice): number {
   return n;
 }
 
+// 週の練習日数を設定した週の数え方（その週の月曜日が期間内の週）：
+//  分母＝設定した日数（今週はまだ途中なので「設定した日数」と「今日までの日数」の少ない方）
+//  出席＝その週の出席日数（分母が上限）、欠席＝欠席日数（残りが上限）、未入力＝残り
 export function attendStats(m: Member, p: Practice, from: string, to: string): AttendStats {
-  const cand = attendTargets(m, p, from, to);
+  const end = to < today() ? to : today();
+  const cand = attendTargets(m, p, from, to).filter((d) => !p.weekDays.has(weekStart(d)));
   let yes = 0,
     no = 0,
     none = 0;
@@ -153,7 +177,26 @@ export function attendStats(m: Member, p: Practice, from: string, to: string): A
     else if (a === "欠席") no++;
     else none++;
   });
-  const days = cand.length;
+  let days = cand.length;
+  p.weekDays.forEach((n, ws) => {
+    const sun = addDays(ws, 6);
+    if (ws < from || ws > end || sun < m.joined) return;
+    const elapsed = Math.min(7, Math.round((new Date(end + "T00:00:00").getTime() - new Date(ws + "T00:00:00").getTime()) / 86400000) + 1);
+    const total = Math.min(n, elapsed);
+    let y = 0,
+      x = 0;
+    for (let i = 0; i < 7; i++) {
+      const a = m.daily[addDays(ws, i)]?.attendance;
+      if (a === "出席") y++;
+      else if (a === "欠席") x++;
+    }
+    y = Math.min(y, total);
+    x = Math.min(x, total - y);
+    yes += y;
+    no += x;
+    none += total - y - x;
+    days += total;
+  });
   return { yes, no, none, days, rate: days ? (yes / days) * 100 : null, absentRate: days ? (no / days) * 100 : null };
 }
 

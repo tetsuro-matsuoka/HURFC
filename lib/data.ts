@@ -1,7 +1,7 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { AbsenceReason, Attendance, Category, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
+import type { AbsenceReason, Attendance, Category, Menu, WeekSetting, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
 import { makePractice, ymd } from "./calc";
 
 function sb() {
@@ -168,9 +168,9 @@ export async function savePhysical(userId: string, date: string, rec: PhysRec) {
 }
 
 // 測定項目と設定（評価基準の説明文など）の読み込み
-export type Meta = { metrics: MetricDef[]; settings: Record<string, string>; practice: Practice };
+export type Meta = { metrics: MetricDef[]; settings: Record<string, string>; practice: Practice; weeks: Record<string, WeekSetting> };
 export async function loadMeta(): Promise<Meta> {
-  const [metrics, settings, practice] = await Promise.all([
+  const [metrics, settings, practice, weeks] = await Promise.all([
     // 体重比の設定（追加SQL その7）がまだ無い場合は、体重比なしで読み込む
     fetchAll<MetricDef>("metrics", "id,key,name,unit,category,better,sort_order,show_ratio")
       .catch(() => fetchAll<MetricDef>("metrics", "id,key,name,unit,category,better,sort_order"))
@@ -178,14 +178,30 @@ export async function loadMeta(): Promise<Meta> {
     fetchAll<{ key: string; value: string }>("app_settings", "key,value", "key").catch(() => []),
     // 追加SQL（その4）が未実行なら「練習日の設定なし」として扱う
     fetchAll<{ date: string }>("practice_days", "date", "date").catch(() => []),
+    // 週ごとの設定（追加SQL その9）が未実行なら「設定なし」
+    fetchAll<{ week_start: string; practice_days: number | null; menu: Menu | null }>("week_settings", "week_start,practice_days,menu", "week_start").catch(
+      () => [],
+    ),
   ]);
+  const weekMap: Record<string, WeekSetting> = Object.fromEntries(weeks.map((w) => [w.week_start, { days: w.practice_days, menu: w.menu }]));
   metrics.forEach((x) => (x.show_ratio = x.show_ratio === true));
   metrics.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   return {
     metrics,
     settings: Object.fromEntries(settings.map((x) => [x.key, x.value])),
-    practice: makePractice(practice.map((x) => x.date)),
+    practice: makePractice(practice.map((x) => x.date), weekDaysOf(weekMap)),
+    weeks: weekMap,
   };
+}
+
+// 週ごとの設定から「練習日数を設定した週」だけを取り出す
+export const weekDaysOf = (weeks: Record<string, WeekSetting>) =>
+  new Map(Object.entries(weeks).flatMap(([ws, w]) => (w.days != null ? [[ws, w.days] as [string, number]] : [])));
+
+// 週ごとの設定を保存（コーチのみ。データベース側の権限でも確認）
+export async function saveWeekSetting(weekStart: string, v: WeekSetting) {
+  const { error } = await sb().from("week_settings").upsert({ week_start: weekStart, practice_days: v.days, menu: v.menu, updated_at: new Date().toISOString() });
+  if (error) throw error;
 }
 
 // 練習日の ON / OFF（コーチのみ。データベース側の権限でも確認）

@@ -415,3 +415,17 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .chart-tip .tip-n{font-size:11px;color:#1d4f86;font-weight:700}
 svg.chart{touch-action:pan-y}
 .chart-tip .tip-n.none{color:var(--sub);font-weight:400}
+
+/* 日程調整：週の設定（練習日数・筋トレメニュー） */
+.wk-l{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px}
+.wk-l b{color:var(--ink);font-size:16px;margin-left:4px}
+.wk-l small{font-weight:400;font-size:11px;margin-left:4px}
+.wk-days{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.wk-days button{padding:9px 0;border-radius:9px;background:var(--bg);font-size:13px;font-weight:700;color:var(--sub);border:2px solid transparent}
+.wk-days button.on{background:var(--navy);color:#fff}
+@media(max-width:400px){.wk-days button{font-size:11.5px;padding:8px 0}}
+/* 記録する → 筋トレ遂行率：今週のメニュー */
+.menu-of-week{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;margin-top:8px;text-align:center;font-size:12px;font-weight:700}
+.menu-of-week .mw-items{display:flex;justify-content:center;gap:8px;margin:6px 0 4px}
+.menu-of-week .mw-items span{width:38px;height:38px;border-radius:10px;background:#fff;color:var(--warn);display:flex;align-items:center;justify-content:center;font-family:Oswald,sans-serif;font-size:20px;border:2px solid #e8c47a}
+.menu-of-week small{display:block;font-weight:400;font-size:11px;color:#7a5200}

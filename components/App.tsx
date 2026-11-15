@@ -6,9 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { configOk, supabase } from "@/lib/supabase";
-import { adminCall, loadAll, loadMeta, setPracticeDay, type Meta } from "@/lib/data";
+import { adminCall, loadAll, loadMeta, saveWeekSetting, setPracticeDay, weekDaysOf, type Meta } from "@/lib/data";
 import { EMPTY_PRACTICE, makePractice } from "@/lib/calc";
-import type { Category, Members } from "@/lib/types";
+import type { Category, Members, WeekSetting } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
 import { InputScreen } from "./PlayerScreens";
@@ -68,7 +68,7 @@ const ICON = {
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined = 確認中
   const [members, setMembers] = useState<Members | null>(null);
-  const [meta, setMeta] = useState<Meta>({ metrics: [], settings: {}, practice: EMPTY_PRACTICE });
+  const [meta, setMeta] = useState<Meta>({ metrics: [], settings: {}, practice: EMPTY_PRACTICE, weeks: {} });
   const [loadErr, setLoadErr] = useState("");
   const [view, setView] = useState<View | null>(null);
   const [navKey, setNavKey] = useState(0);
@@ -190,7 +190,7 @@ export default function App() {
     const next = new Set(before.days);
     if (on) next.add(d);
     else next.delete(d);
-    setMeta((cur) => ({ ...cur, practice: makePractice([...next]) }));
+    setMeta((cur) => ({ ...cur, practice: makePractice([...next], cur.practice.weekDays) }));
     try {
       await setPracticeDay(d, on);
     } catch {
@@ -210,6 +210,19 @@ export default function App() {
       toast(e instanceof Error ? e.message : "カテゴリーを保存できませんでした");
     }
   };
+  // 週ごとの設定（練習日数・筋トレメニュー）。押した瞬間に反映し、裏で保存。失敗したら元に戻す
+  const setWeek = async (ws: string, v: WeekSetting) => {
+    const before = meta;
+    const apply = (weeks: Record<string, WeekSetting>) =>
+      setMeta((cur) => ({ ...cur, weeks, practice: makePractice([...cur.practice.days], weekDaysOf(weeks)) }));
+    apply({ ...meta.weeks, [ws]: v });
+    try {
+      await saveWeekSetting(ws, v);
+    } catch {
+      apply(before.weeks);
+      toast("保存できませんでした。データベースの更新（追加SQL その9）が済んでいるか確認してください");
+    }
+  };
   const ctx: Ctx = {
     members,
     setCategory,
@@ -217,6 +230,8 @@ export default function App() {
     settings: meta.settings,
     practice: meta.practice,
     togglePractice,
+    weeks: meta.weeks,
+    setWeek,
     me,
     readOnly: false,
     reload,
