@@ -5,12 +5,13 @@
 // ・add     : メンバー追加（選手：名前・学年・ポジション / コーチ：名前・合言葉）
 // ・update  : 選手の名前・学年・ポジションの変更
 // ・reorder : 選手の並び順の変更
+// ・category: 選手のカテゴリー（レギュラー・ベンチ・ベンチ外・未設定）の変更
 // ・delete  : メンバー削除（その人の記録も消えます）
 // 秘密鍵（SUPABASE_SECRET_KEY）はこのサーバー側でのみ使い、ブラウザには送りません。
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { generateSample } from "@/lib/sample";
-import { byOrder, GRADES, POSITIONS } from "@/lib/calc";
+import { byOrder, CATEGORIES, GRADES, POSITIONS } from "@/lib/calc";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ type Body = {
   id?: string;
   ids?: string[];
   grade?: number | null;
+  category?: string | null;
   position?: string | null;
   sample?: boolean;
 };
@@ -160,6 +162,20 @@ export async function POST(req: Request) {
       if (!grade || !position) return fail("学年とポジションを選んでください");
       const { error } = await admin.from("users").update({ name, grade, position }).eq("id", body.id).eq("role", "player");
       if (error) throw new Error(error.code === "23505" ? "同じ名前のメンバーがいます" : error.message);
+      return json({ ok: true });
+    }
+
+    if (body.action === "category") {
+      if (!body.id) return fail("対象が指定されていません");
+      const category = CATEGORIES.includes(body.category as never) ? body.category : null;
+      const { error } = await admin.from("users").update({ category }).eq("id", body.id).eq("role", "player");
+      if (error) {
+        throw new Error(
+          error.message.includes("category")
+            ? "カテゴリーを保存できません。データベースの更新（追加SQL その6）が済んでいるか確認してください"
+            : error.message,
+        );
+      }
       return json({ ok: true });
     }
 

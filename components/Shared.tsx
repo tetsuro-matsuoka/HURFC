@@ -26,7 +26,7 @@ import {
   rowTotal,
   weights,
 } from "@/lib/calc";
-import type { Member, MetricDef, Members, Practice } from "@/lib/types";
+import type { Category, Member, MetricDef, Members, Practice } from "@/lib/types";
 
 export type View = "home" | "input" | "rank" | "team" | "settings" | "manage" | "schedule";
 
@@ -37,6 +37,7 @@ export type Ctx = {
   settings: Record<string, string>; // 設定（筋トレ評価基準の説明文など）
   practice: Practice; // 練習日（日程調整）
   togglePractice: (date: string) => Promise<void>; // 練習日の ON / OFF（コーチのみ）
+  setCategory: (id: string, category: Category | null) => Promise<void>; // 選手のカテゴリー変更（コーチのみ）
   me: Member;
   readOnly: boolean;
   reload: () => Promise<void>;

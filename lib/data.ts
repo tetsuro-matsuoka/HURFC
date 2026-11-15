@@ -1,7 +1,7 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { AbsenceReason, Attendance, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
+import type { AbsenceReason, Attendance, Category, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
 import { makePractice, ymd } from "./calc";
 
 function sb() {
@@ -35,7 +35,7 @@ async function fetchAll<T>(table: string, columns: string, orderBy = "id"): Prom
   return out;
 }
 
-type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null; created_at: string };
+type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null; created_at: string; category?: Category | null };
 type DailyRow = { user_id: string; date: string; attendance: Attendance | null; absence_reason?: AbsenceReason | null; weight: number | null };
 type PhysRow = { user_id: string; date: string } & PhysRec;
 type MetricRecRow = { user_id: string; metric_id: number; date: string; value: number };
@@ -44,7 +44,10 @@ type TrainingRow = { user_id: string; week_start: string; score: number };
 // 全メンバーと記録を読み込み、画面で使う形に変換する
 export async function loadAll(): Promise<Members> {
   const [users, daily, physical, mrec, training] = await Promise.all([
-    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at"),
+    // カテゴリーの欄（追加SQL その6）がまだ無い場合は、カテゴリーなしで読み込む
+    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at,category").catch(() =>
+      fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at"),
+    ),
     // 欠席理由の欄（追加SQL その5）がまだ無い場合は、欠席理由なしで読み込む
     fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,absence_reason,weight").catch(() =>
       fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight"),
@@ -63,6 +66,7 @@ export async function loadAll(): Promise<Members> {
         role: u.role,
         grade: u.grade,
         position: u.position,
+        category: u.category ?? null,
         sort_order: u.sort_order,
         joined: ymd(new Date(u.created_at)),
         daily: {},

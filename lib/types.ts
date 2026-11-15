@@ -6,6 +6,8 @@ export type AbsenceReason = "体調不良" | "学校関連" | "病院・リハ�
 // ポジション（10種類）。「フロント」「バックロー」「バックス」は以前の区分（既存データ用）
 export type Position = "PR" | "HO" | "LO" | "FL" | "No.8" | "SH" | "SO" | "CTB" | "WTB" | "FB" | "フロント" | "バックロー" | "バックス";
 export type Unit = "FW" | "BK";
+// 試合・選考ごとのカテゴリー（未設定は null）
+export type Category = "レギュラー" | "ベンチ" | "ベンチ外";
 
 // 日次データ（DailyRecords）
 export type DailyRec = { attendance: Attendance | null; absence_reason: AbsenceReason | null; weight: number | null };
@@ -20,6 +22,7 @@ export type Member = {
   role: Role;
   grade: number | null; // 学年（1〜6）
   position: Position | null; // ポジション
+  category: Category | null; // カテゴリー（レギュラー・ベンチ・ベンチ外）
   sort_order: number | null; // 一覧での並び順（小さいほど上）
   joined: string; // 出欠席率の計算を始める日（登録日と最初の記録日の早い方）"YYYY-MM-DD"
   daily: Record<string, DailyRec>; // キーは日付 "YYYY-MM-DD"

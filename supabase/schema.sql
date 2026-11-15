@@ -340,3 +340,19 @@ alter table public.daily_records add constraint daily_records_absence_reason_che
   absence_reason is null
   or absence_reason in ('体調不良', '学校関連', '病院・リハビリ', '冠婚葬祭', 'ずる休み', 'その他')
 );
+
+-- =============================================================
+-- 追加SQL（2026-11 その6）：選手のカテゴリー（レギュラー・ベンチ・ベンチ外）
+--
+-- （supabase/migrations/20261115_6_player_category.sql と同じ内容）
+--
+-- users に category（カテゴリー）を追加します。未設定は空（null）。
+-- 変更はコーチのみ（サーバー側 app/api/admin/route.ts で確認してから保存）。
+-- =============================================================
+
+alter table public.users add column if not exists category text;
+
+alter table public.users drop constraint if exists users_category_check;
+alter table public.users add constraint users_category_check check (
+  category is null or category in ('レギュラー', 'ベンチ', 'ベンチ外')
+);

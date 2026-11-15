@@ -9,7 +9,7 @@
 import { useState } from "react";
 import type { Ctx } from "./Shared";
 import { absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
-import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
+import { CategoryButton, FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import type { Member } from "@/lib/types";
 
 type Group = "body" | "attend" | "phys";
@@ -57,20 +57,28 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
   const all = playersOf(ctx.members);
   const rows = applyFilter(all, filter);
   const cols = buildCols(ctx);
-  const filtered = filter.grade != null || filter.unit != null;
+  const filtered = isFiltered(filter);
   // 表示中の選手（絞り込み後）だけで平均を計算
   const avgLabel = filtered ? "選択中平均" : "チーム平均";
+  // カテゴリー別の比較（レギュラー vs それ以外）。カテゴリーで絞り込んでいないときに、
+  // 表示中の選手に1人でもカテゴリー設定があれば表示する
+  const compare = (ms: Member[]) => [
+    { key: "reg", label: "レギュラー平均", ms: ms.filter((m) => m.category === "レギュラー") },
+    { key: "other", label: "その他平均", ms: ms.filter((m) => m.category !== "レギュラー") },
+  ];
+  const showCompare = filter.category == null && rows.some((m) => m.category != null);
   const groups = (["body", "attend", "phys"] as Group[]).map((g) => ({ g, n: cols.filter((c) => c.group === g).length }));
 
   // 全選手・全項目をCSVで保存（Excelで文字化けしないよう先頭にBOMを付ける）
   const downloadCsv = () => {
     const ym = ymOf(today());
-    const head = ["名前", "学年", "ポジション", "FW/BK", ...cols.map((c) => `${c.label}${c.unit ? `(${c.unit})` : ""}`), "今月の欠席理由"];
+    const head = ["名前", "学年", "ポジション", "FW/BK", "カテゴリー", ...cols.map((c) => `${c.label}${c.unit ? `(${c.unit})` : ""}`), "今月の欠席理由"];
     const body = all.map((m) => [
       m.name,
       m.grade ? `${m.grade}年` : "",
       m.position ?? "",
       unitOfPosition(m.position) ?? "",
+      m.category ?? "",
       ...cols.map((c) => {
         const v = c.get(m);
         return v == null ? "" : c.fmt(v);
@@ -78,19 +86,26 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
       // 例：「体調不良2・学校関連1」
       absenceSummary(m, ym + "-01", ym + "-31"),
     ]);
-    // 最終行：平均（CSVは全選手が対象なので、全選手の平均）
-    const avgRow = [
-      "平均（全選手）",
+    // 最後の行：平均（CSVは全選手が対象なので、全選手の平均）。カテゴリー設定があれば、レギュラー・その他の平均も
+    const avgRowOf = (label: string, ms: Member[]) => [
+      label,
+      "",
       "",
       "",
       "",
       ...cols.map((c) => {
-        const v = average(all, c);
+        const v = average(ms, c);
         return v == null ? "" : fmt1(v);
       }),
       "",
     ];
-    const csv = "﻿" + [head, ...body, avgRow].map((r) => r.map(cell).join(",")).join("\r\n");
+    const avgRows = [
+      avgRowOf("平均（全選手）", all),
+      ...(all.some((m) => m.category != null)
+        ? compare(all).map((x) => avgRowOf(`${x.label}（${x.ms.length}名）`, x.ms))
+        : []),
+    ];
+    const csv = "﻿" + [head, ...body, ...avgRows].map((r) => r.map(cell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
@@ -106,7 +121,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
           選手一覧 <small>{rows.length}名</small>
         </h3>
         <div className="pt-tools">
-          <FilterChips f={filter} set={setFilter} />
+          <FilterChips f={filter} set={setFilter} withCategory />
           <button className="btn ghost small" onClick={downloadCsv}>
             全データCSV
           </button>
@@ -118,7 +133,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
           <thead>
             <tr>
               <th className="g-basic s1">基本情報</th>
-              <th colSpan={3} className="g-basic" />
+              <th colSpan={4} className="g-basic" />
               {groups.map(
                 ({ g, n }) =>
                   n > 0 && (
@@ -133,6 +148,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               <th className="g-basic l">学年</th>
               <th className="g-basic l">ポジション</th>
               <th className="g-basic l">FW/BK</th>
+              <th className="g-basic l">カテゴリー</th>
               {cols.map((c) => (
                 <th key={c.key} className={`g-${c.group}`}>
                   {c.label}
@@ -152,6 +168,9 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 <td className="l">
                   <UnitBadge m={m} />
                 </td>
+                <td className="l">
+                  <CategoryButton m={m} onChange={(c) => ctx.setCategory(m.id, c)} />
+                </td>
                 {cols.map((c) => (
                   <td key={c.key} className="num">
                     {c.fmt(c.get(m))}
@@ -169,6 +188,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 <td className="l">—</td>
                 <td className="l">—</td>
                 <td className="l">—</td>
+                <td className="l">—</td>
                 {cols.map((c) => {
                   const v = average(rows, c);
                   return (
@@ -178,13 +198,33 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                   );
                 })}
               </tr>
+              {showCompare &&
+                compare(rows).map((x) => (
+                  <tr key={x.key} className={`cmp ${x.key}`}>
+                    <td className="s1">
+                      <b>{x.label}</b>
+                    </td>
+                    <td className="l" colSpan={4}>
+                      {x.ms.length}名{x.key === "other" ? "（ベンチ・ベンチ外・未設定）" : ""}
+                    </td>
+                    {cols.map((c) => {
+                      const v = average(x.ms, c);
+                      return (
+                        <td key={c.key} className="num">
+                          {v == null ? "—" : fmt1(v)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
             </tfoot>
           )}
         </table>
         {!rows.length && <div className="empty">該当する選手がいません</div>}
       </div>
       <p className="muted" style={{ marginTop: 8 }}>
-        体組成は最新値、フィジカルは自己ベストです。一番下の「{avgLabel}」は、表示中の選手のうち数値が入っている人だけの平均です。名前をタップすると推移グラフを表示します。表示する項目と並び順は「項目設定」で変更できます。
+        体組成は最新値、フィジカルは自己ベストです。一番下の「{avgLabel}」は、表示中の選手のうち数値が入っている人だけの平均です。
+        カテゴリーはバッジをタップするたびに「— → レギュラー → ベンチ → ベンチ外 → —」と切り替わり、自動で保存されます。名前をタップすると推移グラフを表示します。表示する項目と並び順は「項目設定」で変更できます。
       </p>
     </div>
   );

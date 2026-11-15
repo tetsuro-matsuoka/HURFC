@@ -6,9 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { configOk, supabase } from "@/lib/supabase";
-import { loadAll, loadMeta, setPracticeDay, type Meta } from "@/lib/data";
+import { adminCall, loadAll, loadMeta, setPracticeDay, type Meta } from "@/lib/data";
 import { EMPTY_PRACTICE, makePractice } from "@/lib/calc";
-import type { Members } from "@/lib/types";
+import type { Category, Members } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
 import { InputScreen, PlayerHome, RankScreen } from "./PlayerScreens";
@@ -196,8 +196,21 @@ export default function App() {
       toast("保存できませんでした。データベースの更新（追加SQL その4）が済んでいるか確認してください");
     }
   };
+  // 選手のカテゴリー変更（押した瞬間に画面へ反映し、裏で保存。失敗したら元に戻す）
+  const setCategory = async (id: string, category: Category | null) => {
+    const before = members[id]?.category ?? null;
+    const apply = (c: Category | null) => setMembers((cur) => (cur && cur[id] ? { ...cur, [id]: { ...cur[id], category: c } } : cur));
+    apply(category);
+    try {
+      await adminCall("category", { id, category });
+    } catch (e) {
+      apply(before);
+      toast(e instanceof Error ? e.message : "カテゴリーを保存できませんでした");
+    }
+  };
   const ctx: Ctx = {
     members,
+    setCategory,
     metrics: meta.metrics,
     settings: meta.settings,
     practice: meta.practice,
