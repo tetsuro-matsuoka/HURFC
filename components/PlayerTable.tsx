@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
+import { absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
 import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
 import type { Member } from "@/lib/types";
 
@@ -55,7 +55,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
 
   // 全選手・全項目をCSVで保存（Excelで文字化けしないよう先頭にBOMを付ける）
   const downloadCsv = () => {
-    const head = ["名前", "学年", "ポジション", "FW/BK", ...cols.map((c) => `${c.label}${c.unit ? `(${c.unit})` : ""}`)];
+    const ym = ymOf(today());
+    const head = ["名前", "学年", "ポジション", "FW/BK", ...cols.map((c) => `${c.label}${c.unit ? `(${c.unit})` : ""}`), "今月の欠席理由"];
     const body = all.map((m) => [
       m.name,
       m.grade ? `${m.grade}年` : "",
@@ -65,6 +66,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
         const v = c.get(m);
         return v == null ? "" : c.fmt(v);
       }),
+      // 例：「体調不良2・学校関連1」
+      absenceSummary(m, ym + "-01", ym + "-31"),
     ]);
     const csv = "﻿" + [head, ...body].map((r) => r.map(cell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
