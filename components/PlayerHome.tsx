@@ -35,9 +35,9 @@ import {
   phys,
   playersOf,
   ranking,
+  trainingRate,
   recentWeeks,
   today,
-  trainingAvg,
   unitOf,
   unitOfPosition,
   wd,
@@ -278,28 +278,58 @@ function MonthBar({ ym, setYm }: { ym: string; setYm: (v: string) => void }) {
 /* ---------- 詳細：筋トレ遂行率 ---------- */
 function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
+  const ps = playersOf(ctx.members);
+  const thisWeek = weekStart(today());
+  const from30 = weekStart(addDays(today(), -29)); // 直近30日＝この30日にかかる週（4〜5週）
+  const rows: [string, string | undefined][] = [
+    ["今週", thisWeek],
+    ["直近30日", from30],
+    ["全期間", undefined],
+  ];
+  const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
   const weeks = recentWeeks(8);
-  const a = trainingAvg(m, 8);
-  const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }));
+  const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] * 10 }));
   return (
     <div className="card">
-      <div className="sumrow" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <div style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
-          <div className="v num">{m.training[weeks[weeks.length - 1]] ?? "—"}</div>
-          <div className="l">今週（0〜10）</div>
-        </div>
-        <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
-          <div className="v num">{a == null ? "—" : Math.round(a * 10) + "%"}</div>
-          <div className="l">達成率（直近8週）</div>
-        </div>
-      </div>
       <h3>
-        直近8週の推移 <small>0〜10</small>
+        筋トレ遂行率 <small>点数（0〜10）÷10</small>
       </h3>
-      <LineChart pts={pts} h={140} color="var(--warn)" />
-      <button className="btn ghost" style={{ marginTop: 12 }} onClick={() => ctx.go("input")}>
-        「記録する → 筋トレ」で入力する
-      </button>
+      <table className="tbl cmp-tbl" style={{ marginBottom: 10 }}>
+        <tbody>
+          <tr>
+            <th />
+            <th className="r">自分</th>
+            <th className="r">チーム平均</th>
+            <th className="r">差</th>
+          </tr>
+          {rows.map(([l, from]) => {
+            // 今週は「今週の分だけ」、それ以外は from 以降の週
+            const pick = (x: (typeof ps)[number]) => (l === "今週" ? (x.training[thisWeek] != null ? x.training[thisWeek] * 10 : null) : trainingRate(x, from));
+            const mine = pick(m);
+            const team = avg(ps.map(pick));
+            return (
+              <tr key={l}>
+                <td>{l}</td>
+                <td className="r num">
+                  <b style={{ fontSize: 18 }}>{pct(mine)}</b>
+                </td>
+                <td className="r num">{pct(team)}</td>
+                <td className="r num">
+                  {mine == null || team == null ? (
+                    <span className="muted">—</span>
+                  ) : (
+                    <b className={mine - team >= 0 ? "up" : "down"}>
+                      {mine - team >= 0 ? "▲+" : "▼"}
+                      {Math.round(mine - team)}
+                    </b>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {pts.length >= 2 && <LineChart pts={pts} h={100} color="var(--warn)" />}
     </div>
   );
 }

@@ -284,7 +284,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       </div>
       <div className="card">
         <h3>
-          選手ごとの週次推移 <small>0〜10 ・ 達成率＝直近8週の平均÷10</small>
+          選手ごとの週次推移 <small>0〜10 ・ 遂行率＝直近8週の平均÷10</small>
         </h3>
         <div className="scroll">
           <table className="tbl">
@@ -296,7 +296,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                     {md(w)}〜
                   </th>
                 ))}
-                <th className="r">達成率</th>
+                <th className="r">遂行率</th>
               </tr>
               {ps.map((m) => {
                 const a = trainingAvg(m, 8);
