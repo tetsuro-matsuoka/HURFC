@@ -387,7 +387,8 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
   const chart = ratio ? series.map((p) => ({ d: p.d, v: toRatio(p) })).filter((p): p is Point => p.v != null) : series;
 
   return (
-    <div className="card accent-top">
+    <>
+      <div className="card accent-top">
       <select className="t phys-sel" style={{ width: "100%", marginBottom: 10 }} value={key} onChange={(e) => setSel(e.target.value)} aria-label="種目を選ぶ">
         {options.map(([k, l]) => (
           <option key={k} value={k}>
@@ -429,7 +430,43 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
       {chart.length >= 2 && (
         <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} />
       )}
-    </div>
+      </div>
+
+      {/* 下段：選んだ種目のチームランキング */}
+      <div className="card">
+        <h3>
+          チームランキング <small>{options.find(([k]) => k === key)?.[1]}・自己ベスト</small>
+        </h3>
+        <TeamRanking
+          ctx={ctx}
+          rows={rows}
+          fmtV={(v) => (ratio ? `${fmtRatio(v)}倍` : `${fmt2(v)}${u}`)}
+        />
+      </div>
+    </>
+  );
+}
+
+// チームランキング一覧：1位・2位・3位は文字を段階的に大きく太く、4位以下は同じ大きさ。自分の行は色付き＋「あなた」
+function TeamRanking({ ctx, rows, fmtV }: { ctx: Ctx; rows: RankRow[]; fmtV: (v: number) => string }) {
+  if (!rows.length) return <div className="empty">まだ記録がありません</div>;
+  return (
+    <ol className="trank">
+      {rows.map((r, i) => {
+        const tier = i < 3 ? `t${i + 1}` : "tn";
+        const me = r.id === ctx.me.id;
+        return (
+          <li key={r.id} className={`${tier} ${me ? "me" : ""}`}>
+            <span className="tp num">{i === 0 ? "👑" : i + 1}</span>
+            <span className="tn-name">
+              {r.name}
+              {me && <em className="you">あなた</em>}
+            </span>
+            <span className="tv num">{fmtV(r.v)}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

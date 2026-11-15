@@ -1,10 +1,10 @@
 "use client";
 
 // 選手向け画面
-//  S03 データ入力 / ランキング（S02 ホームは PlayerHome.tsx）
+//  S03 データ入力（S02 ホームとランキングは PlayerHome.tsx）
 
 import { useState } from "react";
-import { RankBoard, type Ctx } from "./Shared";
+import type { Ctx } from "./Shared";
 import {
   LIFTS,
   addDays,
@@ -410,18 +410,6 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
           </div>
         </div>
       )}
-    </>
-  );
-}
-
-/* ---------- ランキング（選手用） ---------- */
-export function RankScreen({ ctx }: { ctx: Ctx }) {
-  return (
-    <>
-      <h2 className="page">ランキング</h2>
-      <div className="card">
-        <RankBoard ctx={ctx} />
-      </div>
     </>
   );
 }

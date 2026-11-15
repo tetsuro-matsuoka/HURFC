@@ -11,7 +11,7 @@ import { EMPTY_PRACTICE, makePractice } from "@/lib/calc";
 import type { Category, Members } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
-import { InputScreen, RankScreen } from "./PlayerScreens";
+import { InputScreen } from "./PlayerScreens";
 import { PlayerHome } from "./PlayerHome";
 import { TeamScreen } from "./Dashboard";
 import { ManageScreen } from "./ManageScreen";
@@ -235,7 +235,6 @@ export default function App() {
     : [
         ["home", "ホーム", ICON.home],
         ["input", "記録する", ICON.edit],
-        ["rank", "ランキング", ICON.trophy],
       ];
 
   const screen = (() => {
@@ -244,8 +243,6 @@ export default function App() {
         return <PlayerHome ctx={ctx} />;
       case "input":
         return <InputScreen ctx={ctx} />;
-      case "rank":
-        return <RankScreen ctx={ctx} />;
       case "team":
         return <TeamScreen ctx={ctx} />;
       case "settings":
