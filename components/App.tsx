@@ -118,7 +118,8 @@ export default function App() {
   const toast = useCallback((msg: string, pr = false) => {
     setToastMsg({ msg, pr });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(null), 2600);
+    // 長い文（エラーの原因など）は読めるように長めに表示
+    toastTimer.current = setTimeout(() => setToastMsg(null), msg.length > 30 ? 7000 : 2600);
   }, []);
 
   const logout = async () => {

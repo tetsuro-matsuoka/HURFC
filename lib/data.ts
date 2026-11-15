@@ -122,8 +122,8 @@ export async function saveDaily(
     .from("daily_records")
     .upsert({ user_id: userId, date, attendance, weight, absence_reason }, { onConflict: "user_id,date" });
   if (!error) return;
-  // 欠席理由の欄（追加SQL その5）がまだ無い場合は、理由なしで保存する
-  if (error.message?.includes("absence_reason")) {
+  // 欠席理由の欄（追加SQL その5）がまだ無い／Supabase がまだ欄を認識していない場合は、理由なしで保存する
+  if (error.message?.includes("absence_reason") || error.code === "PGRST204" || error.code === "42703") {
     const { error: e2 } = await sb()
       .from("daily_records")
       .upsert({ user_id: userId, date, attendance, weight }, { onConflict: "user_id,date" });
@@ -131,6 +131,15 @@ export async function saveDaily(
     return;
   }
   throw error;
+}
+
+// 保存に失敗したときに画面に出す文（原因が分かるように、Supabase からのメッセージも添える）
+export function saveErrorText(e: unknown): string {
+  const err = e as { message?: string; code?: string } | null;
+  const msg = err?.message ?? "";
+  if (!msg || /fetch|network|Failed to/i.test(msg)) return "保存に失敗しました。通信を確認してください";
+  if (/row-level security|permission denied/i.test(msg)) return "保存に失敗しました（保存する権限がありません）。コーチに連絡してください";
+  return `保存に失敗しました（原因：${msg}${err?.code ? ` / ${err.code}` : ""}）。この文をコーチに伝えてください`;
 }
 
 // フィジカルデータの保存（同じ日付があれば上書き）

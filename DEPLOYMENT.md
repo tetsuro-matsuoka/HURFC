@@ -177,6 +177,7 @@ Claude がアプリのコードを GitHub に「プルリクエスト（変更�
 | 初期設定で「SUPABASE_SECRET_KEY が設定されていません」 | 手順5-6の③が未設定。追加して「Redeploy」 |
 | 初期設定で「データベースの準備ができていません」 | 手順3の SQL を実行する |
 | Vercel のデプロイが「Error」になる | 「Deployments」→ 失敗したものを開き、赤い文字の部分をコピーして Claude に見せてください |
+| 「毎日の記録」が保存できない | `supabase/migrations/20261116_repair_daily_records.sql` を SQL Editor で実行。最後に表示される一覧に `absence_reason` があれば OK。それでも失敗する場合は、画面に出る「原因：〜」の文を Claude に見せてください |
 | 合言葉を忘れた（コーチ） | Supabase の「Authentication」→「Users」から該当ユーザーを選び、パスワードを再設定（選手は合言葉なしなので不要） |
 | 選手管理やログイン画面で「読み込めません」と出る | データベースの更新（下の「データベースの構造を変える修正」）が未実行。`schema.sql` をもう一度「Run」する |
 
