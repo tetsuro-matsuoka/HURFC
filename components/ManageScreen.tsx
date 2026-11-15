@@ -3,13 +3,14 @@
 // 選手管理（コーチ用）
 //  ・メンバー追加（「＋ メンバーを追加」を押すと入力欄が開く）：選手は「名前・学年・ポジション」、コーチは「名前・合言葉」
 //  ・学年・FW/BK で絞り込み（ポジションから FW / BK を自動判定）
-//  ・選手の並び替え（▲▼）、学年順に並べ直す
+//  ・選手の並び替え（左の ⋮⋮ をドラッグ＆ドロップ。スマホのタッチ操作にも対応）、学年順に並べ直す
 //  ・選手の編集（名前・学年・ポジション）、メンバー削除
 // 選手は合言葉なしでログインするため、ここでの合言葉の設定・リセットはありません。
 
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
+import SortableList from "./SortableList";
 import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf } from "@/lib/calc";
 import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
 import { adminCall } from "@/lib/data";
@@ -158,14 +159,6 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
       });
   };
 
-  const move = (i: number, d: -1 | 1) => {
-    const j = i + d;
-    if (j < 0 || j >= players.length) return;
-    const ids = players.map((p) => p.id);
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-    saveOrder(ids);
-  };
-
   const sortByGrade = () => {
     if (!window.confirm("学年が上の人から順に並べ直します。手で入れ替えた順番は元に戻ります。よろしいですか？")) return;
     const ids = [...players]
@@ -242,43 +235,39 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
         </div>
         <p className="muted" style={{ marginBottom: 8 }}>
           {filtered
-            ? "絞り込み中は並び替えできません（「全学年」「FW・BK」に戻すと▲▼が使えます）。"
-            : "▲▼で順番を入れ替えられます。この順番はチーム画面・ログイン画面などでも使われます。"}
+            ? "絞り込み中は並び替えできません（「全学年」「FW・BK」に戻すと並び替えできます）。"
+            : "左の ⋮⋮ をつかんで上下に動かすと順番を入れ替えられます。この順番はチーム画面・ログイン画面などでも使われます。"}
         </p>
         {shown.length ? (
-          shown.map((m, i) => (
-            <div className="mrow" key={m.id}>
-              {!filtered && (
-              <div className="mv">
-                <button aria-label="上へ" disabled={i === 0} onClick={() => move(i, -1)}>
-                  ▲
-                </button>
-                <button aria-label="下へ" disabled={i === players.length - 1} onClick={() => move(i, 1)}>
-                  ▼
-                </button>
-              </div>
-              )}
-              <div className="mn">
-                <b>{m.name}</b>
-                <div>
-                  <span className="chip none">{m.grade ? `${m.grade}年` : "学年未設定"}</span>{" "}
-                  <span className="chip none">{m.position ?? "ポジション未設定"}</span> <UnitBadge m={m} />
+          <SortableList
+            items={shown}
+            getId={(m) => m.id}
+            disabled={filtered}
+            onReorder={(ids) => saveOrder(ids as string[])}
+            render={(m) => (
+              <>
+                <div className="mn">
+                  <b>{m.name}</b>
+                  <div>
+                    <span className="chip none">{m.grade ? `${m.grade}年` : "学年未設定"}</span>{" "}
+                    <span className="chip none">{m.position ?? "ポジション未設定"}</span> <UnitBadge m={m} />
+                  </div>
                 </div>
-              </div>
-              <div className="ma">
-                <button className="btn ghost small" onClick={() => openEdit(m)}>
-                  編集
-                </button>
-                <button
-                  className="btn ghost small"
-                  style={{ borderColor: "var(--ng)", color: "var(--ng)" }}
-                  onClick={() => setDialog({ type: "del", id: m.id })}
-                >
-                  削除
-                </button>
-              </div>
-            </div>
-          ))
+                <div className="ma">
+                  <button className="btn ghost small" onClick={() => openEdit(m)}>
+                    編集
+                  </button>
+                  <button
+                    className="btn ghost small"
+                    style={{ borderColor: "var(--ng)", color: "var(--ng)" }}
+                    onClick={() => setDialog({ type: "del", id: m.id })}
+                  >
+                    削除
+                  </button>
+                </div>
+              </>
+            )}
+          />
         ) : (
           <div className="empty">{players.length ? "該当する選手がいません" : "選手が登録されていません"}</div>
         )}

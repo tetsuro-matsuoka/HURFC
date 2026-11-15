@@ -1,13 +1,14 @@
 "use client";
 
 // 項目設定（コーチ用）
-//  ・測定項目の追加・名前/単位/カテゴリの変更・削除・並び替え（↑↓）
+//  ・測定項目の追加・名前/単位/カテゴリの変更・削除・並び替え（左の ⋮⋮ をドラッグ＆ドロップ）
 //    → 選手の「記録する → 測定」と、チームダッシュボードの選手一覧に自動で反映（並び順も）
 //  ・筋トレ遂行度の評価基準（説明文）の編集
 
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
+import SortableList from "./SortableList";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
 import { isLinked, metricsOf, unitOf } from "@/lib/calc";
 import type { MetricCategory, MetricDef } from "@/lib/types";
@@ -66,12 +67,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
     }
   };
 
-  // 並び替え：同じカテゴリの中で入れ替えて、カテゴリ内の順番を保存
-  const move = (list: MetricDef[], i: number, d: -1 | 1) => {
-    const ids = list.map((x) => x.id);
-    [ids[i], ids[i + d]] = [ids[i + d], ids[i]];
-    run(() => saveMetricOrder(ids), "並び順を変更しました");
-  };
+  // 並び替え：ドロップした時点で、カテゴリ内の新しい順番を保存（失敗したら元の順番に戻る）
+  const reorder = (ids: number[]) => run(() => saveMetricOrder(ids), "並び順を保存しました");
 
   const clean = (v: MetricInput): MetricInput => ({ ...v, name: v.name.trim(), unit: v.unit.trim() });
   const dup = (name: string, exceptId?: number) => ctx.metrics.some((x) => x.id !== exceptId && x.name === name);
@@ -92,7 +89,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>測定項目</h3>
         <p className="muted" style={{ marginBottom: 8 }}>
-          ここにある項目が、チームダッシュボードの選手一覧と、選手の「記録する → 測定」に、この順番で表示されます。↑↓で並び替えできます。
+          ここにある項目が、チームダッシュボードの選手一覧と、選手の「記録する → 測定」に、この順番で表示されます。左の ⋮⋮ をつかんで上下に動かすと並び替えできます。
         </p>
         {CATEGORIES.map((c) => {
           const list = metricsOf(ctx.metrics, c);
@@ -102,16 +99,12 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                 {c}
               </div>
               {list.length ? (
-                list.map((x, i) => (
-                  <div className="mrow" key={x.id}>
-                    <div className="mv">
-                      <button aria-label="上へ" disabled={busy || i === 0} onClick={() => move(list, i, -1)}>
-                        ↑
-                      </button>
-                      <button aria-label="下へ" disabled={busy || i === list.length - 1} onClick={() => move(list, i, 1)}>
-                        ↓
-                      </button>
-                    </div>
+                <SortableList
+                  items={list}
+                  getId={(x) => x.id}
+                  onReorder={(ids) => reorder(ids as number[])}
+                  render={(x) => (
+                  <>
                     <div className="mn">
                       <b>
                         {x.name}
@@ -138,8 +131,9 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                         削除
                       </button>
                     </div>
-                  </div>
-                ))
+                  </>
+                  )}
+                />
               ) : (
                 <div className="muted" style={{ padding: "8px 0" }}>
                   項目がありません
