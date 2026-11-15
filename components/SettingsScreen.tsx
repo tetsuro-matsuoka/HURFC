@@ -1,14 +1,15 @@
 "use client";
 
 // 項目設定（コーチ用）
-//  ・測定項目の追加・名前/単位/カテゴリの変更・削除
-//    → 選手の「記録する → 測定」と、チームダッシュボードの選手一覧に自動で反映
+//  ・測定項目の追加・名前/単位/カテゴリの変更・削除・並び替え（↑↓）
+//    → 選手の「記録する → 測定」と、チームダッシュボードの選手一覧に自動で反映（並び順も）
 //  ・筋トレ遂行度の評価基準（説明文）の編集
 
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
-import { addMetric, deleteMetric, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
+import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
+import { isLinked, metricsOf, unitOf } from "@/lib/calc";
 import type { MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
@@ -21,7 +22,7 @@ function MetricFields({ v, set }: { v: MetricInput; set: (v: MetricInput) => voi
       <label className="f">項目名</label>
       <input className="t" value={v.name} onChange={(e) => set({ ...v, name: e.target.value })} required placeholder="例：30mスプリント" />
       <label className="f">単位</label>
-      <input className="t" value={v.unit} onChange={(e) => set({ ...v, unit: e.target.value })} placeholder="例：秒、kg、%、cm" />
+      <input className="t" value={v.unit} onChange={(e) => set({ ...v, unit: e.target.value })} placeholder="例：秒、kg、%、cm（不要なら空欄）" />
       <label className="f">カテゴリ</label>
       <div className="seg" style={{ marginBottom: 0 }}>
         {CATEGORIES.map((c) => (
@@ -65,6 +66,13 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
     }
   };
 
+  // 並び替え：同じカテゴリの中で入れ替えて、カテゴリ内の順番を保存
+  const move = (list: MetricDef[], i: number, d: -1 | 1) => {
+    const ids = list.map((x) => x.id);
+    [ids[i], ids[i + d]] = [ids[i + d], ids[i]];
+    run(() => saveMetricOrder(ids), "並び順を変更しました");
+  };
+
   const clean = (v: MetricInput): MetricInput => ({ ...v, name: v.name.trim(), unit: v.unit.trim() });
   const dup = (name: string, exceptId?: number) => ctx.metrics.some((x) => x.id !== exceptId && x.name === name);
 
@@ -84,28 +92,36 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       <div className="card">
         <h3>測定項目</h3>
         <p className="muted" style={{ marginBottom: 8 }}>
-          ここで追加した項目は、選手の「記録する → 測定」と、チームダッシュボードの選手一覧に自動で表示されます。
-          体重（毎日の記録）とBig3（ベンチプレス・スクワット・デッドリフト）はアプリの基本項目のため、ここには表示されません。
+          ここにある項目が、チームダッシュボードの選手一覧と、選手の「記録する → 測定」に、この順番で表示されます。↑↓で並び替えできます。
         </p>
         {CATEGORIES.map((c) => {
-          const list = ctx.metrics.filter((x) => x.category === c);
+          const list = metricsOf(ctx.metrics, c);
           return (
             <div key={c} style={{ marginTop: 12 }}>
               <div className="muted" style={{ fontWeight: 700 }}>
                 {c}
               </div>
               {list.length ? (
-                list.map((x) => (
+                list.map((x, i) => (
                   <div className="mrow" key={x.id}>
+                    <div className="mv">
+                      <button aria-label="上へ" disabled={busy || i === 0} onClick={() => move(list, i, -1)}>
+                        ↑
+                      </button>
+                      <button aria-label="下へ" disabled={busy || i === list.length - 1} onClick={() => move(list, i, 1)}>
+                        ↓
+                      </button>
+                    </div>
                     <div className="mn">
                       <b>
                         {x.name}
-                        {x.unit && <span className="muted">（{x.unit}）</span>}
+                        {unitOf(x) && <span className="muted">（{unitOf(x)}）</span>}
                       </b>
                       <div className="muted" style={{ fontSize: 12 }}>
                         {x.better === "low" ? "小さいほど良い" : "大きいほど良い"}
-                        {x.key === "height" && " ・ BMI・FFMIの計算に使用"}
-                        {x.key === "body_fat" && " ・ LBM・FFMIの計算に使用"}
+                        {x.key === "weight" && " ・ 「毎日の記録」の体重を使用"}
+                        {(x.key === "bench_press" || x.key === "squat" || x.key === "deadlift") && " ・ 「測定」のBig3入力を使用"}
+                        {x.key === "big3_total" && " ・ Big3の自己ベストから自動計算"}
                       </div>
                     </div>
                     <div className="ma">
@@ -175,8 +191,9 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       {dialog?.type === "del" && (
         <Sheet title="項目を削除" onClose={() => setDialog(null)}>
           <p>
-            「{dialog.def.name}」と、全選手のこの項目の記録をすべて削除します。元に戻せません。
-            {(dialog.def.key === "height" || dialog.def.key === "body_fat") && " BMI・LBM・FFMIが計算できなくなります。"}
+            {isLinked(dialog.def)
+              ? `「${dialog.def.name}」を選手一覧などの表示から外します。体重・Big3の記録そのものは消えません（ホーム画面などでは引き続き使われます）。`
+              : `「${dialog.def.name}」と、全選手のこの項目の記録をすべて削除します。元に戻せません。`}
           </p>
           <button
             className="btn"

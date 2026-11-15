@@ -7,8 +7,10 @@ import LineChart from "./LineChart";
 import type { ReactNode } from "react";
 import {
   LIFTS,
-  METRICS,
   attendRate,
+  isLinked,
+  metricsOf,
+  unitOf,
   fmt2,
   metricRanking,
   metricSeries,
@@ -24,7 +26,7 @@ import {
   rowTotal,
   weights,
 } from "@/lib/calc";
-import type { Member, MetricDef, Members, MetricKey } from "@/lib/types";
+import type { Member, MetricDef, Members } from "@/lib/types";
 
 export type View = "home" | "input" | "rank" | "team" | "settings" | "manage";
 
@@ -42,36 +44,32 @@ export type Ctx = {
 };
 
 // ランキング（種目の切り替えボタン付き）
-// Big3・体重比に加えて、項目設定で追加した「フィジカル」の項目も選べる
+// 「項目設定」のフィジカルの項目（並び順どおり）＋ 体重比（Big3合計÷体重）
 export function RankBoard({ ctx }: { ctx: Ctx }) {
-  const [key, setKey] = useState<string>("total");
-  const custom = ctx.metrics.filter((x) => x.category === "フィジカル");
-  const def = custom.find((x) => "m" + x.id === key);
-  const rows: RankRow[] = def ? metricRanking(ctx.members, def) : ranking(ctx.members, key as MetricKey);
+  const defs = metricsOf(ctx.metrics, "フィジカル");
+  const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
+  const [sel, setSel] = useState<string | null>(null);
+  const key = sel ?? (first ? "m" + first.id : "ratio");
+  const def = defs.find((x) => "m" + x.id === key);
+  const rows: RankRow[] = def ? metricRanking(ctx.members, def) : ranking(ctx.members, "ratio");
   const fmtV = (v: number) =>
     def ? (
       <>
         {fmt2(v)}
-        <small> {def.unit}</small>
+        <small> {unitOf(def)}</small>
       </>
-    ) : key === "ratio" ? (
-      "×" + v.toFixed(2)
     ) : (
-      <>
-        {fmt0(v)}
-        <small> kg</small>
-      </>
+      "×" + v.toFixed(2)
     );
+  const chips: [string, string][] = [...defs.map((x) => ["m" + x.id, x.name] as [string, string]), ["ratio", "体重比"]];
   return (
     <>
       <div className="chips">
-        {[...METRICS.map(([k, l]) => [k, l] as [string, string]), ...custom.map((x) => ["m" + x.id, x.name] as [string, string])].map(
-          ([k, l]) => (
-            <button key={k} className={key === k ? "on" : ""} onClick={() => setKey(k)}>
-              {l}
-            </button>
-          ),
-        )}
+        {chips.map(([k, l]) => (
+          <button key={k} className={key === k ? "on" : ""} onClick={() => setSel(k)}>
+            {l}
+          </button>
+        ))}
       </div>
       <RankRows ctx={ctx} rows={rows} fmtV={fmtV} low={def?.better === "low"} />
       <p className="muted" style={{ marginTop: 8 }}>
@@ -183,8 +181,9 @@ export function PlayerModal({ m, metrics, onClose }: { m: Member; metrics: Metri
             color="var(--ok)"
           />
         </div>
-        {metrics.map((def) => {
-          const s = metricSeries(m, def.id);
+        {/* 体重・Big3は上のグラフで表示しているので、ここではそれ以外の項目 */}
+        {metrics.filter((def) => !isLinked(def)).map((def) => {
+          const s = metricSeries(m, def);
           if (!s.length) return null;
           return (
             <div className="card" key={def.id}>
@@ -192,7 +191,7 @@ export function PlayerModal({ m, metrics, onClose }: { m: Member; metrics: Metri
                 {def.name}{" "}
                 <small>
                   最新 {fmt2(s[s.length - 1].v)}
-                  {def.unit}（{md(s[s.length - 1].d)}）
+                  {unitOf(def)}（{md(s[s.length - 1].d)}）
                 </small>
               </h3>
               <LineChart pts={s} h={120} color="var(--navy)" />

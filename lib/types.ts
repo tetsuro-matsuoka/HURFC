@@ -28,7 +28,7 @@ export type Member = {
 export type MetricCategory = "体組成" | "フィジカル";
 export type MetricDef = {
   id: number;
-  key: string | null; // height=身長 / body_fat=体脂肪率（BMI・LBM・FFMIの計算に使う）
+  key: string | null; // weight=体重 / bench_press・squat・deadlift / big3_total（今までの入力欄の値を使う項目の目印）
   name: string;
   unit: string;
   category: MetricCategory;

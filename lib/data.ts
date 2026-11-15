@@ -151,6 +151,12 @@ export async function updateMetric(id: number, v: MetricInput) {
   const { error } = await sb().from("metrics").update(v).eq("id", id);
   if (error) throw error;
 }
+// 項目の並び順を保存（ids の順に 0, 1, 2, …）
+export async function saveMetricOrder(ids: number[]) {
+  const res = await Promise.all(ids.map((id, i) => sb().from("metrics").update({ sort_order: i }).eq("id", id)));
+  const bad = res.find((r) => r.error);
+  if (bad?.error) throw bad.error;
+}
 export async function deleteMetric(id: number) {
   const { error } = await sb().from("metrics").delete().eq("id", id);
   if (error) throw error;
