@@ -20,6 +20,20 @@ export type Member = {
   sort_order: number | null; // 一覧での並び順（小さいほど上）
   daily: Record<string, DailyRec>; // キーは日付 "YYYY-MM-DD"
   physical: Record<string, PhysRec>;
+  metrics: Record<number, Record<string, number>>; // 測定項目ごとの記録 { 項目ID: { 日付: 数値 } }
+  training: Record<string, number>; // 筋トレ遂行度 { 週の月曜日: 0〜10 }
+};
+
+// 測定項目（コーチが「項目設定」で追加・変更・削除できる）
+export type MetricCategory = "体組成" | "フィジカル";
+export type MetricDef = {
+  id: number;
+  key: string | null; // height=身長 / body_fat=体脂肪率（BMI・LBM・FFMIの計算に使う）
+  name: string;
+  unit: string;
+  category: MetricCategory;
+  better: "high" | "low"; // 大きいほど良い / 小さいほど良い
+  sort_order: number;
 };
 
 export type Members = Record<string, Member>;

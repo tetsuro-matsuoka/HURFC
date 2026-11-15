@@ -6,13 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { configOk, supabase } from "@/lib/supabase";
-import { loadAll } from "@/lib/data";
+import { loadAll, loadMeta, type Meta } from "@/lib/data";
 import type { Members } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
 import { InputScreen, PlayerHome, RankScreen } from "./PlayerScreens";
-import { PhysicalScreen, TeamScreen } from "./CoachScreens";
+import { TeamScreen } from "./Dashboard";
 import { ManageScreen } from "./ManageScreen";
+import { SettingsScreen } from "./SettingsScreen";
 
 const ICON = {
   home: (
@@ -40,6 +41,12 @@ const ICON = {
       <path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8 21h8" />
     </svg>
   ),
+  gear: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+    </svg>
+  ),
   users: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -51,6 +58,7 @@ const ICON = {
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined = 確認中
   const [members, setMembers] = useState<Members | null>(null);
+  const [meta, setMeta] = useState<Meta>({ metrics: [], settings: {} });
   const [loadErr, setLoadErr] = useState("");
   const [view, setView] = useState<View | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -69,7 +77,9 @@ export default function App() {
 
   const reload = useCallback(async () => {
     try {
-      setMembers(await loadAll());
+      const [mem, mt] = await Promise.all([loadAll(), loadMeta()]);
+      setMeta(mt);
+      setMembers(mem);
       setLoadErr("");
     } catch {
       setLoadErr("データを読み込めませんでした。通信状況を確認してください。");
@@ -160,12 +170,12 @@ export default function App() {
     setPlayerId(null);
     window.scrollTo(0, 0);
   };
-  const ctx: Ctx = { members, me, readOnly: false, reload, toast, openPlayer: setPlayerId, go };
+  const ctx: Ctx = { members, metrics: meta.metrics, settings: meta.settings, me, readOnly: false, reload, toast, openPlayer: setPlayerId, go };
 
   const tabs: [View, string, ReactNode][] = coach
     ? [
         ["team", "チーム", ICON.team],
-        ["physical", "フィジカル", ICON.trophy],
+        ["settings", "項目設定", ICON.gear],
         ["manage", "選手管理", ICON.users],
       ]
     : [
@@ -184,8 +194,8 @@ export default function App() {
         return <RankScreen ctx={ctx} />;
       case "team":
         return <TeamScreen ctx={ctx} />;
-      case "physical":
-        return <PhysicalScreen ctx={ctx} />;
+      case "settings":
+        return <SettingsScreen ctx={ctx} />;
       case "manage":
         return <ManageScreen ctx={ctx} />;
     }
@@ -218,7 +228,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      {modalMember && <PlayerModal m={modalMember} onClose={() => setPlayerId(null)} />}
+      {modalMember && <PlayerModal m={modalMember} metrics={meta.metrics} onClose={() => setPlayerId(null)} />}
       {toastEl}
     </div>
   );

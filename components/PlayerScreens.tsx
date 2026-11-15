@@ -5,11 +5,16 @@
 
 import { useState } from "react";
 import LineChart from "./LineChart";
-import { RankList, type Ctx } from "./Shared";
+import { RankBoard, type Ctx } from "./Shared";
 import {
   LIFTS,
-  METRICS,
+  addDays,
   attendRate,
+  fmt2,
+  metricBest,
+  metricLatest,
+  weekLabel,
+  weekStart,
   fmt0,
   fmt1,
   latestWeight,
@@ -23,8 +28,8 @@ import {
   weightAgo,
   weights,
 } from "@/lib/calc";
-import { saveDaily, savePhysical } from "@/lib/data";
-import type { Attendance, LiftKey, MetricKey, PhysRec } from "@/lib/types";
+import { saveDaily, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
+import type { Attendance, LiftKey, PhysRec } from "@/lib/types";
 
 /* ---------- S02 選手ダッシュボード ---------- */
 export function PlayerHome({ ctx }: { ctx: Ctx }) {
@@ -145,7 +150,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
             </div>
           )}
           <p className="muted" style={{ marginTop: 8 }}>
-            {lastP ? `最終測定 ${md(lastP.d)}` : "「記録する」→「フィジカル測定」から測定値を入力できます"}
+            {lastP ? `最終測定 ${md(lastP.d)}` : "「記録する」→「測定」から測定値を入力できます"}
           </p>
         </div>
       </div>
@@ -155,7 +160,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 
 /* ---------- S03 データ入力 ---------- */
 export function InputScreen({ ctx }: { ctx: Ctx }) {
-  const [tab, setTab] = useState<"daily" | "phys">("daily");
+  const [tab, setTab] = useState<"daily" | "training" | "phys">("daily");
   return (
     <>
       <h2 className="page">記録する</h2>
@@ -163,11 +168,16 @@ export function InputScreen({ ctx }: { ctx: Ctx }) {
         <button className={tab === "daily" ? "on" : ""} onClick={() => setTab("daily")}>
           毎日の記録
         </button>
+        <button className={tab === "training" ? "on" : ""} onClick={() => setTab("training")}>
+          筋トレ
+        </button>
         <button className={tab === "phys" ? "on" : ""} onClick={() => setTab("phys")}>
-          フィジカル測定
+          測定
         </button>
       </div>
-      {tab === "daily" ? <DailyForm ctx={ctx} /> : <PhysForm ctx={ctx} />}
+      {tab === "daily" && <DailyForm ctx={ctx} />}
+      {tab === "training" && <TrainingForm ctx={ctx} />}
+      {tab === "phys" && <PhysForm ctx={ctx} />}
     </>
   );
 }
@@ -244,6 +254,69 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   );
 }
 
+// 今週の筋トレ遂行度（0〜10をタップするだけで保存）
+function TrainingForm({ ctx }: { ctx: Ctx }) {
+  const m = ctx.me;
+  const cur = weekStart(today());
+  const [ws, setWs] = useState(cur);
+  const [busy, setBusy] = useState(false);
+  const score = m.training[ws];
+  const criteria = ctx.settings.training_criteria;
+
+  const pick = async (n: number) => {
+    if (busy || ctx.readOnly) return;
+    setBusy(true);
+    try {
+      await saveTraining(m.id, ws, n);
+      await ctx.reload();
+      ctx.toast(`筋トレ遂行度 ${n} を記録しました ✓`);
+    } catch {
+      ctx.toast("保存に失敗しました。通信を確認してください");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="card">
+        <div className="datebar" style={{ marginBottom: 6 }}>
+          <button onClick={() => setWs(addDays(ws, -7))} aria-label="前の週">
+            ‹
+          </button>
+          <b style={{ flex: 1, textAlign: "center" }}>
+            {ws === cur ? "今週" : weekLabel(ws)}の筋トレ遂行度
+          </b>
+          <button onClick={() => ws < cur && setWs(addDays(ws, 7))} disabled={ws >= cur} style={ws >= cur ? { opacity: 0.3 } : undefined} aria-label="次の週">
+            ›
+          </button>
+        </div>
+        <p className="muted" style={{ textAlign: "center" }}>
+          {weekLabel(ws)} ・ {score == null ? "未入力" : `記録済み：${score}`}
+        </p>
+        <div className="score11">
+          {Array.from({ length: 11 }, (_, n) => (
+            <button key={n} className={score === n ? "on" : ""} onClick={() => pick(n)} disabled={busy}>
+              {n}
+            </button>
+          ))}
+        </div>
+        <p className="muted" style={{ textAlign: "center", marginTop: 8 }}>
+          数字をタップすると、そのまま記録されます（あとから変更できます）
+        </p>
+      </div>
+      {criteria && (
+        <div className="card">
+          <h3>評価基準</h3>
+          <p className="muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
+            {criteria}
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
 function PhysForm({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
   const p = phys(m),
@@ -253,8 +326,13 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
     const v = (k: LiftKey) => (src && src[k] != null ? String(src[k]) : "");
     return { bench_press: v("bench_press"), squat: v("squat"), deadlift: v("deadlift") };
   };
+  // 項目設定で追加した項目（その日の記録があれば表示）
+  const defs = ctx.metrics;
+  const initialX = (d: string): Record<number, string> =>
+    Object.fromEntries(defs.map((x) => [x.id, m.metrics[x.id]?.[d] != null ? String(m.metrics[x.id][d]) : ""]));
   const [date, setDate] = useState(today());
   const [vals, setVals] = useState<Record<LiftKey, string>>(initial(today()));
+  const [xv, setXv] = useState<Record<number, string>>(initialX(today()));
   const [busy, setBusy] = useState(false);
 
   const step = (k: LiftKey, n: number) =>
@@ -269,17 +347,35 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
       if (n != null && (isNaN(n) || n < 0 || n > 500)) bad = true;
       rec[k] = n;
     });
+    const xs = defs.map((x) => {
+      const t = (xv[x.id] ?? "").trim();
+      const n = t === "" ? null : parseFloat(t);
+      if (n != null && (isNaN(n) || n < 0 || n > 100000)) bad = true;
+      return { metricId: x.id, value: n };
+    });
     if (bad) return ctx.toast("数値を確認してください");
-    if (LIFTS.every(([k]) => rec[k] == null)) return ctx.toast("少なくとも1種目を入力してください");
+    const hasLift = LIFTS.some(([k]) => rec[k] != null);
+    // 空欄にした項目は、その日にもともと記録があった場合だけ削除する
+    const xChanged = xs.filter((x) => x.value != null || m.metrics[x.metricId]?.[date] != null);
+    if (!hasLift && !xs.some((x) => x.value != null)) return ctx.toast("少なくとも1項目を入力してください");
     setBusy(true);
     try {
-      await savePhysical(m.id, date, rec);
+      if (hasLift) await savePhysical(m.id, date, rec);
+      if (xChanged.length) await saveMetricValues(m.id, date, xChanged);
       await ctx.reload();
       const prs = LIFTS.filter(([k]) => {
         const v = rec[k];
         const best = mx[k];
         return v != null && (best == null || v > best);
       }).map((l) => l[1]);
+      // 項目設定の「フィジカル」項目も自己ベスト更新を判定
+      defs
+        .filter((x) => x.category === "フィジカル")
+        .forEach((x) => {
+          const v = xs.find((y) => y.metricId === x.id)?.value;
+          const best = metricBest(m, x);
+          if (v != null && (best == null || (x.better === "low" ? v < best : v > best))) prs.push(x.name);
+        });
       if (prs.length) ctx.toast("🔥 自己ベスト更新！ " + prs.join("・"), true);
       else ctx.toast("保存しました ✓");
       ctx.go("home");
@@ -304,6 +400,7 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
             if (!e.target.value) return;
             setDate(e.target.value);
             setVals(initial(e.target.value));
+            setXv(initialX(e.target.value));
           }}
         />
         {LIFTS.map(([k, l]) => (
@@ -325,6 +422,45 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
             <div className="prev">自己ベスト {fmt0(mx[k])}kg</div>
           </div>
         ))}
+        {(["体組成", "フィジカル"] as const).map((c) => {
+          const list = defs.filter((x) => x.category === c);
+          if (!list.length) return null;
+          return (
+            <div key={c}>
+              <div className="muted" style={{ fontWeight: 700, marginTop: 22, borderTop: "1px dashed var(--line)", paddingTop: 12 }}>
+                {c}
+              </div>
+              {list.map((x) => {
+                const last = metricLatest(m, x.id);
+                const best = c === "フィジカル" ? metricBest(m, x) : null;
+                return (
+                  <div key={x.id}>
+                    <label className="f">{x.name}</label>
+                    <div className="stepper">
+                      <input
+                        className="t"
+                        type="number"
+                        inputMode="decimal"
+                        step="any"
+                        value={xv[x.id] ?? ""}
+                        onChange={(e) => setXv((cur) => ({ ...cur, [x.id]: e.target.value }))}
+                        style={{ fontSize: 24 }}
+                      />
+                      <span className="unit" style={{ width: "auto", minWidth: 24 }}>
+                        {x.unit}
+                      </span>
+                    </div>
+                    <div className="prev">
+                      {last ? `前回 ${fmt2(last.v)}${x.unit}（${md(last.d)}）` : "まだ記録がありません"}
+                      {best != null && ` ・ 自己ベスト ${fmt2(best)}${x.unit}`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+        <p className="muted" style={{ marginTop: 14 }}>測った項目だけ入力すればOKです（空欄の項目は記録されません）。</p>
         <button className="btn" onClick={save} disabled={busy || ctx.readOnly}>
           {busy ? "保存中…" : "保存する"}
         </button>
@@ -371,23 +507,12 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
 
 /* ---------- ランキング（選手用） ---------- */
 export function RankScreen({ ctx }: { ctx: Ctx }) {
-  const [metric, setMetric] = useState<MetricKey>("total");
   return (
     <>
       <h2 className="page">ランキング</h2>
-      <div className="seg">
-        {METRICS.map(([k, l]) => (
-          <button key={k} className={metric === k ? "on" : ""} onClick={() => setMetric(k)} style={{ fontSize: 13, padding: "10px 2px" }}>
-            {l}
-          </button>
-        ))}
-      </div>
       <div className="card">
-        <RankList ctx={ctx} metric={metric} />
+        <RankBoard ctx={ctx} />
       </div>
-      <p className="muted">
-        自己ベスト（MAX）で比較しています。{metric === "ratio" ? "体重比 = Big3合計 ÷ 最新の体重" : ""}
-      </p>
     </>
   );
 }
