@@ -146,9 +146,6 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 
 /* 選手管理の一覧（スマホでも1行に収まるように） */
 .mrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
-.mrow .mv{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-.mrow .mv button{width:34px;height:28px;border-radius:8px;background:var(--bg);font-size:12px;color:var(--navy)}
-.mrow .mv button:disabled{opacity:.25}
 .mrow .mn{flex:1;min-width:0}
 .mrow .mn b{display:block;font-size:15px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .ma{display:flex;gap:6px;flex-shrink:0}
@@ -215,3 +212,12 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .chip.fw{background:#e3edf8;color:#1d4f86}
 .chip.bk{background:#fff1d6;color:#a96a00}
 .chips .chip-sep{flex-shrink:0;width:1px;background:var(--line);margin:4px 2px}
+
+/* ドラッグ＆ドロップの並び替え */
+.sortlist{position:relative}
+.srow{background:#fff;position:relative}
+.grip{flex-shrink:0;width:34px;height:44px;border-radius:8px;color:var(--sub);font-size:16px;letter-spacing:-3px;line-height:44px;text-align:center;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.grip:active{cursor:grabbing;background:var(--bg)}
+/* ドラッグ中の行：少し浮き上がって影がつく */
+.srow.dragging{z-index:5;background:#eef3fb;box-shadow:0 8px 24px rgba(19,34,56,.22);border-radius:10px;border-bottom-color:transparent;transform-origin:center}
+.srow.dragging .grip{color:var(--navy);background:#dbe6f5;cursor:grabbing}
