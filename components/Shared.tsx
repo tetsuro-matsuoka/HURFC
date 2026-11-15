@@ -113,8 +113,8 @@ export function RankBoard({ ctx }: { ctx: Ctx }) {
   );
 }
 
-// ランキングの行
-function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode; low?: boolean }) {
+// ランキングの行（『フィジカル』画面でも使用）
+export function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode; low?: boolean }) {
   if (!rows.length) return <div className="empty">測定データがありません</div>;
   const top = rows[0].v;
   const coach = ctx.me.role === "coach";

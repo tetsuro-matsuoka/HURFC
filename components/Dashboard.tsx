@@ -5,31 +5,26 @@
 //  下部：選手一覧（PlayerTable.tsx）。4つのどれも選んでいないとき（トップ）だけ表示
 //  選択中のボタンをもう一度押すか、「← 選手一覧（トップ）に戻る」でトップに戻る
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import LineChart from "./LineChart";
 import PlayerTable from "./PlayerTable";
 import BodyPanel from "./BodyPanel";
-import { RankBoard, type Ctx } from "./Shared";
+import PhysicalPanel from "./PhysicalPanel";
+import type { Ctx } from "./Shared";
 import {
   addDays,
   addMonths,
   fmt0,
   fmt1,
-  fmt2,
   latestWeight,
   maxes,
   md,
-  metricBest,
-  metricRatio,
-  fmtRatio,
-  metricsOf,
   monthAttendance,
   absenceSummary,
   attendLabel,
   dayKind,
   practiceCount,
-  phys,
   playersOf,
   recentWeeks,
   teamTrainingAvg,
@@ -39,7 +34,6 @@ import {
   weekStart,
   ymLabel,
   ymOf,
-  unitOf,
 } from "@/lib/calc";
 import type { Member } from "@/lib/types";
 
@@ -332,59 +326,5 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         </div>
       </div>
     </>
-  );
-}
-
-/* ---------- フィジカル ---------- */
-// 自己ベスト一覧の列は「項目設定」のフィジカルの項目（並び順どおり）
-function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
-  const defs = metricsOf(ctx.metrics, "フィジカル");
-  return (
-    <div className="grid two">
-      <div className="card">
-        <h3>ランキング</h3>
-        <RankBoard ctx={ctx} />
-      </div>
-      <div className="card">
-        <h3>
-          自己ベスト一覧 <small>名前をタップで推移グラフ</small>
-        </h3>
-        <div className="scroll">
-          <table className="tbl">
-            <tbody>
-              <tr>
-                <th>選手</th>
-                {defs.map((x) => (
-                  <Fragment key={x.id}>
-                    <th className="r">
-                      {x.name}
-                      {unitOf(x) && `(${unitOf(x)})`}
-                    </th>
-                    {/* 体重比が ON の項目は、すぐ右に体重比の列 */}
-                    {x.show_ratio && <th className="r ratio">{x.name}体重比</th>}
-                  </Fragment>
-                ))}
-                <th className="r">最終測定</th>
-              </tr>
-              {ps.map((m) => {
-                const p = phys(m);
-                return (
-                  <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
-                    <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
-                    {defs.map((d) => (
-                      <Fragment key={d.id}>
-                        <td className="r num">{fmt2(metricBest(m, d))}</td>
-                        {d.show_ratio && <td className="r num ratio">{fmtRatio(metricRatio(m, d))}</td>}
-                      </Fragment>
-                    ))}
-                    <td className="r muted">{p.length ? md(p[p.length - 1].d) : "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
   );
 }
