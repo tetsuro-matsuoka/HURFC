@@ -11,8 +11,10 @@ import {
   addDays,
   attendRate,
   fmt2,
+  isLinked,
   metricBest,
   metricLatest,
+  unitOf,
   weekLabel,
   weekStart,
   fmt0,
@@ -327,7 +329,10 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
     return { bench_press: v("bench_press"), squat: v("squat"), deadlift: v("deadlift") };
   };
   // 項目設定で追加した項目（その日の記録があれば表示）
-  const defs = ctx.metrics;
+  // 入力欄を出すのは、体重・Big3（専用の入力欄あり）以外の項目。並び順は項目設定どおり
+  const defs = ctx.metrics.filter((x) => !isLinked(x));
+  // Big3の名前は項目設定で変更した名前を使う
+  const liftName = (k: LiftKey, l: string) => ctx.metrics.find((x) => x.key === k)?.name ?? l;
   const initialX = (d: string): Record<number, string> =>
     Object.fromEntries(defs.map((x) => [x.id, m.metrics[x.id]?.[d] != null ? String(m.metrics[x.id][d]) : ""]));
   const [date, setDate] = useState(today());
@@ -367,7 +372,7 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
         const v = rec[k];
         const best = mx[k];
         return v != null && (best == null || v > best);
-      }).map((l) => l[1]);
+      }).map(([k, l]) => liftName(k, l));
       // 項目設定の「フィジカル」項目も自己ベスト更新を判定
       defs
         .filter((x) => x.category === "フィジカル")
@@ -405,7 +410,7 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
         />
         {LIFTS.map(([k, l]) => (
           <div key={k}>
-            <label className="f">{l}</label>
+            <label className="f">{liftName(k, l)}</label>
             <div className="stepper">
               <button onClick={() => step(k, -2.5)}>−</button>
               <input
@@ -431,7 +436,7 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
                 {c}
               </div>
               {list.map((x) => {
-                const last = metricLatest(m, x.id);
+                const last = metricLatest(m, x);
                 const best = c === "フィジカル" ? metricBest(m, x) : null;
                 return (
                   <div key={x.id}>
@@ -447,12 +452,12 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
                         style={{ fontSize: 24 }}
                       />
                       <span className="unit" style={{ width: "auto", minWidth: 24 }}>
-                        {x.unit}
+                        {unitOf(x)}
                       </span>
                     </div>
                     <div className="prev">
-                      {last ? `前回 ${fmt2(last.v)}${x.unit}（${md(last.d)}）` : "まだ記録がありません"}
-                      {best != null && ` ・ 自己ベスト ${fmt2(best)}${x.unit}`}
+                      {last ? `前回 ${fmt2(last.v)}${unitOf(x)}（${md(last.d)}）` : "まだ記録がありません"}
+                      {best != null && ` ・ 自己ベスト ${fmt2(best)}${unitOf(x)}`}
                     </div>
                   </div>
                 );

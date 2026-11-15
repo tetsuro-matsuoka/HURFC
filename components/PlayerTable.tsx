@@ -1,14 +1,14 @@
 "use client";
 
 // 選手一覧（チームダッシュボード下部）
-//  ・左の「名前・学年・ポジション」は横にスクロールしても固定
+//  ・左の「名前」は横にスクロールしても固定（学年・ポジションは一緒にスクロール）
 //  ・見出しはカテゴリごとに色分け（基本情報 / 体組成指標 / 出欠・筋トレ / フィジカル指標）
 //  ・学年の絞り込み、全データのCSVダウンロード
-//  ・項目設定で追加した項目は自動で列に追加される
+//  ・指標の列は「項目設定」に登録された項目だけ（並び順も項目設定どおり）
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { GRADES, LIFTS, attendRate, bodyComp, fmt0, fmt1, fmt2, maxes, metricBest, metricLatest, playersOf, today, trainingAvg } from "@/lib/calc";
+import { GRADES, attendRate, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf } from "@/lib/calc";
 import type { Member } from "@/lib/types";
 
 type Group = "body" | "attend" | "phys";
@@ -16,22 +16,18 @@ type Col = { key: string; group: Group; label: string; unit: string; get: (m: Me
 
 const GROUP_LABEL: Record<Group, string> = { body: "体組成指標", attend: "出欠・筋トレ", phys: "フィジカル指標" };
 
-// 表示する列（項目設定の内容から組み立てる）
+// 表示する列（項目設定の内容と並び順から組み立てる）
+//  体組成：最新値 / フィジカル：自己ベスト / 出欠・筋トレ：アプリで集計
 function buildCols(ctx: Ctx): Col[] {
-  const body = ctx.metrics.filter((x) => x.category === "体組成");
-  const physDefs = ctx.metrics.filter((x) => x.category === "フィジカル");
-  const bc = (m: Member) => bodyComp(m, ctx.metrics);
   return [
-    { key: "weight", group: "body", label: "体重", unit: "kg", get: (m) => bc(m).weight, fmt: fmt1 },
-    ...body.map((d): Col => ({ key: "m" + d.id, group: "body", label: d.name, unit: d.unit, get: (m) => metricLatest(m, d.id)?.v ?? null, fmt: fmt2 })),
-    { key: "bmi", group: "body", label: "BMI", unit: "", get: (m) => bc(m).bmi, fmt: fmt1 },
-    { key: "lbm", group: "body", label: "LBM", unit: "kg", get: (m) => bc(m).lbm, fmt: fmt1 },
-    { key: "ffmi", group: "body", label: "FFMI", unit: "", get: (m) => bc(m).ffmi, fmt: fmt1 },
+    ...metricsOf(ctx.metrics, "体組成").map(
+      (d): Col => ({ key: "m" + d.id, group: "body", label: d.name, unit: unitOf(d), get: (m) => metricLatest(m, d)?.v ?? null, fmt: fmt2 }),
+    ),
     { key: "att", group: "attend", label: "出席率(30日)", unit: "%", get: (m) => attendRate(m, 30), fmt: (v) => (v == null ? "—" : String(Math.round(v))) },
     { key: "train", group: "attend", label: "筋トレ(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
-    ...LIFTS.map(([k, l]): Col => ({ key: k, group: "phys", label: l, unit: "kg", get: (m) => maxes(m)[k], fmt: fmt0 })),
-    { key: "total", group: "phys", label: "Big3合計", unit: "kg", get: (m) => maxes(m).total, fmt: fmt0 },
-    ...physDefs.map((d): Col => ({ key: "m" + d.id, group: "phys", label: d.name, unit: d.unit, get: (m) => metricBest(m, d), fmt: fmt2 })),
+    ...metricsOf(ctx.metrics, "フィジカル").map(
+      (d): Col => ({ key: "m" + d.id, group: "phys", label: d.name, unit: unitOf(d), get: (m) => metricBest(m, d), fmt: fmt2 }),
+    ),
   ];
 }
 
@@ -96,9 +92,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
         <table className="pt">
           <thead>
             <tr>
-              <th colSpan={3} className="g-basic s-all">
-                基本情報
-              </th>
+              <th className="g-basic s1">基本情報</th>
+              <th colSpan={2} className="g-basic" />
               {groups.map(
                 ({ g, n }) =>
                   n > 0 && (
@@ -110,8 +105,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
             </tr>
             <tr>
               <th className="s1 g-basic">名前</th>
-              <th className="s2 g-basic">学年</th>
-              <th className="s3 g-basic">ポジション</th>
+              <th className="g-basic l">学年</th>
+              <th className="g-basic l">ポジション</th>
               {cols.map((c) => (
                 <th key={c.key} className={`g-${c.group}`}>
                   {c.label}
@@ -126,8 +121,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 <td className="s1">
                   <b>{m.name}</b>
                 </td>
-                <td className="s2">{m.grade ? `${m.grade}年` : "—"}</td>
-                <td className="s3">{m.position ?? "—"}</td>
+                <td className="l">{m.grade ? `${m.grade}年` : "—"}</td>
+                <td className="l">{m.position ?? "—"}</td>
                 {cols.map((c) => (
                   <td key={c.key} className="num">
                     {c.fmt(c.get(m))}
@@ -140,7 +135,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
         {!rows.length && <div className="empty">該当する選手がいません</div>}
       </div>
       <p className="muted" style={{ marginTop: 8 }}>
-        体組成は最新値、フィジカルは自己ベストです。名前をタップすると推移グラフを表示します。表示する項目は「項目設定」で追加・変更できます。
+        体組成は最新値、フィジカルは自己ベストです。名前をタップすると推移グラフを表示します。表示する項目と並び順は「項目設定」で変更できます。
       </p>
     </div>
   );

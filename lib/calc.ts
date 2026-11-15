@@ -165,19 +165,40 @@ export function teamTrainingAvg(players: Member[], ws: string): number | null {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 
-/* ---------- 測定項目（項目設定で追加したもの） ---------- */
-export function metricSeries(m: Member, id: number): Point[] {
-  return Object.entries(m.metrics[id] ?? {})
+/* ---------- 測定項目（項目設定） ---------- */
+// 今までの入力欄の値を使う項目（key で判定）。測定画面に入力欄は出さない
+//   weight=毎日の記録の体重 / bench_press・squat・deadlift=測定のBig3 / big3_total=Big3合計（自動計算）
+export const LINKED_KEYS = ["weight", "bench_press", "squat", "deadlift", "big3_total"];
+export const isLinked = (def: MetricDef) => def.key != null && LINKED_KEYS.includes(def.key);
+
+// 単位の表示（空欄・「なし」は表示しない）
+export const unitOf = (def: { unit: string }) => {
+  const u = (def.unit ?? "").trim();
+  return u === "" || u === "なし" ? "" : u;
+};
+
+export function metricSeries(m: Member, def: MetricDef): Point[] {
+  if (def.key === "weight") return weights(m);
+  if (def.key === "bench_press" || def.key === "squat" || def.key === "deadlift") {
+    const k = def.key;
+    return phys(m)
+      .filter((r) => r[k] != null)
+      .map((r) => ({ d: r.d, v: Number(r[k]) }));
+  }
+  if (def.key === "big3_total") return phys(m).map((r) => ({ d: r.d, v: rowTotal(r) })).filter((p) => p.v > 0);
+  return Object.entries(m.metrics[def.id] ?? {})
     .map(([d, v]) => ({ d, v }))
     .sort((a, b) => (a.d < b.d ? -1 : 1));
 }
-export function metricLatest(m: Member, id: number): Point | null {
-  const s = metricSeries(m, id);
+export function metricLatest(m: Member, def: MetricDef): Point | null {
+  const s = metricSeries(m, def);
   return s.length ? s[s.length - 1] : null;
 }
 // 自己ベスト（良い方向に合わせて最大 or 最小）
 export function metricBest(m: Member, def: MetricDef): number | null {
-  const v = metricSeries(m, def.id).map((p) => p.v);
+  // Big3合計は、種目ごとの自己ベストの合計（ランキングと同じ考え方）
+  if (def.key === "big3_total") return maxes(m).total;
+  const v = metricSeries(m, def).map((p) => p.v);
   if (!v.length) return null;
   return def.better === "low" ? Math.min(...v) : Math.max(...v);
 }
@@ -188,18 +209,5 @@ export function metricRanking(members: Members, def: MetricDef): RankRow[] {
     .filter((r): r is RankRow => r.v != null)
     .sort((a, b) => (def.better === "low" ? a.v - b.v : b.v - a.v));
 }
-
-/* ---------- 体組成の計算（BMI・LBM・FFMI） ---------- */
-// 身長（cm）・体脂肪率（%）は項目設定の「身長」「体脂肪率」の最新値を使う
-export function bodyComp(m: Member, metrics: MetricDef[]) {
-  const hDef = metrics.find((x) => x.key === "height");
-  const fDef = metrics.find((x) => x.key === "body_fat");
-  const w = latestWeight(m)?.v ?? null;
-  const h = hDef ? metricLatest(m, hDef.id)?.v ?? null : null;
-  const fat = fDef ? metricLatest(m, fDef.id)?.v ?? null : null;
-  const hm = h ? h / 100 : null;
-  const bmi = w && hm ? w / (hm * hm) : null;
-  const lbm = w != null && fat != null ? w * (1 - fat / 100) : null; // 除脂肪体重（kg）
-  const ffmi = lbm != null && hm ? lbm / (hm * hm) : null;
-  return { weight: w, bmi, lbm, ffmi };
-}
+// カテゴリごとの項目（項目設定の並び順）
+export const metricsOf = (metrics: MetricDef[], c: MetricDef["category"]) => metrics.filter((x) => x.category === c);

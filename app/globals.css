@@ -185,13 +185,20 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pt th small{font-weight:400;color:var(--sub);margin-left:2px}
 .pt tbody tr{cursor:pointer}
 .pt tbody tr:hover td{background:#fafaf8}
-/* 左3列の固定（名前・学年・ポジション） */
-.pt .s1,.pt .s2,.pt .s3,.pt .s-all{position:sticky;z-index:1;text-align:left}
-.pt .s1{left:0;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis}
-.pt .s2{left:96px;min-width:46px;max-width:46px}
-.pt .s3{left:142px;min-width:82px;max-width:82px;border-right:2px solid var(--line)}
-.pt .s-all{left:0;border-right:2px solid var(--line)}
-.pt thead .s1,.pt thead .s2,.pt thead .s3,.pt thead .s-all{z-index:3}
+/* 左端の「名前」列だけ固定 */
+.pt .l{text-align:left}
+.pt .s1{position:sticky;left:0;z-index:1;text-align:left;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis;border-right:2px solid var(--line)}
+.pt thead .s1{z-index:3}
+/* スマホでは文字と余白を小さくして、一度に見える項目を増やす */
+@media(max-width:600px){
+  .pt{font-size:12px}
+  .pt th,.pt td{padding:6px 5px}
+  .pt thead th{font-size:10px}
+  .pt thead tr:first-child th{font-size:11px}
+  .pt thead tr:nth-child(2) th{top:27px}
+  .pt .s1{min-width:70px;max-width:70px}
+  .pt th small{display:block;margin-left:0}
+}
 /* カテゴリごとの色 */
 .pt .g-basic{background:#e8eaee}
 .pt .g-body{background:#e3edf8;color:#1d4f86}
