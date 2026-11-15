@@ -282,8 +282,7 @@ function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           <tbody>
             <tr>
               <th>選手</th>
-              <th className="r">平均（0〜10）</th>
-              <th className="r">遂行率</th>
+              <th className="r">遂行率（0〜10）</th>
               <th className="r">入力週</th>
             </tr>
             {ps.map((m) => {
@@ -292,9 +291,8 @@ function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                 <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
                   <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
                   <td className="r num">
-                    <b>{f(v)}</b>
+                    <b>{v == null ? "—" : `${f(v)} / 10`}</b>
                   </td>
-                  <td className="r num">{v == null ? "—" : Math.round(v * 10) + "%"}</td>
                   <td className="r num">{weeksIn(m)}</td>
                 </tr>
               );
@@ -327,7 +325,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
               <small>/ 10</small>
             </div>
             <div className="s">
-              遂行率 {curAvg == null ? "—" : Math.round(curAvg * 10) + "%"} ・ 入力 {entered}/{ps.length}名
+              入力 {entered}/{ps.length}名
             </div>
           </div>
           <h3 style={{ marginTop: 14 }}>
@@ -346,7 +344,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
 
       <div className="card">
         <h3>
-          選手ごとの週次推移 <small>0〜10 ・ 遂行率＝直近8週の平均÷10</small>
+          選手ごとの週次推移 <small>0〜10</small>
         </h3>
         <div className="scroll">
           <table className="tbl">
@@ -358,7 +356,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                     {md(w)}〜
                   </th>
                 ))}
-                <th className="r">遂行率</th>
+                <th className="r">8週平均</th>
               </tr>
               {ps.map((m) => {
                 const a = trainingAvg(m, 8);
@@ -371,7 +369,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                       </td>
                     ))}
                     <td className="r num">
-                      <b>{a == null ? "—" : Math.round(a * 10) + "%"}</b>
+                      <b>{a == null ? "—" : `${fmt1(a)} / 10`}</b>
                     </td>
                   </tr>
                 );
