@@ -11,6 +11,7 @@ import {
   unitOf,
   fmtRatio,
   weightAt,
+  weightNote,
   fmt2,
   metricSeries,
   recentWeeks,
@@ -105,7 +106,7 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
               {lw ? fmt1(lw.v) : "—"}
               <small>kg</small>
             </div>
-            <div className="s">{lw ? md(lw.d) : ""}</div>
+            <div className="s">{lw ? `${md(lw.d)}${weightNote(m.daily[lw.d])}` : ""}</div>
           </div>
         </div>
         <div className="card">

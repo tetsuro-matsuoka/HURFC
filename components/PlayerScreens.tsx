@@ -9,6 +9,7 @@ import {
   LIFTS,
   addDays,
   ABSENCE_REASONS,
+  WEIGHT_TIMINGS,
   dayKind,
   fmt2,
   isLinked,
@@ -28,11 +29,12 @@ import {
   weights,
 } from "@/lib/calc";
 import { saveDaily, saveErrorText, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
-import type { AbsenceReason, Attendance, LiftKey, PhysRec } from "@/lib/types";
+import type { AbsenceReason, Attendance, LiftKey, PhysRec, WeightTiming } from "@/lib/types";
 
 /* ---------- S03 データ入力 ---------- */
 export function InputScreen({ ctx }: { ctx: Ctx }) {
-  const [tab, setTab] = useState<"daily" | "training" | "phys">("daily");
+  // 最初はボタンだけ。押すと入力フォームが開き、もう一度押すと閉じる（ホームと同じ操作）
+  const [tab, setTab] = useState<"daily" | "training" | "phys" | null>(null);
   return (
     <>
       <h2 className="page">記録する</h2>
@@ -45,7 +47,7 @@ export function InputScreen({ ctx }: { ctx: Ctx }) {
             ["phys", "m-physical", "フィジカル", "測定の記録"],
           ] as const
         ).map(([k, cls, l, sub]) => (
-          <button key={k} className={`${cls} ${tab === k ? "on" : ""}`} onClick={() => setTab(k)} aria-pressed={tab === k}>
+          <button key={k} className={`${cls} ${tab === k ? "on" : ""}`} onClick={() => setTab(tab === k ? null : k)} aria-pressed={tab === k}>
             <b>{l}</b>
             <span>{sub}</span>
           </button>
@@ -76,6 +78,8 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
       att: (rec?.attendance ?? null) as Attendance | null,
       reason: (rec?.attendance === "欠席" ? rec.absence_reason ?? "" : "") as AbsenceReason | "",
       w: rec?.weight != null ? fmt1(rec.weight) : prev ? fmt1(prev.v) : "",
+      timing: (rec?.weight_timing ?? null) as WeightTiming | null,
+      time: rec?.weight_time ?? "",
       prev,
     };
   };
@@ -84,6 +88,9 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   // 欠席理由（欠席を選んだときだけ表示・必須）。登録済みならその理由を復元
   const [reason, setReason] = useState<AbsenceReason | "">(initial(today()).reason);
   const [w, setW] = useState(initial(today()).w);
+  // 体重の測定タイミング・時刻（ボタンを押すと、そのときの時刻も自動で入る）
+  const [timing, setTiming] = useState<WeightTiming | null>(initial(today()).timing);
+  const [time, setTime] = useState(initial(today()).time);
   const [busy, setBusy] = useState(false);
   const prev = initial(date).prev;
   // オフの日（練習日ではない日）は出欠の入力なし。体重だけ記録できる
@@ -96,6 +103,8 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     setAtt(v.att);
     setReason(v.reason);
     setW(v.w);
+    setTiming(v.timing);
+    setTime(v.time);
   };
   const step = (n: number) => setW((cur) => Math.max(0, Math.round(((parseFloat(cur) || 0) + n) * 10) / 10).toFixed(1));
 
@@ -108,7 +117,10 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     setBusy(true);
     try {
       // 出席・オフのときは欠席理由を空にする（saveDaily 側でも null にする）
-      await saveDaily(m.id, date, off ? null : att, weight, !off && att === "欠席" && reason ? reason : null);
+      await saveDaily(m.id, date, off ? null : att, weight, !off && att === "欠席" && reason ? reason : null, {
+        weight_timing: weight != null ? timing : null,
+        weight_time: weight != null && /^\d{2}:\d{2}$/.test(time) ? time : null,
+      });
       await ctx.reload();
       ctx.toast("保存しました ✓");
       ctx.go("home");
@@ -174,6 +186,28 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
         <button onClick={() => step(0.1)}>＋</button>
       </div>
       <div className="prev">{prev ? `前回 ${fmt1(prev.v)}kg（${md(prev.d)}）` : ""}</div>
+      <label className="f">測った時間</label>
+      <div className="timing">
+        {WEIGHT_TIMINGS.map((x) => (
+          <button
+            key={x}
+            type="button"
+            className={timing === x ? "on" : ""}
+            onClick={() => {
+              if (timing === x) return setTiming(null); // もう一度押すと解除
+              setTiming(x);
+              const now = new Date();
+              setTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+            }}
+          >
+            {x}
+          </button>
+        ))}
+      </div>
+      <div className="timing-time">
+        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="測った時刻" />
+        <span className="muted">時刻は直接変えることもできます</span>
+      </div>
     </div>
 
     <button className="btn" style={{ marginTop: 0, marginBottom: 14 }} onClick={save} disabled={busy || ctx.readOnly}>

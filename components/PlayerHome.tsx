@@ -41,6 +41,7 @@ import {
   unitOf,
   unitOfPosition,
   wd,
+  weightNote,
   weekStart,
   weightAgo,
   weights,
@@ -95,7 +96,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
               <div>今日の記録は完了 ✓</div>
               <small>
                 {attendLabel(rec) ?? "オフ"}
-                {rec.weight ? ` ・ ${fmt1(rec.weight)}kg` : ""}
+                {rec.weight ? ` ・ ${fmt1(rec.weight)}kg${weightNote(rec)}` : ""}
               </small>
             </>
           ) : kind === "off" ? (
@@ -361,7 +362,10 @@ function BodyDetail({ ctx }: { ctx: Ctx }) {
       <div className="sumrow">
         <div style={{ background: "#e3edf8", color: "#1d4f86" }}>
           <div className="v num">{lw ? fmt1(lw.v) : "—"}</div>
-          <div className="l">体重（kg）</div>
+          <div className="l">
+            体重（kg）
+            {lw && m.daily[lw.d] && weightNote(m.daily[lw.d]) && <span style={{ display: "block", fontWeight: 400 }}>{weightNote(m.daily[lw.d])}</span>}
+          </div>
         </div>
         <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
           <div className="v num" style={{ fontSize: 22 }}>

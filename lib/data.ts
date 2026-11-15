@@ -1,7 +1,7 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { AbsenceReason, Attendance, Category, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
+import type { AbsenceReason, Attendance, Category, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
 import { makePractice, ymd } from "./calc";
 
 function sb() {
@@ -36,7 +36,15 @@ async function fetchAll<T>(table: string, columns: string, orderBy = "id"): Prom
 }
 
 type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null; created_at: string; category?: Category | null };
-type DailyRow = { user_id: string; date: string; attendance: Attendance | null; absence_reason?: AbsenceReason | null; weight: number | null };
+type DailyRow = {
+  user_id: string;
+  date: string;
+  attendance: Attendance | null;
+  absence_reason?: AbsenceReason | null;
+  weight: number | null;
+  weight_timing?: WeightTiming | null;
+  weight_time?: string | null;
+};
 type PhysRow = { user_id: string; date: string } & PhysRec;
 type MetricRecRow = { user_id: string; metric_id: number; date: string; value: number };
 type TrainingRow = { user_id: string; week_start: string; score: number };
@@ -49,9 +57,10 @@ export async function loadAll(): Promise<Members> {
       fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at"),
     ),
     // 欠席理由の欄（追加SQL その5）がまだ無い場合は、欠席理由なしで読み込む
-    fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,absence_reason,weight").catch(() =>
-      fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight"),
-    ),
+    // 新しく追加した欄（追加SQL その5・その8）がまだ無い場合は、無い欄を外して読み込む
+    fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,absence_reason,weight,weight_timing,weight_time")
+      .catch(() => fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,absence_reason,weight"))
+      .catch(() => fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight")),
     fetchAll<PhysRow>("physical_records", "id,user_id,date,bench_press,squat,deadlift"),
     // 追加SQL（2026-11）が未実行でもアプリが止まらないよう、読めなければ空として扱う
     fetchAll<MetricRecRow>("metric_records", "id,user_id,metric_id,date,value").catch(() => []),
@@ -93,6 +102,8 @@ export async function loadAll(): Promise<Members> {
       m[r.user_id].daily[r.date] = {
         attendance: r.attendance,
         absence_reason: r.attendance === "欠席" ? r.absence_reason ?? null : null,
+        weight_timing: r.weight_timing ?? null,
+        weight_time: r.weight_time ?? null,
         weight: r.weight == null ? null : Number(r.weight),
       };
   });
@@ -116,21 +127,26 @@ export async function saveDaily(
   attendance: Attendance | null,
   weight: number | null,
   absenceReason: AbsenceReason | null = null,
+  timing: { weight_timing: WeightTiming | null; weight_time: string | null } = { weight_timing: null, weight_time: null },
 ) {
   const absence_reason = attendance === "欠席" ? absenceReason : null;
-  const { error } = await sb()
-    .from("daily_records")
-    .upsert({ user_id: userId, date, attendance, weight, absence_reason }, { onConflict: "user_id,date" });
-  if (!error) return;
-  // 欠席理由の欄（追加SQL その5）がまだ無い／Supabase がまだ欄を認識していない場合は、理由なしで保存する
-  if (error.message?.includes("absence_reason") || error.code === "PGRST204" || error.code === "42703") {
-    const { error: e2 } = await sb()
-      .from("daily_records")
-      .upsert({ user_id: userId, date, attendance, weight }, { onConflict: "user_id,date" });
-    if (e2) throw e2;
-    return;
+  const base = { user_id: userId, date, attendance, weight };
+  // 新しい欄がまだデータベースに無い場合に備えて、多い順に試す（無い欄は外して保存し直す）
+  const tries: Record<string, unknown>[] = [
+    { ...base, absence_reason, ...timing },
+    { ...base, absence_reason },
+    base,
+  ];
+  let last: { message?: string; code?: string } | null = null;
+  for (const row of tries) {
+    const { error } = await sb().from("daily_records").upsert(row, { onConflict: "user_id,date" });
+    if (!error) return;
+    last = error;
+    const missingColumn =
+      error.code === "PGRST204" || error.code === "42703" || /absence_reason|weight_timing|weight_time/.test(error.message ?? "");
+    if (!missingColumn) break;
   }
-  throw error;
+  throw last;
 }
 
 // 保存に失敗したときに画面に出す文（原因が分かるように、Supabase からのメッセージも添える）
