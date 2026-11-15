@@ -109,7 +109,8 @@ export function dayKind(d: string, p: Practice): DayKind {
 //  ・練習日が未設定の月：今までどおり、出欠を記録した日だけが対象
 //  出席率＝出席日数÷対象日数、欠席率＝欠席日数÷対象日数（未入力は出席に含めない）
 export type AttendStats = { yes: number; no: number; none: number; days: number; rate: number | null; absentRate: number | null };
-export function attendStats(m: Member, p: Practice, from: string, to: string): AttendStats {
+// 出欠の対象日（日付順）。attendStats と同じルール
+export function attendTargets(m: Member, p: Practice, from: string, to: string): string[] {
   const end = to < today() ? to : today();
   const start = from > m.joined ? from : m.joined;
   const cand = new Set<string>();
@@ -117,6 +118,24 @@ export function attendStats(m: Member, p: Practice, from: string, to: string): A
   Object.entries(m.daily).forEach(([d, r]) => {
     if (d >= start && d <= end && r.attendance && dayKind(d, p) === "unset") cand.add(d);
   });
+  return [...cand].sort();
+}
+
+// 連続出席回数（対象日を新しい順にさかのぼって、出席が続いている回数。今日まだ未入力なら今日は飛ばす）
+export function attendStreak(m: Member, p: Practice): number {
+  const days = attendTargets(m, p, "0000-01-01", today()).reverse();
+  let n = 0;
+  for (const d of days) {
+    const a = m.daily[d]?.attendance;
+    if (d === today() && !a) continue;
+    if (a !== "出席") break;
+    n++;
+  }
+  return n;
+}
+
+export function attendStats(m: Member, p: Practice, from: string, to: string): AttendStats {
+  const cand = attendTargets(m, p, from, to);
   let yes = 0,
     no = 0,
     none = 0;
@@ -126,7 +145,7 @@ export function attendStats(m: Member, p: Practice, from: string, to: string): A
     else if (a === "欠席") no++;
     else none++;
   });
-  const days = cand.size;
+  const days = cand.length;
   return { yes, no, none, days, rate: days ? (yes / days) * 100 : null, absentRate: days ? (no / days) * 100 : null };
 }
 

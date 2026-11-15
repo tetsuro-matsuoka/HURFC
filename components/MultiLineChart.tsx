@@ -6,7 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { md, type Point } from "@/lib/calc";
 
-export type Series = { label: string; color: string; pts: Point[] };
+// dash：点線で描く（平均の基準線など）
+export type Series = { label: string; color: string; pts: Point[]; dash?: boolean };
 
 // minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
 export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1 }: { series: Series[]; h?: number; digits?: number; minRange?: number }) {
@@ -31,7 +32,7 @@ export default function MultiLineChart({ series, h = 200, digits = 1, minRange =
       <div className="legend">
         {series.map((s) => (
           <span key={s.label}>
-            <i style={{ background: s.color }} />
+            <i style={s.dash ? { background: `repeating-linear-gradient(90deg, ${s.color} 0 4px, transparent 4px 7px)` } : { background: s.color }} />
             {s.label}
           </span>
         ))}
@@ -94,8 +95,16 @@ function Chart({ series, w, h, digits, minRange, first, last }: { series: Series
         const end = s.pts[s.pts.length - 1];
         return (
           <g key={s.label}>
-            <path d={path} fill="none" stroke={s.color} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
-            <circle cx={X(end.d)} cy={Y(end.v)} r={3.5} fill={s.color} />
+            <path
+              d={path}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={s.dash ? 1.8 : 2.4}
+              strokeDasharray={s.dash ? "5 4" : undefined}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {!s.dash && <circle cx={X(end.d)} cy={Y(end.v)} r={3.5} fill={s.color} />}
           </g>
         );
       })}
