@@ -191,6 +191,9 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pt .l{text-align:left}
 .pt .s1{position:sticky;left:0;z-index:1;text-align:left;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis;border-right:2px solid var(--line)}
 .pt thead .s1{z-index:3}
+/* 一番下の「平均」行：淡いグレー・太い上枠・太字。縦にスクロールしても下に固定 */
+.pt tfoot td{position:sticky;bottom:0;z-index:2;background:#eef0f3;border-top:2px solid #b9bfc8;border-bottom:none;font-weight:700;color:var(--ink)}
+.pt tfoot .s1{z-index:3}
 /* スマホでは文字と余白を小さくして、一度に見える項目を増やす */
 @media(max-width:600px){
   .pt{font-size:12px}
