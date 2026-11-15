@@ -316,3 +316,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 /* 選手一覧：体重比の列（元の項目のすぐ右）。少し色を変えて区別 */
 .pt th.ratio{font-style:italic}
 .pt td.ratio{color:#4a5563;background:#fafbfc}
+/* フィジカル：自己ベスト一覧の体重比の列・ランキングの体重比の併記 */
+.tbl th.ratio{font-style:italic}
+.tbl td.ratio{color:#4a5563;background:#fafbfc}
+.rk-ratio{font-family:"Noto Sans JP",sans-serif;font-size:11px;color:var(--sub);margin-left:2px;font-weight:500}

@@ -11,6 +11,10 @@ import {
   isLinked,
   metricsOf,
   unitOf,
+  fmtRatio,
+  metricRatio,
+  playersOf,
+  weightAt,
   fmt2,
   metricRanking,
   metricSeries,
@@ -47,24 +51,48 @@ export type Ctx = {
 };
 
 // ランキング（種目の切り替えボタン付き）
-// 「項目設定」のフィジカルの項目（並び順どおり）＋ 体重比（Big3合計÷体重）
+// 「項目設定」のフィジカルの項目（並び順どおり）。「体重比」が ON の項目は、すぐ右に「項目名体重比」も選べる
+// 体重比＝値 ÷ その記録日時点の体重（選手一覧と同じ計算。体重が分からない選手はランキングから除く）
 export function RankBoard({ ctx }: { ctx: Ctx }) {
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
   const [sel, setSel] = useState<string | null>(null);
   const key = sel ?? (first ? "m" + first.id : "ratio");
-  const def = defs.find((x) => "m" + x.id === key);
-  const rows: RankRow[] = def ? metricRanking(ctx.members, def) : ranking(ctx.members, "ratio");
-  const fmtV = (v: number) =>
-    def ? (
+  const def = defs.find((x) => "m" + x.id === key || "r" + x.id === key);
+  const isRatio = !!def && key === "r" + def.id;
+  // 以前からの「体重比（Big3合計÷最新の体重）」。Big3合計の体重比を ON にしている場合は重複するので出さない
+  const showOldRatio = !defs.some((x) => x.key === "big3_total" && x.show_ratio);
+
+  const ratioOf = (id: string) => (def ? metricRatio(ctx.members[id], def) : null);
+  const rows: RankRow[] = !def
+    ? ranking(ctx.members, "ratio")
+    : isRatio
+      ? playersOf(ctx.members)
+          .map((m) => ({ id: m.id, name: m.name, v: metricRatio(m, def) }))
+          .filter((r): r is RankRow => r.v != null)
+          .sort((a, b) => b.v - a.v)
+      : metricRanking(ctx.members, def);
+
+  const fmtV = (r: RankRow) => {
+    if (!def) return "×" + r.v.toFixed(2);
+    if (isRatio) return fmtRatio(r.v) + "倍";
+    const ratio = def.show_ratio ? ratioOf(r.id) : null;
+    return (
       <>
-        {fmt2(v)}
+        {fmt2(r.v)}
         <small> {unitOf(def)}</small>
+        {ratio != null && <small className="rk-ratio">（{fmtRatio(ratio)}倍）</small>}
       </>
-    ) : (
-      "×" + v.toFixed(2)
     );
-  const chips: [string, string][] = [...defs.map((x) => ["m" + x.id, x.name] as [string, string]), ["ratio", "体重比"]];
+  };
+  const chips: [string, string][] = [
+    ...defs.flatMap((x) => {
+      const c: [string, string][] = [["m" + x.id, x.name]];
+      if (x.show_ratio) c.push(["r" + x.id, `${x.name}体重比`]);
+      return c;
+    }),
+    ...(showOldRatio ? [["ratio", "体重比"] as [string, string]] : []),
+  ];
   return (
     <>
       <div className="chips">
@@ -74,17 +102,19 @@ export function RankBoard({ ctx }: { ctx: Ctx }) {
           </button>
         ))}
       </div>
-      <RankRows ctx={ctx} rows={rows} fmtV={fmtV} low={def?.better === "low"} />
+      <RankRows ctx={ctx} rows={rows} fmtV={fmtV} low={!isRatio && def?.better === "low"} />
       <p className="muted" style={{ marginTop: 8 }}>
-        自己ベストで比較しています。{key === "ratio" ? "体重比 = Big3合計 ÷ 最新の体重" : ""}
-        {def?.better === "low" ? "（小さいほど上位）" : ""}
+        自己ベストで比較しています。
+        {key === "ratio" ? "体重比 = Big3合計 ÷ 最新の体重" : ""}
+        {isRatio ? "体重比 = 自己ベスト ÷ その記録の日の体重（その日の記録がなければ、それより前の最新の体重）。体重が分からない選手は表示しません。" : ""}
+        {!isRatio && def?.better === "low" ? "（小さいほど上位）" : ""}
       </p>
     </>
   );
 }
 
 // ランキングの行
-function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (v: number) => ReactNode; low?: boolean }) {
+function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode; low?: boolean }) {
   if (!rows.length) return <div className="empty">測定データがありません</div>;
   const top = rows[0].v;
   const coach = ctx.me.role === "coach";
@@ -105,7 +135,7 @@ function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (
               <i style={{ width: `${(Math.min(1, low ? top / r.v : r.v / top) * 100).toFixed(1)}%` }} />
             </div>
           </div>
-          <div className="v num">{fmtV(r.v)}</div>
+          <div className="v num">{fmtV(r)}</div>
         </div>
       ))}
     </>
@@ -184,6 +214,29 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
             color="var(--ok)"
           />
         </div>
+        {/* 体重比（相対値）の推移：項目設定で「体重比」が ON の項目。記録ごとに、その日の体重（なければそれ以前の最新）で割る */}
+        {metrics
+          .filter((def) => def.show_ratio && def.key !== "weight")
+          .map((def) => {
+            const s = metricSeries(m, def)
+              .map((p) => {
+                const w = weightAt(m, p.d);
+                return w && p.v ? { d: p.d, v: p.v / w } : null;
+              })
+              .filter((p): p is { d: string; v: number } => p != null);
+            if (!s.length) return null;
+            return (
+              <div className="card" key={"r" + def.id}>
+                <h3>
+                  {def.name}体重比の推移{" "}
+                  <small>
+                    最新 {fmtRatio(s[s.length - 1].v)}倍（{md(s[s.length - 1].d)}）
+                  </small>
+                </h3>
+                <LineChart pts={s} h={120} color="var(--ok)" minRange={0.2} digits={2} />
+              </div>
+            );
+          })}
         {/* 体重・Big3は上のグラフで表示しているので、ここではそれ以外の項目 */}
         {metrics.filter((def) => !isLinked(def)).map((def) => {
           const s = metricSeries(m, def);
