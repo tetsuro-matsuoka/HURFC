@@ -11,7 +11,7 @@ import { TipBox, useChartTip } from "./ChartTip";
 export type Series = { label: string; color: string; pts: Point[]; dash?: boolean };
 
 // minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
-// unit：吹き出しの単位 / note：吹き出しで1本目の線（自分）に添える文（例：「練習後 18:30」）
+// unit：吹き出しの単位 / note：吹き出しで1本目の線（自分）に添える文（例：「練習後」）
 type Props = { series: Series[]; h?: number; digits?: number; minRange?: number; unit?: string; note?: (d: string) => string };
 export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note }: Props) {
   const ref = useRef<HTMLDivElement>(null);

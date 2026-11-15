@@ -79,7 +79,6 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
       reason: (rec?.attendance === "欠席" ? rec.absence_reason ?? "" : "") as AbsenceReason | "",
       w: rec?.weight != null ? fmt1(rec.weight) : prev ? fmt1(prev.v) : "",
       timing: (rec?.weight_timing ?? null) as WeightTiming | null,
-      time: rec?.weight_time ?? "",
       prev,
     };
   };
@@ -88,9 +87,8 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   // 欠席理由（欠席を選んだときだけ表示・必須）。登録済みならその理由を復元
   const [reason, setReason] = useState<AbsenceReason | "">(initial(today()).reason);
   const [w, setW] = useState(initial(today()).w);
-  // 体重の測定タイミング・時刻（ボタンを押すと、そのときの時刻も自動で入る）
+  // 体重の測定タイミング（4つのボタンから選ぶだけ。時刻は記録しない）
   const [timing, setTiming] = useState<WeightTiming | null>(initial(today()).timing);
-  const [time, setTime] = useState(initial(today()).time);
   const [busy, setBusy] = useState(false);
   const prev = initial(date).prev;
   // オフの日（練習日ではない日）は出欠の入力なし。体重だけ記録できる
@@ -104,7 +102,6 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     setReason(v.reason);
     setW(v.w);
     setTiming(v.timing);
-    setTime(v.time);
   };
   const step = (n: number) => setW((cur) => Math.max(0, Math.round(((parseFloat(cur) || 0) + n) * 10) / 10).toFixed(1));
 
@@ -117,17 +114,15 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     setBusy(true);
     try {
       // 出席・オフのときは欠席理由を空にする（saveDaily 側でも null にする）
-      // 時刻は "18:30" の形にそろえる（端末によっては "18:30:00" になるため先頭5文字）
-      const hhmm = time.slice(0, 5);
       const r = await saveDaily(m.id, date, off ? null : att, weight, !off && att === "欠席" && reason ? reason : null, {
         weight_timing: weight != null ? timing : null,
-        weight_time: weight != null && /^\d{2}:\d{2}$/.test(hhmm) ? hhmm : null,
+        weight_time: null, // 時刻の入力はなくしたので保存しない
       });
       await ctx.reload();
-      const wantedTiming = weight != null && (timing || time);
+      const wantedTiming = weight != null && timing;
       ctx.toast(
         wantedTiming && !r.timingSaved
-          ? "体重は保存しました。測った時間はデータベースの更新（追加SQL その8）が必要なため保存できませんでした"
+          ? "体重は保存しました。測ったタイミングはデータベースの更新（追加SQL その8）が必要なため保存できませんでした"
           : "保存しました ✓",
       );
       ctx.go("home");
@@ -193,7 +188,7 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
         <button onClick={() => step(0.1)}>＋</button>
       </div>
       <div className="prev">{prev ? `前回 ${fmt1(prev.v)}kg（${md(prev.d)}）` : ""}</div>
-      <label className="f">測った時間</label>
+      <label className="f">測ったタイミング</label>
       <div className="timing">
         {WEIGHT_TIMINGS.map((x) => (
           <button
@@ -201,19 +196,12 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
             type="button"
             className={timing === x ? "on" : ""}
             onClick={() => {
-              if (timing === x) return setTiming(null); // もう一度押すと解除
-              setTiming(x);
-              const now = new Date();
-              setTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+              setTiming(timing === x ? null : x); // もう一度押すと解除
             }}
           >
             {x}
           </button>
         ))}
-      </div>
-      <div className="timing-time">
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="測った時刻" />
-        <span className="muted">時刻は直接変えることもできます</span>
       </div>
     </div>
 

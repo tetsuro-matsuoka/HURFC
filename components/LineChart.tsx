@@ -8,7 +8,7 @@ import { md, type Point } from "@/lib/calc";
 import { TipBox, useChartTip } from "./ChartTip";
 
 // minRange：縦軸の最小の幅（値の差が小さくても線がつぶれないように。体重比などは小さく）/ digits：縦軸の小数の桁
-// unit：吹き出しの数値の単位 / note：吹き出しに添える文（例：体重の測定タイミング「練習後 18:30」）
+// unit：吹き出しの数値の単位 / note：吹き出しに添える文（例：体重の測定タイミング「練習後」）
 type Props = {
   pts: Point[];
   h?: number;
