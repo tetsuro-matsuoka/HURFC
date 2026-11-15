@@ -40,6 +40,12 @@ function buildCols(ctx: Ctx): Col[] {
   ];
 }
 
+// 平均（未入力の選手は分母から除く。全員未入力なら null）
+function average(ms: Member[], c: Col): number | null {
+  const v = ms.map((m) => c.get(m)).filter((x): x is number => x != null && !isNaN(x));
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
+
 // CSVの1セル（カンマや改行を含む場合は "" で囲む）
 const cell = (v: string | number | null) => {
   const s = v == null ? "" : String(v);
@@ -51,6 +57,9 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
   const all = playersOf(ctx.members);
   const rows = applyFilter(all, filter);
   const cols = buildCols(ctx);
+  const filtered = filter.grade != null || filter.unit != null;
+  // 表示中の選手（絞り込み後）だけで平均を計算
+  const avgLabel = filtered ? "選択中平均" : "チーム平均";
   const groups = (["body", "attend", "phys"] as Group[]).map((g) => ({ g, n: cols.filter((c) => c.group === g).length }));
 
   // 全選手・全項目をCSVで保存（Excelで文字化けしないよう先頭にBOMを付ける）
@@ -69,7 +78,19 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
       // 例：「体調不良2・学校関連1」
       absenceSummary(m, ym + "-01", ym + "-31"),
     ]);
-    const csv = "﻿" + [head, ...body].map((r) => r.map(cell).join(",")).join("\r\n");
+    // 最終行：平均（CSVは全選手が対象なので、全選手の平均）
+    const avgRow = [
+      "平均（全選手）",
+      "",
+      "",
+      "",
+      ...cols.map((c) => {
+        const v = average(all, c);
+        return v == null ? "" : fmt1(v);
+      }),
+      "",
+    ];
+    const csv = "﻿" + [head, ...body, avgRow].map((r) => r.map(cell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
@@ -139,11 +160,31 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               </tr>
             ))}
           </tbody>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr>
+                <td className="s1">
+                  <b>{avgLabel}</b>
+                </td>
+                <td className="l">—</td>
+                <td className="l">—</td>
+                <td className="l">—</td>
+                {cols.map((c) => {
+                  const v = average(rows, c);
+                  return (
+                    <td key={c.key} className="num">
+                      {v == null ? "—" : fmt1(v)}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tfoot>
+          )}
         </table>
         {!rows.length && <div className="empty">該当する選手がいません</div>}
       </div>
       <p className="muted" style={{ marginTop: 8 }}>
-        体組成は最新値、フィジカルは自己ベストです。名前をタップすると推移グラフを表示します。表示する項目と並び順は「項目設定」で変更できます。
+        体組成は最新値、フィジカルは自己ベストです。一番下の「{avgLabel}」は、表示中の選手のうち数値が入っている人だけの平均です。名前をタップすると推移グラフを表示します。表示する項目と並び順は「項目設定」で変更できます。
       </p>
     </div>
   );
