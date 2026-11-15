@@ -320,3 +320,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .tbl th.ratio{font-style:italic}
 .tbl td.ratio{color:#4a5563;background:#fafbfc}
 .rk-ratio{font-family:"Noto Sans JP",sans-serif;font-size:11px;color:var(--sub);margin-left:2px;font-weight:500}
+/* フィジカル：最新値 / 自己ベストの切り替え（小さめ） */
+.modebar2{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.seg.mini{margin:0;padding:3px;border-radius:10px}
+.seg.mini button{flex:none;padding:6px 12px;font-size:13px;border-radius:8px}

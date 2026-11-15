@@ -8,7 +8,8 @@ import { md, type Point } from "@/lib/calc";
 
 export type Series = { label: string; color: string; pts: Point[] };
 
-export default function MultiLineChart({ series, h = 200, digits = 1 }: { series: Series[]; h?: number; digits?: number }) {
+// minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
+export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1 }: { series: Series[]; h?: number; digits?: number; minRange?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(600);
 
@@ -38,20 +39,20 @@ export default function MultiLineChart({ series, h = 200, digits = 1 }: { series
       {all.length < 2 || dates[0] === dates[dates.length - 1] ? (
         <div className="empty">データが2日分以上になるとグラフを表示します</div>
       ) : (
-        <Chart series={series} w={w} h={h} digits={digits} first={dates[0]} last={dates[dates.length - 1]} />
+        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} />
       )}
     </div>
   );
 }
 
-function Chart({ series, w, h, digits, first, last }: { series: Series[]; w: number; h: number; digits: number; first: string; last: string }) {
+function Chart({ series, w, h, digits, minRange, first, last }: { series: Series[]; w: number; h: number; digits: number; minRange: number; first: string; last: string }) {
   const vs = series.flatMap((s) => s.pts.map((p) => p.v));
   let lo = Math.min(...vs),
     hi = Math.max(...vs);
-  if (hi - lo < 1) {
+  if (hi - lo < minRange) {
     const c = (hi + lo) / 2;
-    lo = c - 0.5;
-    hi = c + 0.5;
+    lo = c - minRange / 2;
+    hi = c + minRange / 2;
   }
   const pad = (hi - lo) * 0.12;
   lo -= pad;
