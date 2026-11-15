@@ -157,13 +157,8 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             </button>
           </div>
         </div>
-        <h3 style={{ marginTop: 12 }}>{label}の平均</h3>
         <DateBar d={d} setD={setD} />
-        <GroupCards groups={groups} d={d} label={label} unit={unit} at={at} fmt={fmtV} />
-        <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>
-          選んだ日時点の各選手の{mode === "latest" ? "最新の記録" : "自己ベスト"}を平均（記録のない選手は除く）。7日・30日はその日数前の平均との差。
-          {ratio && "体重比＝値÷その記録の日の体重。"}
-        </p>
+        <GroupCards groups={groups} d={d} unit={unit} at={at} fmt={fmtV} />
       </div>
 
       <div className="card">

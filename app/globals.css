@@ -270,9 +270,6 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .daytag.practice{background:var(--ok-soft);color:var(--ok)}
 .daytag.off{background:var(--bg);color:var(--sub)}
 
-/* チームダッシュボード：詳細から選手一覧（トップ）に戻るボタン */
-.backtop{display:inline-flex;align-items:center;gap:4px;margin:0 0 12px;padding:9px 14px;border-radius:999px;background:#fff;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:700}
-.backtop:active{background:var(--bg)}
 
 /* カテゴリーのバッジボタン（タップで切り替え） */
 .catbtn{min-width:70px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.4;white-space:nowrap;border:1.5px solid transparent;-webkit-tap-highlight-color:transparent}
@@ -289,7 +286,6 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .bc-h{display:flex;align-items:baseline;justify-content:space-between;gap:4px}
 .bc-h b{font-size:14px}
 .bc-h small{font-size:11px;color:var(--sub)}
-.bc-l{font-size:11px;color:var(--sub);font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bc-v{font-size:22px;font-weight:700;line-height:1.15}
 .bc-v small{font-size:11px;color:var(--sub);margin-left:2px;font-weight:500}
 .bc-d{display:flex;flex-wrap:wrap;column-gap:8px;font-size:11px;color:var(--sub);line-height:1.4}
@@ -322,9 +318,15 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .rk-ratio{font-family:"Noto Sans JP",sans-serif;font-size:11px;color:var(--sub);margin-left:2px;font-weight:500}
 /* フィジカル：最新値 / 自己ベストの切り替え（小さめ） */
 /* フィジカル：カード最上段の「種目プルダウン」と「最新値 / 自己ベスト」を横並び（スマホでも1行に収める） */
-.phys-top{display:flex;align-items:center;gap:8px}
-.phys-sel{flex:1;min-width:0;width:auto;padding:10px 12px;font-size:15px;font-weight:700}
+.phys-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.phys-sel{flex:1;min-width:0;width:auto;padding:8px 10px;font-size:15px;font-weight:700}
 .phys-top .seg.mini{flex-shrink:0}
 @media(max-width:380px){.phys-top .seg.mini button{padding:6px 8px;font-size:12px}}
 .seg.mini{margin:0;padding:3px;border-radius:10px}
 .seg.mini button{flex:none;padding:6px 12px;font-size:13px;border-radius:8px}
+
+/* 『体組成』『フィジカル』共通：コントロール行をコンパクトに */
+.datebar.compact{gap:6px;margin-bottom:8px}
+.datebar.compact button{width:34px;height:34px;font-size:16px}
+.datebar.compact input{padding:6px 10px}
+.ctl-title{font-size:15px;font-weight:700;margin-bottom:8px}

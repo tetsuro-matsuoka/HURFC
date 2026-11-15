@@ -3,7 +3,7 @@
 // S04 チームダッシュボード（コーチ用ホーム）
 //  上部：4つのメニュー（出欠席率 / 筋トレ遂行率 / 体組成 / フィジカル）。押すと詳細が開く
 //  下部：選手一覧（PlayerTable.tsx）。4つのどれも選んでいないとき（トップ）だけ表示
-//  選択中のボタンをもう一度押すか、「← 選手一覧（トップ）に戻る」でトップに戻る
+//  選択中のボタンをもう一度押す（または下部メニューの「チーム」）とトップに戻る
 
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -89,13 +89,6 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
           </button>
         ))}
       </div>
-
-      {/* 詳細を開いているとき：上に「選手一覧に戻る」ボタン。選手一覧は表示しない */}
-      {panel && (
-        <button className="backtop" onClick={() => setPanel(null)}>
-          ← 選手一覧（トップ）に戻る
-        </button>
-      )}
 
       {panel === "attend" && <AttendPanel ctx={ctx} ps={ps} />}
       {panel === "training" && <TrainingPanel ctx={ctx} ps={ps} />}

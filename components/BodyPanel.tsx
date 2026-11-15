@@ -31,12 +31,10 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   return (
     <>
       <div className="card">
-        <h3>体重の平均</h3>
+        {/* 見出しは『フィジカル』の種目プルダウンと同じ位置に、短く1つだけ */}
+        <div className="ctl-title">{weightName}（kg）</div>
         <DateBar d={d} setD={setD} />
-        <GroupCards groups={groups} d={d} label={weightName} unit="kg" at={at} fmt={fmt1} />
-        <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>
-          選んだ日時点の各選手の最新の体重を平均（記録のない選手は除く）。7日・30日はその日数前の平均との差。
-        </p>
+        <GroupCards groups={groups} d={d} unit="kg" at={at} fmt={fmt1} />
       </div>
 
       <div className="card">
