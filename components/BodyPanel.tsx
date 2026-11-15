@@ -2,9 +2,9 @@
 
 // チームダッシュボード『体組成』
 //  1. 上部：全体・FW・BK の体重の平均カード（選んだ日時点の平均と、7日前比・30日前比）
-//  2. その下：全体・FW・BK の推移グラフ（指標と期間を切り替え）
+//  2. その下：全体・FW・BK の体重の推移グラフ（期間を切り替え）
 //  3. 一番下：選手別の体組成（最新値）の表
-// 指標は「項目設定」の体組成の項目（体重・体脂肪率など。並び順どおり）
+// 一番下の表の列は「項目設定」の体組成の項目（体重・体脂肪率など。並び順どおり）
 
 import { useMemo, useState } from "react";
 import LineChart from "./LineChart";
@@ -16,7 +16,6 @@ import {
   fmt2,
   latestWeight,
   metricLatest,
-  metricSeries,
   metricsOf,
   today,
   unitOf,
@@ -53,32 +52,21 @@ const avg = (v: (number | null)[]) => {
 export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const defs = metricsOf(ctx.metrics, "体組成");
   const [d, setD] = useState(today());
-  const [sel, setSel] = useState<number | null>(null);
   const [period, setPeriod] = useState<Period>(30);
-  const def = defs.find((x) => x.id === sel) ?? defs[0];
-
-  // 選手ごとの記録（項目ごと・日付順）。毎回計算しないようにまとめて作っておく
-  const series = useMemo(() => {
-    const out = new Map<number, Map<string, Point[]>>();
-    defs.forEach((x) => out.set(x.id, new Map(ps.map((m) => [m.id, metricSeries(m, x)]))));
-    return out;
-  }, [defs, ps]);
 
   const members: Record<GroupKey, Member[]> = {
     all: ps,
     FW: ps.filter((m) => unitOfPosition(m.position) === "FW"),
     BK: ps.filter((m) => unitOfPosition(m.position) === "BK"),
   };
-  // 平均カードは「体重」だけ（毎日の記録の体重。項目設定で名前を変えていればその名前で表示）
+  // 平均カード・推移グラフとも「体重」だけ（毎日の記録の体重。項目設定で名前を変えていればその名前で表示）
   const weightName = defs.find((x) => x.key === "weight")?.name ?? "体重";
   const weightPts = useMemo(() => new Map(ps.map((m) => [m.id, weights(m)])), [ps]);
   const weightAvg = (g: GroupKey, day: string) => avg(members[g].map((m) => valueAsOf(weightPts.get(m.id) ?? [], day)));
 
-  // 推移グラフ：期間内の毎日について、グループの平均（その日時点の値の平均）
+  // 推移グラフ（体重のみ）：期間内の毎日について、グループの平均（その日時点の体重の平均）
   const chart: Series[] = useMemo(() => {
-    if (!def) return [];
-    const per = series.get(def.id);
-    if (!per) return [];
+    const per = weightPts;
     let from = period ? addDays(d, -period + 1) : "9999-12-31";
     if (!period) per.forEach((pts) => pts[0] && pts[0].d < from && (from = pts[0].d));
     if (from > d) return [];
@@ -101,7 +89,7 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       return { label: g.label, color: g.color, pts };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [def, series, period, d, ps]);
+  }, [weightPts, period, d, ps]);
 
   const diff = (a: number | null, b: number | null) => {
     if (a == null || b == null) return <span className="muted">—</span>;
@@ -157,17 +145,8 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         </p>
       </div>
 
-      {def && (
-        <div className="card">
-          <h3>全体・FW・BK の推移</h3>
-          <div className="chips">
-            {defs.map((x) => (
-              <button key={x.id} className={def.id === x.id ? "on" : ""} onClick={() => setSel(x.id)}>
-                {x.name}
-                {unitOf(x) && `(${unitOf(x)})`}
-              </button>
-            ))}
-          </div>
+      <div className="card">
+          <h3>全体・FW・BK の{weightName}推移（kg）</h3>
           <div className="seg" style={{ marginBottom: 10 }}>
             {([30, 90, 0] as Period[]).map((p) => (
               <button key={p} className={period === p ? "on" : ""} onClick={() => setPeriod(p)} style={{ fontSize: 14, padding: 8 }}>
@@ -176,8 +155,7 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             ))}
           </div>
           <MultiLineChart series={chart} />
-        </div>
-      )}
+      </div>
 
       <PlayerBodyTable ctx={ctx} ps={ps} />
     </>
