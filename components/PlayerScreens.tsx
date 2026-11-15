@@ -27,7 +27,7 @@ import {
   today,
   weights,
 } from "@/lib/calc";
-import { saveDaily, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
+import { saveDaily, saveErrorText, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
 import type { AbsenceReason, Attendance, LiftKey, PhysRec } from "@/lib/types";
 
 /* ---------- S03 データ入力 ---------- */
@@ -100,8 +100,8 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
       await ctx.reload();
       ctx.toast("保存しました ✓");
       ctx.go("home");
-    } catch {
-      ctx.toast("保存に失敗しました。通信を確認してください");
+    } catch (e) {
+      ctx.toast(saveErrorText(e));
       setBusy(false);
     }
   };
@@ -176,8 +176,8 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
       await saveTraining(m.id, ws, n);
       await ctx.reload();
       ctx.toast(`筋トレ遂行度 ${n} を記録しました ✓`);
-    } catch {
-      ctx.toast("保存に失敗しました。通信を確認してください");
+    } catch (e) {
+      ctx.toast(saveErrorText(e));
     } finally {
       setBusy(false);
     }
@@ -288,8 +288,8 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
       if (prs.length) ctx.toast("🔥 自己ベスト更新！ " + prs.join("・"), true);
       else ctx.toast("保存しました ✓");
       ctx.go("home");
-    } catch {
-      ctx.toast("保存に失敗しました。通信を確認してください");
+    } catch (e) {
+      ctx.toast(saveErrorText(e));
       setBusy(false);
     }
   };
