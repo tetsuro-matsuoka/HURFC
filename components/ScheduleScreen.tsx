@@ -28,7 +28,7 @@ export function ScheduleScreen({ ctx }: { ctx: Ctx }) {
   return (
     <>
       <h2 className="page">日程調整</h2>
-      <div className="card">
+      <div className="card cal-card">
         <div className="datebar" style={{ marginBottom: 10 }}>
           <button onClick={() => setYm(addMonths(ym, -1))} aria-label="前の月">
             ‹
@@ -59,7 +59,12 @@ export function ScheduleScreen({ ctx }: { ctx: Ctx }) {
                 aria-label={`${Number(d.slice(8))}日 ${ctx.practice.days.has(d) ? "練習日" : "練習日ではない"}`}
               >
                 <span>{Number(d.slice(8))}</span>
-                {ctx.practice.days.has(d) && <small>練習</small>}
+                {ctx.practice.days.has(d) && (
+                  <>
+                    <small>練習</small>
+                    <i className="dot" />
+                  </>
+                )}
               </button>
             ) : (
               <div key={"e" + i} />
