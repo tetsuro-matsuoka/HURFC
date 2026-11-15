@@ -258,3 +258,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .daytag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
 .daytag.practice{background:var(--ok-soft);color:var(--ok)}
 .daytag.off{background:var(--bg);color:var(--sub)}
+
+/* チームダッシュボード：詳細から選手一覧（トップ）に戻るボタン */
+.backtop{display:inline-flex;align-items:center;gap:4px;margin:0 0 12px;padding:9px 14px;border-radius:999px;background:#fff;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:700}
+.backtop:active{background:var(--bg)}

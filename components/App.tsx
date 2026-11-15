@@ -70,6 +70,7 @@ export default function App() {
   const [meta, setMeta] = useState<Meta>({ metrics: [], settings: {}, practice: EMPTY_PRACTICE });
   const [loadErr, setLoadErr] = useState("");
   const [view, setView] = useState<View | null>(null);
+  const [navKey, setNavKey] = useState(0);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<{ msg: string; pr: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,6 +177,7 @@ export default function App() {
   const current: View = view ?? (coach ? "team" : "home");
   const go = (v: View) => {
     setView(v);
+    setNavKey((k) => k + 1); // 下部メニューを押したら、その画面を最初の状態に戻す（チーム画面ならトップの選手一覧）
     setPlayerId(null);
     window.scrollTo(0, 0);
   };
@@ -258,7 +260,7 @@ export default function App() {
         </button>
       </header>
       {loadErr && <div className="modebar err">{loadErr}</div>}
-      <main>{screen}</main>
+      <main key={navKey}>{screen}</main>
       <nav className="nav">
         {tabs.map(([v, l, icon]) => (
           <button key={v} className={current === v ? "on" : ""} onClick={() => go(v)}>
