@@ -43,7 +43,7 @@ export function valueAsOf(pts: Point[], d: string): number | null {
 
 export function DateBar({ d, setD }: { d: string; setD: (d: string) => void }) {
   return (
-    <div className="datebar">
+    <div className="datebar compact">
       <button onClick={() => setD(addDays(d, -1))} aria-label="前の日">
         ‹
       </button>
@@ -58,18 +58,17 @@ export function DateBar({ d, setD }: { d: string; setD: (d: string) => void }) {
   );
 }
 
-// 全体・FW・BK の平均カード。at(グループ, 日付) でその日時点の平均を返す
+// 全体・FW・BK の平均カード。中身は「グループ名と人数」「大きな数値」「7日・30日前比」の3つだけ
+// at(グループ, 日付) でその日時点の平均を返す
 export function GroupCards({
   groups,
   d,
-  label,
   unit,
   at,
   fmt,
 }: {
   groups: Record<GroupKey, Member[]>;
   d: string;
-  label: string;
   unit: string;
   at: (g: GroupKey, day: string) => number | null;
   fmt: (v: number) => string;
@@ -94,7 +93,6 @@ export function GroupCards({
               <b style={{ color: g.color }}>{g.label}</b>
               <small>{groups[g.key].length}名</small>
             </div>
-            <div className="bc-l">{label}</div>
             <div className="bc-v num">
               {now == null ? "—" : fmt(now)}
               {unit && <small>{unit}</small>}
