@@ -330,3 +330,6 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .datebar.compact button{width:34px;height:34px;font-size:16px}
 .datebar.compact input{padding:6px 10px}
 .ctl-title{font-size:15px;font-weight:700;margin-bottom:8px}
+
+/* 選手ホーム：Big3 自己ベストのカードに ALL-IN の赤いアクセントライン */
+.card.accent-top{border-top:4px solid var(--accent)}

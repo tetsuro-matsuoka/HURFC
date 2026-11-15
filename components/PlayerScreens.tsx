@@ -1,17 +1,14 @@
 "use client";
 
 // 選手向け画面
-//  S02 選手ダッシュボード（ホーム） / S03 データ入力 / ランキング
+//  S03 データ入力 / ランキング（S02 ホームは PlayerHome.tsx）
 
 import { useState } from "react";
-import LineChart from "./LineChart";
 import { RankBoard, type Ctx } from "./Shared";
 import {
   LIFTS,
   addDays,
   ABSENCE_REASONS,
-  attendLabel,
-  attendRate,
   dayKind,
   fmt2,
   isLinked,
@@ -26,153 +23,12 @@ import {
   maxes,
   md,
   phys,
-  ranking,
   rowTotal,
   today,
-  wd,
-  weightAgo,
   weights,
 } from "@/lib/calc";
 import { saveDaily, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
 import type { AbsenceReason, Attendance, LiftKey, PhysRec } from "@/lib/types";
-
-/* ---------- S02 選手ダッシュボード ---------- */
-export function PlayerHome({ ctx }: { ctx: Ctx }) {
-  const m = ctx.me,
-    t = today(),
-    rec = m.daily[t],
-    kind = dayKind(t, ctx.practice);
-  const rate = attendRate(m, ctx.practice),
-    rate30 = attendRate(m, ctx.practice, 30);
-  const lw = latestWeight(m),
-    w7 = weightAgo(m, 7);
-  const dW = lw && w7 ? lw.v - w7.v : null;
-  const mx = maxes(m),
-    p = phys(m),
-    lastP = p[p.length - 1];
-  const rk = ranking(ctx.members, "total"),
-    pos = rk.findIndex((r) => r.id === m.id);
-
-  return (
-    <>
-      <div className={`today ${rec || kind === "off" ? "done" : "todo"}`}>
-        <div className="tx">
-          {kind !== "unset" && (
-            <span className={`daytag ${kind}`} style={{ marginBottom: 4, background: "#fff" }}>
-              {kind === "practice" ? "今日は練習日" : "今日はオフ"}
-            </span>
-          )}
-          {rec ? (
-            <>
-              <div>今日の記録は完了 ✓</div>
-              <small>
-                {attendLabel(rec) ?? "オフ"}
-                {rec.weight ? ` ・ ${fmt1(rec.weight)}kg` : ""}
-              </small>
-            </>
-          ) : kind === "off" ? (
-            <>
-              <div>今日は練習日ではありません</div>
-              <small>出欠の入力は不要です（体重だけ記録できます）</small>
-            </>
-          ) : (
-            <>
-              今日の記録がまだです
-              <small>
-                {md(t)}（{wd(t)}） 出欠と体重を入力しよう
-              </small>
-            </>
-          )}
-        </div>
-        <button onClick={() => ctx.go("input")}>{rec ? "修正する" : "入力する"}</button>
-      </div>
-
-      <div className="kpis">
-        <div className="kpi">
-          <div className="l">出席率</div>
-          <div className="v num">
-            {rate == null ? "—" : Math.round(rate)}
-            <small>%</small>
-          </div>
-          <div className="s">直近30日 {rate30 == null ? "—" : Math.round(rate30) + "%"}</div>
-        </div>
-        <div className="kpi">
-          <div className="l">体重</div>
-          <div className="v num">
-            {lw ? fmt1(lw.v) : "—"}
-            <small>kg</small>
-          </div>
-          <div className="s">
-            {dW == null ? (
-              lw ? (
-                `${md(lw.d)} 時点`
-              ) : (
-                "未入力"
-              )
-            ) : (
-              <>
-                1週間で{" "}
-                <b className={dW >= 0 ? "up" : "down"}>
-                  {dW >= 0 ? "+" : ""}
-                  {fmt1(dW)}kg
-                </b>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid two">
-        <div className="card">
-          <h3>
-            体重の推移 <small>直近30日</small>
-          </h3>
-          <LineChart pts={weights(m, 30)} />
-        </div>
-        <div className="card">
-          <h3>
-            Big3 自己ベスト
-            {pos >= 0 && (
-              <span className="rankpill" style={{ marginLeft: "auto" }}>
-                チーム {pos + 1}位 / {rk.length}人
-              </span>
-            )}
-          </h3>
-          <div className="big3">
-            {LIFTS.map(([k, l]) => (
-              <div className="lift" key={k}>
-                <div className="l">{l}</div>
-                <div className="v num">
-                  {fmt0(mx[k])}
-                  <small>kg</small>
-                </div>
-                <div className="d">{lastP && lastP[k] ? "前回 " + fmt0(lastP[k]) : ""}</div>
-              </div>
-            ))}
-          </div>
-          <div className="total">
-            <span className="muted">合計（Total）</span>
-            <span className="v num">
-              {fmt0(mx.total)}
-              <small className="muted" style={{ fontSize: 14 }}>
-                {" "}
-                kg
-              </small>
-            </span>
-          </div>
-          {mx.ratio && (
-            <div className="muted" style={{ textAlign: "right" }}>
-              体重比 ×{mx.ratio.toFixed(2)}
-            </div>
-          )}
-          <p className="muted" style={{ marginTop: 8 }}>
-            {lastP ? `最終測定 ${md(lastP.d)}` : "「記録する」→「測定」から測定値を入力できます"}
-          </p>
-        </div>
-      </div>
-    </>
-  );
-}
 
 /* ---------- S03 データ入力 ---------- */
 export function InputScreen({ ctx }: { ctx: Ctx }) {
