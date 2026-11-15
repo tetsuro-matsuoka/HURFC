@@ -245,6 +245,13 @@ export function trainingRate(m: Member, from?: string): number | null {
     .map(([, s]) => s);
   return v.length ? (v.reduce((a, b) => a + b, 0) / v.length) * 10 : null;
 }
+// 月別の筋トレ遂行度：週の月曜日がその月に入る週の点数の平均（0〜10。入力のある週だけ）
+export function trainingMonthAvg(m: Member, ym: string): number | null {
+  const v = Object.entries(m.training)
+    .filter(([w]) => w.slice(0, 7) === ym)
+    .map(([, s]) => s);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
 // その週のチーム平均
 export function teamTrainingAvg(players: Member[], ws: string): number | null {
   const v = players.map((m) => m.training[ws]).filter((x): x is number => x != null);

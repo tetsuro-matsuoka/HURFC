@@ -8,12 +8,11 @@
 import { useMemo, useState } from "react";
 import LineChart from "./LineChart";
 import MultiLineChart, { type Series } from "./MultiLineChart";
-import { avg, valueAsOf } from "./GroupStats";
+import { MonthBar, avg, valueAsOf } from "./GroupStats";
 import type { Ctx } from "./Shared";
 import {
   LIFTS,
   addDays,
-  addMonths,
   attendLabel,
   attendStats,
   attendStreak,
@@ -36,6 +35,7 @@ import {
   playersOf,
   ranking,
   trainingRate,
+  trainingMonthAvg,
   recentWeeks,
   today,
   unitOf,
@@ -260,21 +260,6 @@ function TeamCompare({ ctx, ym }: { ctx: Ctx; ym: string }) {
   );
 }
 
-function MonthBar({ ym, setYm }: { ym: string; setYm: (v: string) => void }) {
-  const last = ym >= ymOf(today());
-  return (
-    <div className="datebar compact">
-      <button onClick={() => setYm(addMonths(ym, -1))} aria-label="前の月">
-        ‹
-      </button>
-      <b style={{ flex: 1, textAlign: "center" }}>{ymLabel(ym)}</b>
-      <button onClick={() => !last && setYm(addMonths(ym, 1))} disabled={last} style={last ? { opacity: 0.3 } : undefined} aria-label="次の月">
-        ›
-      </button>
-    </div>
-  );
-}
-
 /* ---------- 詳細：筋トレ遂行率 ---------- */
 function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
@@ -289,6 +274,10 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
   const weeks = recentWeeks(8);
   const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] * 10 }));
+  const [ym, setYm] = useState(ymOf(today()));
+  const myMonth = trainingMonthAvg(m, ym);
+  const teamMonth = avg(ps.map((x) => trainingMonthAvg(x, ym)));
+  const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
   return (
     <div className="card">
       <h3>
@@ -329,6 +318,29 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
           })}
         </tbody>
       </table>
+      {/* 月別：選んだ月の自分とチーム平均（0〜10） */}
+      <MonthBar ym={ym} setYm={setYm} />
+      <div className="mrow2">
+        <div>
+          <span className="l">自分</span>
+          <b className="num">{fmtScore(myMonth)}</b>
+        </div>
+        <div>
+          <span className="l">チーム平均</span>
+          <b className="num">{fmtScore(teamMonth)}</b>
+        </div>
+        <div>
+          <span className="l">差</span>
+          {myMonth == null || teamMonth == null ? (
+            <span className="muted">—</span>
+          ) : (
+            <b className={`num ${myMonth - teamMonth >= 0 ? "up" : "down"}`}>
+              {myMonth - teamMonth >= 0 ? "▲+" : "▼"}
+              {fmt1(myMonth - teamMonth)}
+            </b>
+          )}
+        </div>
+      </div>
       {pts.length >= 2 && <LineChart pts={pts} h={100} color="var(--warn)" />}
     </div>
   );

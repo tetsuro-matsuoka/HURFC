@@ -4,11 +4,12 @@
 //  ・DateBar     … 基準日の切り替え（‹ 日付 ›）
 //  ・GroupCards  … 全体・FW・BK の平均カード（上の線：黒・青・オレンジ）と 7日・30日前比
 //  ・PeriodSeg   … 推移グラフの期間（30日 / 90日 / 全期間）
+//  ・MonthBar    … 月の切り替え（‹ 2026年11月 ›）
 //  ・groupTrend  … 推移グラフ用に、期間内の毎日のグループ平均を計算
 
 import type { ReactNode } from "react";
 import type { Series } from "./MultiLineChart";
-import { addDays, today, unitOfPosition, wd, type Point } from "@/lib/calc";
+import { addDays, addMonths, today, unitOfPosition, wd, ymLabel, ymOf, type Point } from "@/lib/calc";
 import type { Member } from "@/lib/types";
 
 export type GroupKey = "all" | "FW" | "BK";
@@ -135,4 +136,20 @@ export function groupTrend(d: string, period: Period, first: string | null, at: 
     });
     return { label: g.label, color: g.color, pts };
   });
+}
+
+// 月の切り替え（‹ 2026年11月 ›）。今月より先には進めない
+export function MonthBar({ ym, setYm }: { ym: string; setYm: (v: string) => void }) {
+  const last = ym >= ymOf(today());
+  return (
+    <div className="datebar compact">
+      <button onClick={() => setYm(addMonths(ym, -1))} aria-label="前の月">
+        ‹
+      </button>
+      <b style={{ flex: 1, textAlign: "center" }}>{ymLabel(ym)}</b>
+      <button onClick={() => !last && setYm(addMonths(ym, 1))} disabled={last} style={last ? { opacity: 0.3 } : undefined} aria-label="次の月">
+        ›
+      </button>
+    </div>
+  );
 }
