@@ -2,11 +2,18 @@
 
 // 選手・コーチ共通で使う部品（ランキング、選手詳細、トースト通知）
 
+import { useState } from "react";
 import LineChart from "./LineChart";
 import type { ReactNode } from "react";
 import {
   LIFTS,
+  METRICS,
   attendRate,
+  fmt2,
+  metricRanking,
+  metricSeries,
+  recentWeeks,
+  type RankRow,
   fmt0,
   fmt1,
   latestWeight,
@@ -17,13 +24,15 @@ import {
   rowTotal,
   weights,
 } from "@/lib/calc";
-import type { Member, Members, MetricKey } from "@/lib/types";
+import type { Member, MetricDef, Members, MetricKey } from "@/lib/types";
 
-export type View = "home" | "input" | "rank" | "team" | "physical" | "manage";
+export type View = "home" | "input" | "rank" | "team" | "settings" | "manage";
 
 // 画面どうしで受け渡す共通の情報
 export type Ctx = {
   members: Members;
+  metrics: MetricDef[]; // 測定項目（項目設定）
+  settings: Record<string, string>; // 設定（筋トレ評価基準の説明文など）
   me: Member;
   readOnly: boolean;
   reload: () => Promise<void>;
@@ -32,15 +41,55 @@ export type Ctx = {
   go: (v: View) => void;
 };
 
-// ランキング一覧
-export function RankList({ ctx, metric }: { ctx: Ctx; metric: MetricKey }) {
-  const rk = ranking(ctx.members, metric);
-  if (!rk.length) return <div className="empty">測定データがありません</div>;
-  const top = rk[0].v;
+// ランキング（種目の切り替えボタン付き）
+// Big3・体重比に加えて、項目設定で追加した「フィジカル」の項目も選べる
+export function RankBoard({ ctx }: { ctx: Ctx }) {
+  const [key, setKey] = useState<string>("total");
+  const custom = ctx.metrics.filter((x) => x.category === "フィジカル");
+  const def = custom.find((x) => "m" + x.id === key);
+  const rows: RankRow[] = def ? metricRanking(ctx.members, def) : ranking(ctx.members, key as MetricKey);
+  const fmtV = (v: number) =>
+    def ? (
+      <>
+        {fmt2(v)}
+        <small> {def.unit}</small>
+      </>
+    ) : key === "ratio" ? (
+      "×" + v.toFixed(2)
+    ) : (
+      <>
+        {fmt0(v)}
+        <small> kg</small>
+      </>
+    );
+  return (
+    <>
+      <div className="chips">
+        {[...METRICS.map(([k, l]) => [k, l] as [string, string]), ...custom.map((x) => ["m" + x.id, x.name] as [string, string])].map(
+          ([k, l]) => (
+            <button key={k} className={key === k ? "on" : ""} onClick={() => setKey(k)}>
+              {l}
+            </button>
+          ),
+        )}
+      </div>
+      <RankRows ctx={ctx} rows={rows} fmtV={fmtV} low={def?.better === "low"} />
+      <p className="muted" style={{ marginTop: 8 }}>
+        自己ベストで比較しています。{key === "ratio" ? "体重比 = Big3合計 ÷ 最新の体重" : ""}
+        {def?.better === "low" ? "（小さいほど上位）" : ""}
+      </p>
+    </>
+  );
+}
+
+// ランキングの行
+function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (v: number) => ReactNode; low?: boolean }) {
+  if (!rows.length) return <div className="empty">測定データがありません</div>;
+  const top = rows[0].v;
   const coach = ctx.me.role === "coach";
   return (
     <>
-      {rk.map((r, i) => (
+      {rows.map((r, i) => (
         <div
           key={r.id}
           className={`rk ${r.id === ctx.me.id ? "me" : ""}`}
@@ -51,19 +100,11 @@ export function RankList({ ctx, metric }: { ctx: Ctx; metric: MetricKey }) {
           <div className="nm">
             <b>{r.name}</b>
             <div className="bar">
-              <i style={{ width: `${((r.v / top) * 100).toFixed(1)}%` }} />
+              {/* 小さいほど良い項目は、1位を100%として逆比で表示 */}
+              <i style={{ width: `${(Math.min(1, low ? top / r.v : r.v / top) * 100).toFixed(1)}%` }} />
             </div>
           </div>
-          <div className="v num">
-            {metric === "ratio" ? (
-              "×" + r.v.toFixed(2)
-            ) : (
-              <>
-                {fmt0(r.v)}
-                <small> kg</small>
-              </>
-            )}
-          </div>
+          <div className="v num">{fmtV(r.v)}</div>
         </div>
       ))}
     </>
@@ -71,7 +112,8 @@ export function RankList({ ctx, metric }: { ctx: Ctx; metric: MetricKey }) {
 }
 
 // 選手の詳細（コーチが選手をタップしたときに表示）
-export function PlayerModal({ m, onClose }: { m: Member; onClose: () => void }) {
+export function PlayerModal({ m, metrics, onClose }: { m: Member; metrics: MetricDef[]; onClose: () => void }) {
+  const weeks = recentWeeks(8);
   const x = maxes(m),
     p = phys(m),
     lw = latestWeight(m),
@@ -131,6 +173,32 @@ export function PlayerModal({ m, onClose }: { m: Member; onClose: () => void }) 
             </>
           )}
         </div>
+        <div className="card">
+          <h3>
+            筋トレ遂行度 <small>直近8週（0〜10）</small>
+          </h3>
+          <LineChart
+            pts={weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }))}
+            h={120}
+            color="var(--ok)"
+          />
+        </div>
+        {metrics.map((def) => {
+          const s = metricSeries(m, def.id);
+          if (!s.length) return null;
+          return (
+            <div className="card" key={def.id}>
+              <h3>
+                {def.name}{" "}
+                <small>
+                  最新 {fmt2(s[s.length - 1].v)}
+                  {def.unit}（{md(s[s.length - 1].d)}）
+                </small>
+              </h3>
+              <LineChart pts={s} h={120} color="var(--navy)" />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

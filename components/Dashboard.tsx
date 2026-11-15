@@ -1,0 +1,430 @@
+"use client";
+
+// S04 チームダッシュボード（コーチ用ホーム）
+//  上部：4つのメニュー（出欠席率 / 筋トレ遂行率 / 体組成 / フィジカル）。押すと詳細が開く
+//  下部：選手一覧（PlayerTable.tsx）
+
+import { useState } from "react";
+import type { ReactNode } from "react";
+import LineChart from "./LineChart";
+import PlayerTable from "./PlayerTable";
+import { RankBoard, type Ctx } from "./Shared";
+import {
+  LIFTS,
+  addDays,
+  addMonths,
+  bodyComp,
+  fmt0,
+  fmt1,
+  fmt2,
+  latestWeight,
+  maxes,
+  md,
+  metricBest,
+  metricLatest,
+  monthAttendance,
+  phys,
+  playersOf,
+  recentWeeks,
+  teamTrainingAvg,
+  today,
+  trainingAvg,
+  wd,
+  weekStart,
+  weightAgo,
+  weights,
+  ymLabel,
+  ymOf,
+} from "@/lib/calc";
+import type { Member } from "@/lib/types";
+
+type Panel = "attend" | "training" | "body" | "physical";
+
+const avg = (v: (number | null)[]) => {
+  const x = v.filter((n): n is number => n != null);
+  return x.length ? x.reduce((a, b) => a + b, 0) / x.length : null;
+};
+
+// 前後に切り替えるバー（‹ ラベル ›）
+function Stepper({ label, onPrev, onNext, nextDisabled }: { label: ReactNode; onPrev: () => void; onNext: () => void; nextDisabled: boolean }) {
+  return (
+    <div className="datebar">
+      <button onClick={onPrev} aria-label="前へ">
+        ‹
+      </button>
+      <b style={{ flex: 1, textAlign: "center" }}>{label}</b>
+      <button onClick={onNext} disabled={nextDisabled} style={nextDisabled ? { opacity: 0.3 } : undefined} aria-label="次へ">
+        ›
+      </button>
+    </div>
+  );
+}
+
+export function TeamScreen({ ctx }: { ctx: Ctx }) {
+  const [panel, setPanel] = useState<Panel | null>(null);
+  const ps = playersOf(ctx.members);
+  const t = today();
+
+  // ボタンに出す概要
+  const todayYes = ps.filter((m) => m.daily[t]?.attendance === "出席").length;
+  const weekAvg = teamTrainingAvg(ps, weekStart(t));
+  const wAvg = avg(ps.map((m) => latestWeight(m)?.v ?? null));
+  const bigAvg = avg(ps.map((m) => maxes(m).total));
+
+  const menus: [Panel, string, string][] = [
+    ["attend", "出欠席率", `今日 出席 ${todayYes}/${ps.length}名`],
+    ["training", "筋トレ遂行率", `今週平均 ${weekAvg == null ? "—" : fmt1(weekAvg)} / 10`],
+    ["body", "体組成", `平均体重 ${wAvg == null ? "—" : fmt1(wAvg) + "kg"}`],
+    ["physical", "フィジカル", `Big3合計 平均 ${bigAvg == null ? "—" : fmt0(bigAvg) + "kg"}`],
+  ];
+
+  return (
+    <>
+      <h2 className="page">チームダッシュボード</h2>
+      <div className="menu4">
+        {menus.map(([k, l, sub]) => (
+          <button key={k} className={`m-${k} ${panel === k ? "on" : ""}`} onClick={() => setPanel(panel === k ? null : k)}>
+            <b>{l}</b>
+            <span>{sub}</span>
+          </button>
+        ))}
+      </div>
+
+      {panel === "attend" && <AttendPanel ctx={ctx} ps={ps} />}
+      {panel === "training" && <TrainingPanel ctx={ctx} ps={ps} />}
+      {panel === "body" && <BodyPanel ctx={ctx} ps={ps} />}
+      {panel === "physical" && <PhysicalPanel ctx={ctx} ps={ps} />}
+
+      <PlayerTable ctx={ctx} />
+    </>
+  );
+}
+
+/* ---------- 出欠席率 ---------- */
+function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
+  const [d, setD] = useState(today());
+  const [ym, setYm] = useState(ymOf(today()));
+  const rows = ps.map((m, i) => ({ m, r: m.daily[d], i }));
+  const yes = rows.filter((x) => x.r?.attendance === "出席").length;
+  const no = rows.filter((x) => x.r?.attendance === "欠席").length;
+  const none = rows.length - yes - no;
+  // 未入力 → 欠席 → 出席 の順（確認が必要な人を上に）。同じ状態の中は選手管理の並び順
+  const order = (x: (typeof rows)[number]) => (!x.r ? 2 : x.r.attendance === "欠席" ? 1 : 0);
+  const sorted = [...rows].sort((a, b) => order(b) - order(a) || a.i - b.i);
+
+  const month = ps.map((m) => ({ m, ...monthAttendance(m, ym) }));
+  const tYes = month.reduce((a, x) => a + x.yes, 0),
+    tNo = month.reduce((a, x) => a + x.no, 0);
+  const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
+
+  return (
+    <div className="grid two">
+      <div className="card">
+        <h3>当日の出欠状況</h3>
+        <div className="datebar">
+          <button onClick={() => setD(addDays(d, -1))} aria-label="前の日">
+            ‹
+          </button>
+          <input type="date" value={d} max={today()} onChange={(e) => e.target.value && setD(e.target.value > today() ? today() : e.target.value)} />
+          <button onClick={() => d < today() && setD(addDays(d, 1))} disabled={d >= today()} style={d >= today() ? { opacity: 0.3 } : undefined} aria-label="次の日">
+            ›
+          </button>
+          <span className="muted">
+            {wd(d)}曜日{d === today() ? "（今日）" : ""}
+          </span>
+        </div>
+        <div className="sumrow">
+          <div style={{ background: "var(--ok-soft)", color: "var(--ok)" }}>
+            <div className="v num">{yes}</div>
+            <div className="l">出席</div>
+          </div>
+          <div style={{ background: "var(--ng-soft)", color: "var(--ng)" }}>
+            <div className="v num">{no}</div>
+            <div className="l">欠席</div>
+          </div>
+          <div style={{ background: "var(--bg)", color: "var(--sub)" }}>
+            <div className="v num">{none}</div>
+            <div className="l">未入力</div>
+          </div>
+        </div>
+        {rows.length ? (
+          <table className="tbl">
+            <tbody>
+              {sorted.map((x) => (
+                <tr key={x.m.id} className="click" onClick={() => ctx.openPlayer(x.m.id)}>
+                  <td>{x.m.name}</td>
+                  <td>
+                    <span className={`chip ${!x.r ? "none" : x.r.attendance === "出席" ? "yes" : "no"}`}>
+                      {x.r ? x.r.attendance ?? "—" : "未入力"}
+                    </span>
+                  </td>
+                  <td className="r num">{x.r?.weight ? fmt1(x.r.weight) + "kg" : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="empty">選手が登録されていません</div>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>月別の出欠席率</h3>
+        <Stepper
+          label={ymLabel(ym)}
+          onPrev={() => setYm(addMonths(ym, -1))}
+          onNext={() => setYm(addMonths(ym, 1))}
+          nextDisabled={ym >= ymOf(today())}
+        />
+        <div className="scroll">
+          <table className="tbl">
+            <tbody>
+              <tr>
+                <th>選手</th>
+                <th className="r">出席</th>
+                <th className="r">欠席</th>
+                <th className="r">出席率</th>
+                <th className="r">欠席率</th>
+              </tr>
+              {month.map((x) => (
+                <tr key={x.m.id} className="click" onClick={() => ctx.openPlayer(x.m.id)}>
+                  <td style={{ whiteSpace: "nowrap" }}>{x.m.name}</td>
+                  <td className="r num">{x.yes}</td>
+                  <td className="r num">{x.no}</td>
+                  <td className="r num">
+                    <b>{pct(x.rate)}</b>
+                  </td>
+                  <td className="r num">{pct(x.rate == null ? null : 100 - x.rate)}</td>
+                </tr>
+              ))}
+              <tr>
+                <td>
+                  <b>チーム全体</b>
+                </td>
+                <td className="r num">{tYes}</td>
+                <td className="r num">{tNo}</td>
+                <td className="r num">
+                  <b>{pct(tYes + tNo ? (tYes / (tYes + tNo)) * 100 : null)}</b>
+                </td>
+                <td className="r num">{pct(tYes + tNo ? (tNo / (tYes + tNo)) * 100 : null)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 筋トレ遂行率 ---------- */
+function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
+  const weeks = recentWeeks(8);
+  const cur = weeks[weeks.length - 1];
+  const teamPts = weeks.map((w) => ({ d: w, v: teamTrainingAvg(ps, w) })).filter((p): p is { d: string; v: number } => p.v != null);
+  const curAvg = teamTrainingAvg(ps, cur);
+  const entered = ps.filter((m) => m.training[cur] != null).length;
+  const criteria = ctx.settings.training_criteria;
+
+  return (
+    <>
+      <div className="grid two">
+        <div className="card">
+          <h3>
+            チーム平均 <small>今週（{md(cur)}〜）</small>
+          </h3>
+          <div className="kpi" style={{ padding: 0 }}>
+            <div className="v num">
+              {curAvg == null ? "—" : fmt1(curAvg)}
+              <small>/ 10</small>
+            </div>
+            <div className="s">
+              遂行率 {curAvg == null ? "—" : Math.round(curAvg * 10) + "%"} ・ 入力 {entered}/{ps.length}名
+            </div>
+          </div>
+          <h3 style={{ marginTop: 14 }}>
+            チーム平均の推移 <small>直近8週</small>
+          </h3>
+          <LineChart pts={teamPts} h={130} color="var(--ok)" />
+        </div>
+        <div className="card">
+          <h3>評価基準</h3>
+          <p className="muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
+            {criteria || "まだ設定されていません（「項目設定」から入力できます）"}
+          </p>
+        </div>
+      </div>
+      <div className="card">
+        <h3>
+          選手ごとの週次推移 <small>0〜10 ・ 達成率＝直近8週の平均÷10</small>
+        </h3>
+        <div className="scroll">
+          <table className="tbl">
+            <tbody>
+              <tr>
+                <th>選手</th>
+                {weeks.map((w) => (
+                  <th className="r" key={w}>
+                    {md(w)}〜
+                  </th>
+                ))}
+                <th className="r">達成率</th>
+              </tr>
+              {ps.map((m) => {
+                const a = trainingAvg(m, 8);
+                return (
+                  <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
+                    <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
+                    {weeks.map((w) => (
+                      <td className="r num" key={w}>
+                        {m.training[w] ?? <span className="muted">—</span>}
+                      </td>
+                    ))}
+                    <td className="r num">
+                      <b>{a == null ? "—" : Math.round(a * 10) + "%"}</b>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ---------- 体組成 ---------- */
+function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
+  const defs = ctx.metrics.filter((x) => x.category === "体組成");
+  const diffCell = (v: number | null) =>
+    v == null ? (
+      <span className="muted">—</span>
+    ) : (
+      <span className={v >= 0 ? "up" : "down"}>
+        {v >= 0 ? "+" : ""}
+        {fmt1(v)}
+      </span>
+    );
+  return (
+    <div className="card">
+      <h3>
+        体組成 <small>最新値 ・ 名前をタップで推移グラフ</small>
+      </h3>
+      <div className="scroll">
+        <table className="tbl">
+          <tbody>
+            <tr>
+              <th>選手</th>
+              <th>体重の推移（30日）</th>
+              <th className="r">体重</th>
+              <th className="r">7日差</th>
+              <th className="r">30日差</th>
+              {defs.map((x) => (
+                <th className="r" key={x.id}>
+                  {x.name}
+                  {x.unit && `(${x.unit})`}
+                </th>
+              ))}
+              <th className="r">BMI</th>
+              <th className="r">LBM(kg)</th>
+              <th className="r">FFMI</th>
+            </tr>
+            {ps.map((m) => {
+              const lw = latestWeight(m),
+                a7 = weightAgo(m, 7),
+                a30 = weightAgo(m, 30),
+                bc = bodyComp(m, ctx.metrics);
+              return (
+                <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
+                  <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
+                  <td>
+                    <LineChart pts={weights(m, 30)} h={30} width={110} label={false} color="var(--navy)" />
+                  </td>
+                  <td className="r num">
+                    <b>{lw ? fmt1(lw.v) : "—"}</b>
+                  </td>
+                  <td className="r num">{diffCell(lw && a7 ? lw.v - a7.v : null)}</td>
+                  <td className="r num">{diffCell(lw && a30 ? lw.v - a30.v : null)}</td>
+                  {defs.map((x) => (
+                    <td className="r num" key={x.id}>
+                      {fmt2(metricLatest(m, x.id)?.v)}
+                    </td>
+                  ))}
+                  <td className="r num">{fmt1(bc.bmi)}</td>
+                  <td className="r num">{fmt1(bc.lbm)}</td>
+                  <td className="r num">{fmt1(bc.ffmi)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted" style={{ marginTop: 8 }}>
+        BMI＝体重÷身長(m)²、LBM（除脂肪体重）＝体重×(1−体脂肪率)、FFMI＝LBM÷身長(m)²。身長・体脂肪率は「記録する → 測定」で選手が入力した最新値を使います。
+      </p>
+    </div>
+  );
+}
+
+/* ---------- フィジカル ---------- */
+function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
+  const defs = ctx.metrics.filter((x) => x.category === "フィジカル");
+  return (
+    <div className="grid two">
+      <div className="card">
+        <h3>ランキング</h3>
+        <RankBoard ctx={ctx} />
+      </div>
+      <div className="card">
+        <h3>
+          自己ベスト一覧 <small>名前をタップで推移グラフ</small>
+        </h3>
+        <div className="scroll">
+          <table className="tbl">
+            <tbody>
+              <tr>
+                <th>選手</th>
+                {LIFTS.map((l) => (
+                  <th className="r" key={l[0]}>
+                    {l[2]}
+                  </th>
+                ))}
+                <th className="r">合計</th>
+                {defs.map((x) => (
+                  <th className="r" key={x.id}>
+                    {x.name}
+                    {x.unit && `(${x.unit})`}
+                  </th>
+                ))}
+                <th className="r">最終測定</th>
+              </tr>
+              {ps.map((m) => {
+                const x = maxes(m),
+                  p = phys(m);
+                return (
+                  <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
+                    <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
+                    {LIFTS.map(([k]) => (
+                      <td className="r num" key={k}>
+                        {fmt0(x[k])}
+                      </td>
+                    ))}
+                    <td className="r num">
+                      <b>{fmt0(x.total)}</b>
+                    </td>
+                    {defs.map((d) => (
+                      <td className="r num" key={d.id}>
+                        {fmt2(metricBest(m, d))}
+                      </td>
+                    ))}
+                    <td className="r muted">{p.length ? md(p[p.length - 1].d) : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
