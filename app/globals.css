@@ -283,23 +283,23 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .catbtn.none{background:#fff;color:var(--sub);border-color:var(--line)}
 @media(max-width:600px){.catbtn{min-width:60px;padding:3px 8px;font-size:11px}}
 
-/* 体組成：全体・FW・BK の平均カード */
+/* 体組成：全体・FW・BK の体重の平均カード（体重だけなのでコンパクトに） */
 .bcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.bcard{min-width:0;background:var(--bg);border-radius:12px;border-top:4px solid var(--navy);padding:10px 10px 6px}
-.bc-h{display:flex;align-items:baseline;justify-content:space-between;gap:4px;margin-bottom:4px}
-.bc-h b{font-size:15px}
+.bcard{min-width:0;background:var(--bg);border-radius:10px;border-top:4px solid var(--navy);padding:7px 10px 8px}
+.bc-h{display:flex;align-items:baseline;justify-content:space-between;gap:4px}
+.bc-h b{font-size:14px}
 .bc-h small{font-size:11px;color:var(--sub)}
-.bc-row{padding:6px 0;border-top:1px dashed var(--line)}
-.bc-l{font-size:11px;color:var(--sub);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bc-v{font-size:22px;font-weight:700;line-height:1.2}
+.bc-l{font-size:11px;color:var(--sub);font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bc-v{font-size:22px;font-weight:700;line-height:1.15}
 .bc-v small{font-size:11px;color:var(--sub);margin-left:2px;font-weight:500}
-.bc-d{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-d{display:flex;flex-wrap:wrap;column-gap:8px;font-size:11px;color:var(--sub);line-height:1.4}
+.bc-d span{white-space:nowrap}
 @media(max-width:480px){
   .bcards{gap:5px}
-  .bcard{padding:8px 6px 4px}
+  .bcard{padding:6px 6px 6px}
   .bc-h b{font-size:13px}
-  .bc-v{font-size:17px}
-  .bc-d{font-size:10px;white-space:normal}
+  .bc-v{font-size:18px}
+  .bc-d{font-size:10px;column-gap:4px}
 }
 /* グラフの凡例 */
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}

@@ -1,7 +1,7 @@
 "use client";
 
 // チームダッシュボード『体組成』
-//  1. 上部：全体平均・FW平均・BK平均のカード（選んだ日時点の平均と、7日前比・30日前比）
+//  1. 上部：全体・FW・BK の体重の平均カード（選んだ日時点の平均と、7日前比・30日前比）
 //  2. その下：全体・FW・BK の推移グラフ（指標と期間を切り替え）
 //  3. 一番下：選手別の体組成（最新値）の表
 // 指標は「項目設定」の体組成の項目（体重・体脂肪率など。並び順どおり）
@@ -26,7 +26,7 @@ import {
   wd,
   type Point,
 } from "@/lib/calc";
-import type { Member, MetricDef } from "@/lib/types";
+import type { Member } from "@/lib/types";
 
 type GroupKey = "all" | "FW" | "BK";
 const GROUPS: { key: GroupKey; label: string; color: string }[] = [
@@ -69,8 +69,10 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
     FW: ps.filter((m) => unitOfPosition(m.position) === "FW"),
     BK: ps.filter((m) => unitOfPosition(m.position) === "BK"),
   };
-  const groupAvg = (g: GroupKey, x: MetricDef, day: string) =>
-    avg(members[g].map((m) => valueAsOf(series.get(x.id)?.get(m.id) ?? [], day)));
+  // 平均カードは「体重」だけ（毎日の記録の体重。項目設定で名前を変えていればその名前で表示）
+  const weightName = defs.find((x) => x.key === "weight")?.name ?? "体重";
+  const weightPts = useMemo(() => new Map(ps.map((m) => [m.id, weights(m)])), [ps]);
+  const weightAvg = (g: GroupKey, day: string) => avg(members[g].map((m) => valueAsOf(weightPts.get(m.id) ?? [], day)));
 
   // 推移グラフ：期間内の毎日について、グループの平均（その日時点の値の平均）
   const chart: Series[] = useMemo(() => {
@@ -115,7 +117,7 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   return (
     <>
       <div className="card">
-        <h3>体組成の平均</h3>
+        <h3>体重の平均</h3>
         <div className="datebar">
           <button onClick={() => setD(addDays(d, -1))} aria-label="前の日">
             ‹
@@ -128,37 +130,30 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             {wd(d)}曜日{d === today() ? "（今日）" : ""}
           </span>
         </div>
-        {defs.length ? (
-          <div className="bcards">
-            {GROUPS.map((g) => (
+        <div className="bcards">
+          {GROUPS.map((g) => {
+            const now = weightAvg(g.key, d);
+            return (
               <div key={g.key} className="bcard" style={{ borderTopColor: g.color }}>
                 <div className="bc-h">
-                  <b style={{ color: g.color }}>{g.label}平均</b>
+                  <b style={{ color: g.color }}>{g.label}</b>
                   <small>{members[g.key].length}名</small>
                 </div>
-                {defs.map((x) => {
-                  const now = groupAvg(g.key, x, d);
-                  return (
-                    <div key={x.id} className="bc-row">
-                      <div className="bc-l">{x.name}</div>
-                      <div className="bc-v num">
-                        {now == null ? "—" : fmt1(now)}
-                        <small>{unitOf(x)}</small>
-                      </div>
-                      <div className="bc-d num">
-                        7日 {diff(now, groupAvg(g.key, x, addDays(d, -7)))} ・ 30日 {diff(now, groupAvg(g.key, x, addDays(d, -30)))}
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="bc-l">{weightName}</div>
+                <div className="bc-v num">
+                  {now == null ? "—" : fmt1(now)}
+                  <small>kg</small>
+                </div>
+                <div className="bc-d num">
+                  <span>7日 {diff(now, weightAvg(g.key, addDays(d, -7)))}</span>
+                  <span>30日 {diff(now, weightAvg(g.key, addDays(d, -30)))}</span>
+                </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty">「項目設定」に体組成の項目がありません</div>
-        )}
-        <p className="muted" style={{ marginTop: 8 }}>
-          選んだ日の時点で、各選手のいちばん新しい記録（その日以前）を平均しています。記録のない選手は数えません。「7日・30日」はその日数前の平均との差です。
+            );
+          })}
+        </div>
+        <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>
+          選んだ日時点の各選手の最新の体重を平均（記録のない選手は除く）。7日・30日はその日数前の平均との差。
         </p>
       </div>
 
