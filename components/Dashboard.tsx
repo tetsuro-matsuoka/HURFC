@@ -5,7 +5,7 @@
 //  下部：選手一覧（PlayerTable.tsx）。4つのどれも選んでいないとき（トップ）だけ表示
 //  選択中のボタンをもう一度押すか、「← 選手一覧（トップ）に戻る」でトップに戻る
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
 import LineChart from "./LineChart";
 import PlayerTable from "./PlayerTable";
@@ -21,6 +21,8 @@ import {
   maxes,
   md,
   metricBest,
+  metricRatio,
+  fmtRatio,
   metricsOf,
   monthAttendance,
   absenceSummary,
@@ -353,10 +355,14 @@ function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
               <tr>
                 <th>選手</th>
                 {defs.map((x) => (
-                  <th className="r" key={x.id}>
-                    {x.name}
-                    {unitOf(x) && `(${unitOf(x)})`}
-                  </th>
+                  <Fragment key={x.id}>
+                    <th className="r">
+                      {x.name}
+                      {unitOf(x) && `(${unitOf(x)})`}
+                    </th>
+                    {/* 体重比が ON の項目は、すぐ右に体重比の列 */}
+                    {x.show_ratio && <th className="r ratio">{x.name}体重比</th>}
+                  </Fragment>
                 ))}
                 <th className="r">最終測定</th>
               </tr>
@@ -366,9 +372,10 @@ function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                   <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
                     <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
                     {defs.map((d) => (
-                      <td className="r num" key={d.id}>
-                        {fmt2(metricBest(m, d))}
-                      </td>
+                      <Fragment key={d.id}>
+                        <td className="r num">{fmt2(metricBest(m, d))}</td>
+                        {d.show_ratio && <td className="r num ratio">{fmtRatio(metricRatio(m, d))}</td>}
+                      </Fragment>
                     ))}
                     <td className="r muted">{p.length ? md(p[p.length - 1].d) : "—"}</td>
                   </tr>

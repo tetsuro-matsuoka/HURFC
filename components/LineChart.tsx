@@ -6,9 +6,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { md, type Point } from "@/lib/calc";
 
-type Props = { pts: Point[]; h?: number; color?: string; label?: boolean; width?: number };
+// minRange：縦軸の最小の幅（値の差が小さくても線がつぶれないように。体重比などは小さく）/ digits：縦軸の小数の桁
+type Props = { pts: Point[]; h?: number; color?: string; label?: boolean; width?: number; minRange?: number; digits?: number };
 
-export default function LineChart({ pts, h = 170, color = "var(--accent)", label = true, width }: Props) {
+export default function LineChart({ pts, h = 170, color = "var(--accent)", label = true, width, minRange = 2, digits = 1 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(width ?? 600);
   const gid = "g" + useId().replace(/[^a-zA-Z0-9]/g, "");
@@ -29,10 +30,10 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
   const vs = pts.map((p) => p.v);
   let lo = Math.min(...vs),
     hi = Math.max(...vs);
-  if (hi - lo < 2) {
+  if (hi - lo < minRange) {
     const c = (hi + lo) / 2;
-    lo = c - 1;
-    hi = c + 1;
+    lo = c - minRange / 2;
+    hi = c + minRange / 2;
   }
   const padY = (hi - lo) * 0.15;
   lo -= padY;
@@ -64,7 +65,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
             <g key={i}>
               <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="#e7e8e4" strokeWidth={1} />
               <text x={L - 6} y={Y(v) + 4} textAnchor="end">
-                {v.toFixed(1)}
+                {v.toFixed(digits)}
               </text>
             </g>
           ))}
