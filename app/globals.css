@@ -407,3 +407,13 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .timing-time{display:flex;align-items:center;gap:10px;margin-top:8px}
 .timing-time input{padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-size:16px}
 .timing-time .muted{font-size:11px}
+
+/* グラフの吹き出し（タップ／マウスで表示） */
+.chart-tip{position:absolute;top:2px;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 14px rgba(19,34,56,.18);padding:6px 10px;font-size:12px;line-height:1.35;pointer-events:none;white-space:nowrap;z-index:3}
+.chart-tip .tip-d{font-size:11px;color:var(--sub);font-weight:700}
+.chart-tip .tip-v{font-family:Oswald,"Noto Sans JP",sans-serif;font-size:17px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:4px}
+.chart-tip .tip-s{font-size:11.5px;color:var(--sub);display:flex;align-items:center;gap:4px}
+.chart-tip i{display:inline-block;width:8px;height:8px;border-radius:50%}
+.chart-tip .tip-l{font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;color:var(--sub);margin-right:2px}
+.chart-tip .tip-n{font-size:11px;color:#1d4f86;font-weight:700}
+svg.chart{touch-action:pan-y}

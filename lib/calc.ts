@@ -53,6 +53,9 @@ export const weightNote = (r: { weight_timing?: WeightTiming | null; weight_time
   const parts = [r?.weight_timing ? TIMING_SHORT[r.weight_timing] : null, r?.weight_time || null].filter(Boolean);
   return parts.length ? `（${parts.join("・")}）` : "";
 };
+// 吹き出し用：「練習後 18:30」「朝（起床後）」のように、タイミングと時刻
+export const timingText = (r: { weight_timing?: WeightTiming | null; weight_time?: string | null } | undefined) =>
+  [r?.weight_timing, r?.weight_time].filter(Boolean).join(" ");
 // 出欠の表示：「出席」/「欠席（体調不良）」/ 理由なしの欠席は「欠席」
 export const attendLabel = (r: { attendance: string | null; absence_reason?: string | null } | undefined) =>
   !r?.attendance ? null : r.attendance === "欠席" && r.absence_reason ? `欠席（${r.absence_reason}）` : r.attendance;
