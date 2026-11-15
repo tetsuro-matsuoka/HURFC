@@ -138,9 +138,10 @@ export async function saveDaily(
     base,
   ];
   let last: { message?: string; code?: string } | null = null;
-  for (const row of tries) {
+  for (const [i, row] of tries.entries()) {
     const { error } = await sb().from("daily_records").upsert(row, { onConflict: "user_id,date" });
-    if (!error) return;
+    // 戻り値 timingSaved：測った時間を保存できたか（データベースに欄が無く、外して保存した場合は false）
+    if (!error) return { timingSaved: i === 0 };
     last = error;
     const missingColumn =
       error.code === "PGRST204" || error.code === "42703" || /absence_reason|weight_timing|weight_time/.test(error.message ?? "");

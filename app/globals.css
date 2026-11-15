@@ -417,3 +417,4 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .chart-tip .tip-l{font-family:"Noto Sans JP",sans-serif;font-size:11px;font-weight:700;color:var(--sub);margin-right:2px}
 .chart-tip .tip-n{font-size:11px;color:#1d4f86;font-weight:700}
 svg.chart{touch-action:pan-y}
+.chart-tip .tip-n.none{color:var(--sub);font-weight:400}

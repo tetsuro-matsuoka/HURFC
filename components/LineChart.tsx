@@ -114,7 +114,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
             {fmtV(act.v)}
             {unit && ` ${unit}`}
           </div>
-          {note?.(act.d) && <div className="tip-n">{note(act.d)}</div>}
+          {note?.(act.d) && <div className={`tip-n ${note(act.d) === "時間未記録" ? "none" : ""}`}>{note(act.d)}</div>}
         </TipBox>
       )}
     </div>

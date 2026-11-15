@@ -169,7 +169,8 @@ function Chart({
             </div>
           );
         })}
-        {note?.(act) && <div className="tip-n">{note(act)}</div>}
+        {/* 測った時間など（1本目＝自分の点がある日だけ） */}
+        {series[0] && at(series[0]) && note?.(act) && <div className={`tip-n ${note(act) === "時間未記録" ? "none" : ""}`}>{note(act)}</div>}
       </TipBox>
     )}
     </div>

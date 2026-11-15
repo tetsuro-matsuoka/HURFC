@@ -117,12 +117,19 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     setBusy(true);
     try {
       // 出席・オフのときは欠席理由を空にする（saveDaily 側でも null にする）
-      await saveDaily(m.id, date, off ? null : att, weight, !off && att === "欠席" && reason ? reason : null, {
+      // 時刻は "18:30" の形にそろえる（端末によっては "18:30:00" になるため先頭5文字）
+      const hhmm = time.slice(0, 5);
+      const r = await saveDaily(m.id, date, off ? null : att, weight, !off && att === "欠席" && reason ? reason : null, {
         weight_timing: weight != null ? timing : null,
-        weight_time: weight != null && /^\d{2}:\d{2}$/.test(time) ? time : null,
+        weight_time: weight != null && /^\d{2}:\d{2}$/.test(hhmm) ? hhmm : null,
       });
       await ctx.reload();
-      ctx.toast("保存しました ✓");
+      const wantedTiming = weight != null && (timing || time);
+      ctx.toast(
+        wantedTiming && !r.timingSaved
+          ? "体重は保存しました。測った時間はデータベースの更新（追加SQL その8）が必要なため保存できませんでした"
+          : "保存しました ✓",
+      );
       ctx.go("home");
     } catch (e) {
       ctx.toast(saveErrorText(e));
