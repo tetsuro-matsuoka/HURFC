@@ -44,7 +44,7 @@ create table if not exists public.physical_records (
 
 -- 選手の学年・ポジション・並び順（あとから追加した列。既存のデータベースにも追加されます）
 alter table public.users add column if not exists grade smallint check (grade between 1 and 6);                         -- 学年（画面では1〜4年を選択）
-alter table public.users add column if not exists position text check (position in ('フロント', 'バックロー', 'バックス')); -- ポジション
+alter table public.users add column if not exists position text check (position in ('フロント', 'バックロー', 'バックス')); -- ポジション（ファイル末尾の「その3」で10種類に変更）
 alter table public.users add column if not exists sort_order integer;                                                  -- 一覧での並び順（小さいほど上）
 
 create index if not exists daily_records_date_idx on public.daily_records (date);
@@ -270,3 +270,32 @@ begin
   insert into public.app_settings (key, value) values ('linked_metrics_seeded', '1')
   on conflict (key) do nothing;
 end $$;
+
+-- =============================================================
+-- 追加SQL（2026-11 その3）：ポジションを10種類（PR・HO・LO・FL・No.8・SH・SO・CTB・WTB・FB）に
+--
+-- （supabase/migrations/20261115_3_positions.sql と同じ内容）
+--
+-- ・FW / BK の区分はアプリ側で自動判定します（PR・HO・LO・FL・No.8 → FW / SH・SO・CTB・WTB・FB → BK）
+-- ・すでに登録済みの「フロント」「バックロー」「バックス」はそのまま残します（FW・BK に自動で振り分け）。
+--   選手管理の「編集」から新しいポジションに変更できます。
+-- ・学年は 1〜6 まで保存できる設定のままです（画面では 1〜5年を選択）
+-- =============================================================
+
+do $$
+declare
+  c record;
+begin
+  -- 古いポジションの制限（チェック）を外す
+  for c in
+    select conname from pg_constraint
+     where conrelid = 'public.users'::regclass and contype = 'c'
+       and pg_get_constraintdef(oid) like '%position%'
+  loop
+    execute format('alter table public.users drop constraint %I', c.conname);
+  end loop;
+end $$;
+
+alter table public.users add constraint users_position_check check (
+  position in ('PR', 'HO', 'LO', 'FL', 'No.8', 'SH', 'SO', 'CTB', 'WTB', 'FB', 'フロント', 'バックロー', 'バックス')
+);

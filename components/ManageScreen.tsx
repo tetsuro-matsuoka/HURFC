@@ -1,7 +1,8 @@
 "use client";
 
 // 選手管理（コーチ用）
-//  ・メンバー追加：選手は「名前・学年・ポジション」、コーチは「名前・合言葉」
+//  ・メンバー追加（「＋ メンバーを追加」を押すと入力欄が開く）：選手は「名前・学年・ポジション」、コーチは「名前・合言葉」
+//  ・学年・FW/BK で絞り込み（ポジションから FW / BK を自動判定）
 //  ・選手の並び替え（▲▼）、学年順に並べ直す
 //  ・選手の編集（名前・学年・ポジション）、メンバー削除
 // 選手は合言葉なしでログインするため、ここでの合言葉の設定・リセットはありません。
@@ -9,12 +10,13 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
-import { POSITIONS, normName, playersOf } from "@/lib/calc";
+import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf } from "@/lib/calc";
+import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
 import { adminCall } from "@/lib/data";
 import type { Member, Position, Role } from "@/lib/types";
 
 // 画面で選べる学年
-const GRADE_OPTIONS = [4, 3, 2, 1];
+const GRADE_OPTIONS = [5, 4, 3, 2, 1];
 
 // 学年・ポジションの入力欄（追加と編集で共通）
 function PlayerFields({
@@ -38,20 +40,37 @@ function PlayerFields({
           </button>
         ))}
       </div>
-      <label className="f">ポジション</label>
-      <div className="seg" style={{ marginBottom: 0 }}>
-        {POSITIONS.map((p) => (
-          <button type="button" key={p} className={position === p ? "on" : ""} onClick={() => setPosition(p)} style={{ fontSize: 14 }}>
-            {p}
-          </button>
-        ))}
-      </div>
+      <label className="f">ポジション（FW / BK は自動で判定）</label>
+      <select className="t" value={position && POSITIONS.includes(position) ? position : ""} onChange={(e) => setPosition(e.target.value as Position)}>
+        <option value="">選んでください</option>
+        <optgroup label="FW">
+          {FW_POSITIONS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="BK">
+          {BK_POSITIONS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      {position && !POSITIONS.includes(position) && (
+        <p className="muted" style={{ marginTop: 6 }}>
+          現在：{position}（以前の区分）。新しいポジションを選んでください。
+        </p>
+      )}
     </>
   );
 }
 
 export function ManageScreen({ ctx }: { ctx: Ctx }) {
-  // 追加フォーム
+  // 追加フォーム（最初は閉じておく）
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [role, setRole] = useState<Role>("player");
   const [name, setName] = useState("");
   const [grade, setGrade] = useState<number | null>(null);
@@ -79,6 +98,10 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
         ...basePlayers.filter((p) => !localIds.includes(p.id)),
       ]
     : basePlayers;
+
+  // 絞り込み（学年・FW/BK）
+  const shown = applyFilter(players, filter);
+  const filtered = filter.grade != null || filter.unit != null;
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
     setBusy(true);
@@ -109,6 +132,7 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
       setPw("");
       setGrade(null);
       setPosition(null);
+      setOpen(false); // 登録できたら閉じる
     }
   };
 
@@ -164,8 +188,18 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
     <>
       <h2 className="page">選手管理</h2>
 
+      {!open ? (
+        <button className="btn navy" style={{ marginTop: 0, marginBottom: 14 }} onClick={() => setOpen(true)}>
+          ＋ メンバーを追加
+        </button>
+      ) : (
       <div className="card">
-        <h3>メンバーを追加</h3>
+        <h3>
+          メンバーを追加
+          <button type="button" className="btn ghost small" style={{ marginLeft: "auto", padding: "6px 12px", fontSize: 13 }} onClick={() => setOpen(false)}>
+            閉じる
+          </button>
+        </h3>
         <form onSubmit={add}>
           <div className="seg" style={{ marginBottom: 0 }}>
             <button type="button" className={role === "player" ? "on" : ""} onClick={() => setRole("player")}>
@@ -190,11 +224,12 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
           </button>
         </form>
       </div>
+      )}
 
       <div className="card">
         <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span>
-            選手一覧 <small>{players.length}名</small>
+            選手一覧 <small>{shown.length}名</small>
           </span>
           {players.length > 1 && (
             <button className="btn ghost small" style={{ marginLeft: "auto", fontSize: 13, padding: "6px 10px" }} onClick={sortByGrade}>
@@ -202,12 +237,18 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
             </button>
           )}
         </h3>
+        <div style={{ marginBottom: 8 }}>
+          <FilterChips f={filter} set={setFilter} />
+        </div>
         <p className="muted" style={{ marginBottom: 8 }}>
-          ▲▼で順番を入れ替えられます。この順番はチーム画面・ログイン画面などでも使われます。
+          {filtered
+            ? "絞り込み中は並び替えできません（「全学年」「FW・BK」に戻すと▲▼が使えます）。"
+            : "▲▼で順番を入れ替えられます。この順番はチーム画面・ログイン画面などでも使われます。"}
         </p>
-        {players.length ? (
-          players.map((m, i) => (
+        {shown.length ? (
+          shown.map((m, i) => (
             <div className="mrow" key={m.id}>
+              {!filtered && (
               <div className="mv">
                 <button aria-label="上へ" disabled={i === 0} onClick={() => move(i, -1)}>
                   ▲
@@ -216,11 +257,12 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
                   ▼
                 </button>
               </div>
+              )}
               <div className="mn">
                 <b>{m.name}</b>
                 <div>
                   <span className="chip none">{m.grade ? `${m.grade}年` : "学年未設定"}</span>{" "}
-                  <span className="chip none">{m.position ?? "ポジション未設定"}</span>
+                  <span className="chip none">{m.position ?? "ポジション未設定"}</span> <UnitBadge m={m} />
                 </div>
               </div>
               <div className="ma">
@@ -238,7 +280,7 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
             </div>
           ))
         ) : (
-          <div className="empty">選手が登録されていません</div>
+          <div className="empty">{players.length ? "該当する選手がいません" : "選手が登録されていません"}</div>
         )}
       </div>
 
@@ -275,7 +317,7 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
               if (!n) return ctx.toast("名前を入力してください");
               if (Object.values(ctx.members).some((m) => m.id !== target.id && normName(m.name) === normName(n)))
                 return ctx.toast("同じ名前のメンバーがいます");
-              if (!eGrade || !ePos) return ctx.toast("学年とポジションを選んでください");
+              if (!eGrade || !ePos || !POSITIONS.includes(ePos)) return ctx.toast("学年とポジションを選んでください");
               const ok = await run(
                 () => adminCall("update", { id: target.id, name: n, grade: eGrade, position: ePos }),
                 "変更しました",

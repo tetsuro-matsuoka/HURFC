@@ -2,7 +2,9 @@
 
 export type Role = "player" | "coach";
 export type Attendance = "出席" | "欠席";
-export type Position = "フロント" | "バックロー" | "バックス";
+// ポジション（10種類）。「フロント」「バックロー」「バックス」は以前の区分（既存データ用）
+export type Position = "PR" | "HO" | "LO" | "FL" | "No.8" | "SH" | "SO" | "CTB" | "WTB" | "FB" | "フロント" | "バックロー" | "バックス";
+export type Unit = "FW" | "BK";
 
 // 日次データ（DailyRecords）
 export type DailyRec = { attendance: Attendance | null; weight: number | null };
