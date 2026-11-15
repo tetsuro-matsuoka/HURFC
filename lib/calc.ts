@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { AbsenceReason, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
+import type { AbsenceReason, Category, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -40,6 +40,9 @@ export const METRICS: [MetricKey, string][] = [
 export type Point = { d: string; v: number };
 
 export const GRADES = [1, 2, 3, 4, 5];
+// カテゴリー（タップするたびに 未設定 → レギュラー → ベンチ → ベンチ外 → 未設定 と切り替え）
+export const CATEGORIES: Category[] = ["レギュラー", "ベンチ", "ベンチ外"];
+export const nextCategory = (c: Category | null): Category | null => (c == null ? CATEGORIES[0] : CATEGORIES[CATEGORIES.indexOf(c) + 1] ?? null);
 // 欠席理由（この順番でプルダウンに表示）
 export const ABSENCE_REASONS: AbsenceReason[] = ["体調不良", "学校関連", "病院・リハビリ", "冠婚葬祭", "ずる休み", "その他"];
 // 出欠の表示：「出席」/「欠席（体調不良）」/ 理由なしの欠席は「欠席」

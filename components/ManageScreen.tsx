@@ -12,7 +12,7 @@ import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
 import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf } from "@/lib/calc";
-import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
+import { FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import { adminCall } from "@/lib/data";
 import type { Member, Position, Role } from "@/lib/types";
 
@@ -102,7 +102,7 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
 
   // 絞り込み（学年・FW/BK）
   const shown = applyFilter(players, filter);
-  const filtered = filter.grade != null || filter.unit != null;
+  const filtered = isFiltered(filter);
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
     setBusy(true);

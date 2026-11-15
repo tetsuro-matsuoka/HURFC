@@ -191,9 +191,17 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pt .l{text-align:left}
 .pt .s1{position:sticky;left:0;z-index:1;text-align:left;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis;border-right:2px solid var(--line)}
 .pt thead .s1{z-index:3}
-/* 一番下の「平均」行：淡いグレー・太い上枠・太字。縦にスクロールしても下に固定 */
-.pt tfoot td{position:sticky;bottom:0;z-index:2;background:#eef0f3;border-top:2px solid #b9bfc8;border-bottom:none;font-weight:700;color:var(--ink)}
+/* 一番下の「平均」行（＋カテゴリー別の比較行）：淡い色・太い上枠・太字。縦にスクロールしても下にまとめて固定 */
+.pt tfoot{position:sticky;bottom:0;z-index:2}
+.pt tfoot td{background:#eef0f3;border-bottom:none;font-weight:700;color:var(--ink)}
+.pt tfoot tr:first-child td{border-top:2px solid #b9bfc8}
 .pt tfoot .s1{z-index:3}
+.pt tfoot tr.cmp td{border-top:1px solid #d6dae0;font-size:.95em}
+.pt tfoot tr.cmp.reg td{background:#fdeee8}
+.pt tfoot tr.cmp.reg .s1{color:#b8401f}
+.pt tfoot tr.cmp.other td{background:#eaf1fa}
+.pt tfoot tr.cmp.other .s1{color:#1d4f86}
+.pt tfoot tr.cmp td.l{font-weight:400;color:var(--sub);font-size:11px}
 /* スマホでは文字と余白を小さくして、一度に見える項目を増やす */
 @media(max-width:600px){
   .pt{font-size:12px}
@@ -265,3 +273,12 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 /* チームダッシュボード：詳細から選手一覧（トップ）に戻るボタン */
 .backtop{display:inline-flex;align-items:center;gap:4px;margin:0 0 12px;padding:9px 14px;border-radius:999px;background:#fff;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:700}
 .backtop:active{background:var(--bg)}
+
+/* カテゴリーのバッジボタン（タップで切り替え） */
+.catbtn{min-width:70px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.4;white-space:nowrap;border:1.5px solid transparent;-webkit-tap-highlight-color:transparent}
+.catbtn:active{transform:scale(.94)}
+.catbtn.reg{background:#d9480f;color:#fff}
+.catbtn.bench{background:#1f6fb2;color:#fff}
+.catbtn.out{background:#8a929c;color:#fff}
+.catbtn.none{background:#fff;color:var(--sub);border-color:var(--line)}
+@media(max-width:600px){.catbtn{min-width:60px;padding:3px 8px;font-size:11px}}
