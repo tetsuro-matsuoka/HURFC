@@ -10,7 +10,15 @@ export type Unit = "FW" | "BK";
 export type Category = "レギュラー" | "ベンチ" | "ベンチ外";
 
 // 日次データ（DailyRecords）
-export type DailyRec = { attendance: Attendance | null; absence_reason: AbsenceReason | null; weight: number | null };
+// 体重の測定タイミング
+export type WeightTiming = "朝（起床後）" | "練習前" | "練習後" | "夜（就寝前）";
+export type DailyRec = {
+  attendance: Attendance | null;
+  absence_reason: AbsenceReason | null;
+  weight: number | null;
+  weight_timing: WeightTiming | null; // 測定タイミング
+  weight_time: string | null; // 測定時刻 "HH:MM"
+};
 
 // フィジカルデータ（PhysicalRecords）
 export type PhysRec = { bench_press: number | null; squat: number | null; deadlift: number | null };

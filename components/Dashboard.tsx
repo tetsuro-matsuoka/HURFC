@@ -33,6 +33,7 @@ import {
   trainingAvg,
   trainingMonthAvg,
   wd,
+  weightNote,
   weekStart,
   ymLabel,
   ymOf,
@@ -178,7 +179,14 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                       {attendLabel(x.r) ?? (kind === "off" ? "—" : "未入力")}
                     </span>
                   </td>
-                  <td className="r num">{x.r?.weight ? fmt1(x.r.weight) + "kg" : ""}</td>
+                  <td className="r num">{x.r?.weight ? (
+                      <>
+                        {fmt1(x.r.weight)}kg
+                        {weightNote(x.r) && <small className="muted"> {weightNote(x.r)}</small>}
+                      </>
+                    ) : (
+                      ""
+                    )}</td>
                 </tr>
               ))}
             </tbody>

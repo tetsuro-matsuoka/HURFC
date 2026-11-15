@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { AbsenceReason, Category, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
+import type { AbsenceReason, Category, WeightTiming, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -45,6 +45,14 @@ export const CATEGORIES: Category[] = ["レギュラー", "ベンチ", "ベン�
 export const nextCategory = (c: Category | null): Category | null => (c == null ? CATEGORIES[0] : CATEGORIES[CATEGORIES.indexOf(c) + 1] ?? null);
 // 欠席理由（この順番でプルダウンに表示）
 export const ABSENCE_REASONS: AbsenceReason[] = ["体調不良", "学校関連", "病院・リハビリ", "冠婚葬祭", "ずる休み", "その他"];
+// 体重の測定タイミング（この順でボタンに表示）
+export const WEIGHT_TIMINGS: WeightTiming[] = ["朝（起床後）", "練習前", "練習後", "夜（就寝前）"];
+const TIMING_SHORT: Record<WeightTiming, string> = { "朝（起床後）": "朝", 練習前: "練習前", 練習後: "練習後", "夜（就寝前）": "夜" };
+// 体重の横に小さく付ける文字：「（朝・07:15）」。どちらも無ければ空
+export const weightNote = (r: { weight_timing?: WeightTiming | null; weight_time?: string | null } | undefined) => {
+  const parts = [r?.weight_timing ? TIMING_SHORT[r.weight_timing] : null, r?.weight_time || null].filter(Boolean);
+  return parts.length ? `（${parts.join("・")}）` : "";
+};
 // 出欠の表示：「出席」/「欠席（体調不良）」/ 理由なしの欠席は「欠席」
 export const attendLabel = (r: { attendance: string | null; absence_reason?: string | null } | undefined) =>
   !r?.attendance ? null : r.attendance === "欠席" && r.absence_reason ? `欠席（${r.absence_reason}）` : r.attendance;
