@@ -22,6 +22,8 @@ import {
   metricLatest,
   metricsOf,
   monthAttendance,
+  dayKind,
+  practiceCount,
   phys,
   playersOf,
   recentWeeks,
@@ -67,12 +69,13 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
 
   // ボタンに出す概要
   const todayYes = ps.filter((m) => m.daily[t]?.attendance === "出席").length;
+  const todayOff = dayKind(t, ctx.practice) === "off";
   const weekAvg = teamTrainingAvg(ps, weekStart(t));
   const wAvg = avg(ps.map((m) => latestWeight(m)?.v ?? null));
   const bigAvg = avg(ps.map((m) => maxes(m).total));
 
   const menus: [Panel, string, string][] = [
-    ["attend", "出欠席率", `今日 出席 ${todayYes}/${ps.length}名`],
+    ["attend", "出欠席率", todayOff ? "今日はオフ（練習日ではありません）" : `今日 出席 ${todayYes}/${ps.length}名`],
     ["training", "筋トレ遂行率", `今週平均 ${weekAvg == null ? "—" : fmt1(weekAvg)} / 10`],
     ["body", "体組成", `平均体重 ${wAvg == null ? "—" : fmt1(wAvg) + "kg"}`],
     ["physical", "フィジカル", `Big3合計 平均 ${bigAvg == null ? "—" : fmt0(bigAvg) + "kg"}`],
@@ -104,7 +107,9 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
 function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const [d, setD] = useState(today());
   const [ym, setYm] = useState(ymOf(today()));
-  const rows = ps.map((m, i) => ({ m, r: m.daily[d], i }));
+  const kind = dayKind(d, ctx.practice);
+  // その日より後に登録した選手は数えない
+  const rows = ps.filter((m) => m.joined <= d).map((m, i) => ({ m, r: m.daily[d], i }));
   const yes = rows.filter((x) => x.r?.attendance === "出席").length;
   const no = rows.filter((x) => x.r?.attendance === "欠席").length;
   const none = rows.length - yes - no;
@@ -112,9 +117,13 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const order = (x: (typeof rows)[number]) => (!x.r ? 2 : x.r.attendance === "欠席" ? 1 : 0);
   const sorted = [...rows].sort((a, b) => order(b) - order(a) || a.i - b.i);
 
-  const month = ps.map((m) => ({ m, ...monthAttendance(m, ym) }));
+  // 練習日ベースの月間集計（今日より後の練習日はまだ数えない）
+  const month = ps.map((m) => ({ m, ...monthAttendance(m, ym, ctx.practice) }));
   const tYes = month.reduce((a, x) => a + x.yes, 0),
-    tNo = month.reduce((a, x) => a + x.no, 0);
+    tNo = month.reduce((a, x) => a + x.no, 0),
+    tNone = month.reduce((a, x) => a + x.none, 0),
+    tDays = month.reduce((a, x) => a + x.days, 0);
+  const pCount = practiceCount(ctx.practice, ym);
   const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
 
   return (
@@ -132,7 +141,13 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           <span className="muted">
             {wd(d)}曜日{d === today() ? "（今日）" : ""}
           </span>
+          {kind !== "unset" && <span className={`daytag ${kind}`}>{kind === "practice" ? "練習日" : "オフ"}</span>}
         </div>
+        {kind === "off" && (
+          <p className="muted" style={{ marginBottom: 10 }}>
+            この日は練習日ではありません（オフ）。出欠席率の計算には含めません。
+          </p>
+        )}
         <div className="sumrow">
           <div style={{ background: "var(--ok-soft)", color: "var(--ok)" }}>
             <div className="v num">{yes}</div>
@@ -143,7 +158,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             <div className="l">欠席</div>
           </div>
           <div style={{ background: "var(--bg)", color: "var(--sub)" }}>
-            <div className="v num">{none}</div>
+            <div className="v num">{kind === "off" ? "—" : none}</div>
             <div className="l">未入力</div>
           </div>
         </div>
@@ -154,8 +169,8 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                 <tr key={x.m.id} className="click" onClick={() => ctx.openPlayer(x.m.id)}>
                   <td>{x.m.name}</td>
                   <td>
-                    <span className={`chip ${!x.r ? "none" : x.r.attendance === "出席" ? "yes" : "no"}`}>
-                      {x.r ? x.r.attendance ?? "—" : "未入力"}
+                    <span className={`chip ${!x.r?.attendance ? "none" : x.r.attendance === "出席" ? "yes" : "no"}`}>
+                      {x.r?.attendance ?? (kind === "off" ? "—" : "未入力")}
                     </span>
                   </td>
                   <td className="r num">{x.r?.weight ? fmt1(x.r.weight) + "kg" : ""}</td>
@@ -176,6 +191,11 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           onNext={() => setYm(addMonths(ym, 1))}
           nextDisabled={ym >= ymOf(today())}
         />
+        <p className="muted" style={{ marginBottom: 8 }}>
+          {pCount
+            ? `設定練習日数：${pCount}日。出席率＝練習日の出席日数÷練習日数（今日より後の練習日と、入部前の日は数えません）`
+            : "この月は練習日が未設定のため、出欠を記録した日をもとに計算しています（「日程調整」で練習日を設定できます）"}
+        </p>
         <div className="scroll">
           <table className="tbl">
             <tbody>
@@ -183,6 +203,8 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                 <th>選手</th>
                 <th className="r">出席</th>
                 <th className="r">欠席</th>
+                <th className="r">未入力</th>
+                <th className="r">対象日数</th>
                 <th className="r">出席率</th>
                 <th className="r">欠席率</th>
               </tr>
@@ -191,10 +213,12 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                   <td style={{ whiteSpace: "nowrap" }}>{x.m.name}</td>
                   <td className="r num">{x.yes}</td>
                   <td className="r num">{x.no}</td>
+                  <td className="r num">{x.none}</td>
+                  <td className="r num">{x.days}</td>
                   <td className="r num">
                     <b>{pct(x.rate)}</b>
                   </td>
-                  <td className="r num">{pct(x.rate == null ? null : 100 - x.rate)}</td>
+                  <td className="r num">{pct(x.absentRate)}</td>
                 </tr>
               ))}
               <tr>
@@ -203,10 +227,12 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                 </td>
                 <td className="r num">{tYes}</td>
                 <td className="r num">{tNo}</td>
+                <td className="r num">{tNone}</td>
+                <td className="r num">{tDays}</td>
                 <td className="r num">
-                  <b>{pct(tYes + tNo ? (tYes / (tYes + tNo)) * 100 : null)}</b>
+                  <b>{pct(tDays ? (tYes / tDays) * 100 : null)}</b>
                 </td>
-                <td className="r num">{pct(tYes + tNo ? (tNo / (tYes + tNo)) * 100 : null)}</td>
+                <td className="r num">{pct(tDays ? (tNo / tDays) * 100 : null)}</td>
               </tr>
             </tbody>
           </table>

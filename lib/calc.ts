@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { LiftKey, Member, MetricDef, Members, MetricKey, Position, Unit } from "./types";
+import type { LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -70,12 +70,48 @@ export const playersOf = (members: Members) =>
     .filter((m) => m.role === "player")
     .sort(byOrder);
 
+/* ---------- 練習日と出欠席率 ---------- */
+export function makePractice(days: string[]): Practice {
+  return { days: new Set(days), months: new Set(days.map((d) => d.slice(0, 7))) };
+}
+export const EMPTY_PRACTICE: Practice = makePractice([]);
+
+// その日の種類：practice＝練習日 / off＝オフ（その月は練習日を設定済みだが、この日は練習日でない）/ unset＝その月は未設定
+export type DayKind = "practice" | "off" | "unset";
+export function dayKind(d: string, p: Practice): DayKind {
+  if (p.days.has(d)) return "practice";
+  return p.months.has(d.slice(0, 7)) ? "off" : "unset";
+}
+
+// 出欠の集計（from〜to の期間。今日より後と、その選手の登録前は数えない）
+//  ・練習日を設定した月：練習日すべてが対象（出席 / 欠席 / 未入力）
+//  ・練習日が未設定の月：今までどおり、出欠を記録した日だけが対象
+//  出席率＝出席日数÷対象日数、欠席率＝欠席日数÷対象日数（未入力は出席に含めない）
+export type AttendStats = { yes: number; no: number; none: number; days: number; rate: number | null; absentRate: number | null };
+export function attendStats(m: Member, p: Practice, from: string, to: string): AttendStats {
+  const end = to < today() ? to : today();
+  const start = from > m.joined ? from : m.joined;
+  const cand = new Set<string>();
+  p.days.forEach((d) => d >= start && d <= end && cand.add(d));
+  Object.entries(m.daily).forEach(([d, r]) => {
+    if (d >= start && d <= end && r.attendance && dayKind(d, p) === "unset") cand.add(d);
+  });
+  let yes = 0,
+    no = 0,
+    none = 0;
+  cand.forEach((d) => {
+    const a = m.daily[d]?.attendance;
+    if (a === "出席") yes++;
+    else if (a === "欠席") no++;
+    else none++;
+  });
+  const days = cand.size;
+  return { yes, no, none, days, rate: days ? (yes / days) * 100 : null, absentRate: days ? (no / days) * 100 : null };
+}
+
 // 出席率（%）。days を指定すると直近◯日だけで計算
-export function attendRate(m: Member, days?: number): number | null {
-  const from = days ? addDays(today(), -days + 1) : "0000";
-  const e = Object.entries(m.daily).filter(([d, r]) => d >= from && r.attendance);
-  if (!e.length) return null;
-  return (e.filter(([, r]) => r.attendance === "出席").length / e.length) * 100;
+export function attendRate(m: Member, p: Practice, days?: number): number | null {
+  return attendStats(m, p, days ? addDays(today(), -days + 1) : "0000-01-01", today()).rate;
 }
 
 // 体重の推移
@@ -139,16 +175,9 @@ export function addMonths(ym: string, n: number) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 }
 export const ymLabel = (ym: string) => `${Number(ym.slice(0, 4))}年${Number(ym.slice(5, 7))}月`;
-export function monthAttendance(m: Member, ym: string) {
-  let yes = 0,
-    no = 0;
-  Object.entries(m.daily).forEach(([d, r]) => {
-    if (ymOf(d) !== ym) return;
-    if (r.attendance === "出席") yes++;
-    else if (r.attendance === "欠席") no++;
-  });
-  return { yes, no, rate: yes + no ? (yes / (yes + no)) * 100 : null };
-}
+export const monthAttendance = (m: Member, ym: string, p: Practice) => attendStats(m, p, ym + "-01", ym + "-31");
+// その月の練習日数（設定した日すべて）
+export const practiceCount = (p: Practice, ym: string) => [...p.days].filter((d) => d.startsWith(ym)).length;
 
 /* ---------- 筋トレ遂行度（週ごと・0〜10） ---------- */
 // その日を含む週の月曜日
