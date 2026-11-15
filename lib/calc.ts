@@ -271,3 +271,41 @@ export function metricRanking(members: Members, def: MetricDef): RankRow[] {
 }
 // カテゴリごとの項目（項目設定の並び順）
 export const metricsOf = (metrics: MetricDef[], c: MetricDef["category"]) => metrics.filter((x) => x.category === c);
+
+/* ---------- 体重比（相対値） ---------- */
+// 選手一覧に表示している値と、その記録日（体組成＝最新値 / フィジカル＝自己ベスト）
+export function metricShownPoint(m: Member, def: MetricDef): Point | null {
+  if (def.category === "体組成") return metricLatest(m, def);
+  if (def.key === "big3_total") {
+    // Big3合計＝種目ごとの自己ベストの合計。日付は、その中でいちばん新しい自己ベストの日
+    const total = maxes(m).total;
+    if (total == null) return null;
+    const dates = LIFTS.map(([k]) => {
+      const best = maxes(m)[k];
+      return phys(m).find((r) => best != null && Number(r[k]) === best)?.d ?? "";
+    }).filter(Boolean);
+    return { d: dates.sort().pop() ?? today(), v: total };
+  }
+  const best = metricBest(m, def);
+  if (best == null) return null;
+  // 自己ベストを最初に出した日
+  return metricSeries(m, def).find((p) => p.v === best) ?? null;
+}
+// その日時点の体重：同じ日の体重 → なければその日以前で最新 → それもなければ最新の体重
+export function weightAt(m: Member, d: string): number | null {
+  const w = weights(m);
+  let v: number | null = null;
+  for (const p of w) {
+    if (p.d > d) break;
+    v = p.v;
+  }
+  return v ?? (w.length ? w[w.length - 1].v : null);
+}
+// 体重比＝値 ÷ その記録日時点の体重（値・体重が無いか0なら null）
+export function metricRatio(m: Member, def: MetricDef): number | null {
+  const p = metricShownPoint(m, def);
+  if (!p || !p.v) return null;
+  const w = weightAt(m, p.d);
+  return w ? p.v / w : null;
+}
+export const fmtRatio = (v: number | null | undefined) => (v == null || isNaN(v) ? "—" : v.toFixed(2));

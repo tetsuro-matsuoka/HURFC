@@ -8,12 +8,28 @@
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
+import { fmtRatio, metricRatio, absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
 import { CategoryButton, FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
-import type { Member } from "@/lib/types";
+import type { Member, MetricDef } from "@/lib/types";
 
 type Group = "body" | "attend" | "phys";
-type Col = { key: string; group: Group; label: string; unit: string; get: (m: Member) => number | null; fmt: (v: number | null) => string };
+type Col = {
+  key: string;
+  group: Group;
+  label: string;
+  unit: string;
+  get: (m: Member) => number | null;
+  fmt: (v: number | null) => string;
+  avgFmt?: (v: number | null) => string; // 平均の表示（省略時は小数第1位）
+  ratio?: boolean; // 体重比の列
+};
+
+// 項目の列。「体重比」が ON の項目は、すぐ右に体重比の列（値÷その記録日時点の体重・小数第2位）を付ける
+function metricCols(def: MetricDef, group: Group, get: (m: Member) => number | null): Col[] {
+  const base: Col = { key: "m" + def.id, group, label: def.name, unit: unitOf(def), get, fmt: fmt2 };
+  if (!def.show_ratio || def.key === "weight") return [base];
+  return [base, { key: "r" + def.id, group, label: `${def.name}体重比`, unit: "", get: (m) => metricRatio(m, def), fmt: fmtRatio, avgFmt: fmtRatio, ratio: true }];
+}
 
 const GROUP_LABEL: Record<Group, string> = { body: "体組成指標", attend: "出欠・筋トレ", phys: "フィジカル指標" };
 
@@ -21,9 +37,7 @@ const GROUP_LABEL: Record<Group, string> = { body: "体組成指標", attend: "�
 //  体組成：最新値 / フィジカル：自己ベスト / 出欠・筋トレ：アプリで集計
 function buildCols(ctx: Ctx): Col[] {
   return [
-    ...metricsOf(ctx.metrics, "体組成").map(
-      (d): Col => ({ key: "m" + d.id, group: "body", label: d.name, unit: unitOf(d), get: (m) => metricLatest(m, d)?.v ?? null, fmt: fmt2 }),
-    ),
+    ...metricsOf(ctx.metrics, "体組成").flatMap((d) => metricCols(d, "body", (m) => metricLatest(m, d)?.v ?? null)),
     {
       key: "att",
       group: "attend",
@@ -34,9 +48,7 @@ function buildCols(ctx: Ctx): Col[] {
       fmt: (v) => (v == null ? "—" : String(Math.round(v))),
     },
     { key: "train", group: "attend", label: "筋トレ(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
-    ...metricsOf(ctx.metrics, "フィジカル").map(
-      (d): Col => ({ key: "m" + d.id, group: "phys", label: d.name, unit: unitOf(d), get: (m) => metricBest(m, d), fmt: fmt2 }),
-    ),
+    ...metricsOf(ctx.metrics, "フィジカル").flatMap((d) => metricCols(d, "phys", (m) => metricBest(m, d))),
   ];
 }
 
@@ -95,7 +107,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
       "",
       ...cols.map((c) => {
         const v = average(ms, c);
-        return v == null ? "" : fmt1(v);
+        return v == null ? "" : (c.avgFmt ?? fmt1)(v);
       }),
       "",
     ];
@@ -150,7 +162,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               <th className="g-basic l">FW/BK</th>
               <th className="g-basic l">カテゴリー</th>
               {cols.map((c) => (
-                <th key={c.key} className={`g-${c.group}`}>
+                <th key={c.key} className={`g-${c.group} ${c.ratio ? "ratio" : ""}`}>
                   {c.label}
                   {c.unit && <small>({c.unit})</small>}
                 </th>
@@ -172,7 +184,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                   <CategoryButton m={m} onChange={(c) => ctx.setCategory(m.id, c)} />
                 </td>
                 {cols.map((c) => (
-                  <td key={c.key} className="num">
+                  <td key={c.key} className={`num ${c.ratio ? "ratio" : ""}`}>
                     {c.fmt(c.get(m))}
                   </td>
                 ))}
@@ -193,7 +205,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                   const v = average(rows, c);
                   return (
                     <td key={c.key} className="num">
-                      {v == null ? "—" : fmt1(v)}
+                      {v == null ? "—" : (c.avgFmt ?? fmt1)(v)}
                     </td>
                   );
                 })}
@@ -211,7 +223,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                       const v = average(x.ms, c);
                       return (
                         <td key={c.key} className="num">
-                          {v == null ? "—" : fmt1(v)}
+                          {v == null ? "—" : (c.avgFmt ?? fmt1)(v)}
                         </td>
                       );
                     })}

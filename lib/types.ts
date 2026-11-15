@@ -40,6 +40,7 @@ export type MetricDef = {
   unit: string;
   category: MetricCategory;
   better: "high" | "low"; // 大きいほど良い / 小さいほど良い
+  show_ratio: boolean; // true：選手一覧・CSVで体重比（値÷その日時点の体重）も表示
   sort_order: number;
 };
 
