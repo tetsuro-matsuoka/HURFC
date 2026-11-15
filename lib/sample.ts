@@ -5,8 +5,8 @@ import type { Attendance, PhysRec, Position } from "./types";
 
 export const SAMPLE_NAMES = ["佐藤 健太", "鈴木 大輝", "高橋 翔", "田中 蓮", "伊藤 悠真", "渡辺 海斗", "山本 颯", "中村 陸"];
 // サンプル選手の学年・ポジション（上の名前と同じ順番）
-const SAMPLE_GRADES = [4, 4, 3, 3, 2, 2, 1, 1];
-const SAMPLE_POSITIONS: Position[] = ["フロント", "バックス", "バックロー", "フロント", "バックス", "バックロー", "フロント", "バックス"];
+const SAMPLE_GRADES = [5, 4, 3, 3, 2, 2, 1, 1];
+const SAMPLE_POSITIONS: Position[] = ["PR", "SO", "FL", "LO", "CTB", "No.8", "HO", "WTB"];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 function addDaysUTC(base: string, n: number) {

@@ -210,3 +210,8 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .score11 button{height:54px;border-radius:12px;background:var(--bg);font-family:Oswald,sans-serif;font-size:22px;font-weight:700;color:var(--navy);border:2px solid transparent}
 .score11 button.on{background:var(--navy);color:#fff}
 .score11 button:disabled{opacity:.6}
+
+/* FW / BK の区分 */
+.chip.fw{background:#e3edf8;color:#1d4f86}
+.chip.bk{background:#fff1d6;color:#a96a00}
+.chips .chip-sep{flex-shrink:0;width:1px;background:var(--line);margin:4px 2px}

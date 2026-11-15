@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { LiftKey, Member, MetricDef, Members, MetricKey, Position } from "./types";
+import type { LiftKey, Member, MetricDef, Members, MetricKey, Position, Unit } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -39,8 +39,18 @@ export const METRICS: [MetricKey, string][] = [
 
 export type Point = { d: string; v: number };
 
-export const GRADES = [1, 2, 3, 4];
-export const POSITIONS: Position[] = ["フロント", "バックロー", "バックス"];
+export const GRADES = [1, 2, 3, 4, 5];
+// 画面で選べるポジション（上から FW → BK の順）
+export const FW_POSITIONS: Position[] = ["PR", "HO", "LO", "FL", "No.8"];
+export const BK_POSITIONS: Position[] = ["SH", "SO", "CTB", "WTB", "FB"];
+export const POSITIONS: Position[] = [...FW_POSITIONS, ...BK_POSITIONS];
+// FW / BK の自動判定（以前の区分「フロント・バックロー」は FW、「バックス」は BK）
+export function unitOfPosition(p: Position | null | undefined): Unit | null {
+  if (!p) return null;
+  if (FW_POSITIONS.includes(p) || p === "フロント" || p === "バックロー") return "FW";
+  if (BK_POSITIONS.includes(p) || p === "バックス") return "BK";
+  return null;
+}
 
 // 選手の並び順：コーチが決めた順 → 学年が上の人 → 名前順
 type Sortable = { name: string; grade: number | null; sort_order: number | null };

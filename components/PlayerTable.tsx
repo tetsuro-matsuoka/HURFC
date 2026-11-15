@@ -3,12 +3,13 @@
 // 選手一覧（チームダッシュボード下部）
 //  ・左の「名前」は横にスクロールしても固定（学年・ポジションは一緒にスクロール）
 //  ・見出しはカテゴリごとに色分け（基本情報 / 体組成指標 / 出欠・筋トレ / フィジカル指標）
-//  ・学年の絞り込み、全データのCSVダウンロード
+//  ・学年・FW/BK の絞り込み、全データのCSVダウンロード
 //  ・指標の列は「項目設定」に登録された項目だけ（並び順も項目設定どおり）
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { GRADES, attendRate, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf } from "@/lib/calc";
+import { attendRate, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
+import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
 import type { Member } from "@/lib/types";
 
 type Group = "body" | "attend" | "phys";
@@ -38,19 +39,20 @@ const cell = (v: string | number | null) => {
 };
 
 export default function PlayerTable({ ctx }: { ctx: Ctx }) {
-  const [grade, setGrade] = useState<number | null>(null);
+  const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const all = playersOf(ctx.members);
-  const rows = grade == null ? all : all.filter((m) => m.grade === grade);
+  const rows = applyFilter(all, filter);
   const cols = buildCols(ctx);
   const groups = (["body", "attend", "phys"] as Group[]).map((g) => ({ g, n: cols.filter((c) => c.group === g).length }));
 
   // 全選手・全項目をCSVで保存（Excelで文字化けしないよう先頭にBOMを付ける）
   const downloadCsv = () => {
-    const head = ["名前", "学年", "ポジション", ...cols.map((c) => `${c.label}${c.unit ? `(${c.unit})` : ""}`)];
+    const head = ["名前", "学年", "ポジション", "FW/BK", ...cols.map((c) => `${c.label}${c.unit ? `(${c.unit})` : ""}`)];
     const body = all.map((m) => [
       m.name,
       m.grade ? `${m.grade}年` : "",
       m.position ?? "",
+      unitOfPosition(m.position) ?? "",
       ...cols.map((c) => {
         const v = c.get(m);
         return v == null ? "" : c.fmt(v);
@@ -72,16 +74,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
           選手一覧 <small>{rows.length}名</small>
         </h3>
         <div className="pt-tools">
-          <div className="chips" style={{ margin: 0 }}>
-            <button className={grade == null ? "on" : ""} onClick={() => setGrade(null)}>
-              全学年
-            </button>
-            {GRADES.map((g) => (
-              <button key={g} className={grade === g ? "on" : ""} onClick={() => setGrade(g)}>
-                {g}年
-              </button>
-            ))}
-          </div>
+          <FilterChips f={filter} set={setFilter} />
           <button className="btn ghost small" onClick={downloadCsv}>
             全データCSV
           </button>
@@ -93,7 +86,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
           <thead>
             <tr>
               <th className="g-basic s1">基本情報</th>
-              <th colSpan={2} className="g-basic" />
+              <th colSpan={3} className="g-basic" />
               {groups.map(
                 ({ g, n }) =>
                   n > 0 && (
@@ -107,6 +100,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               <th className="s1 g-basic">名前</th>
               <th className="g-basic l">学年</th>
               <th className="g-basic l">ポジション</th>
+              <th className="g-basic l">FW/BK</th>
               {cols.map((c) => (
                 <th key={c.key} className={`g-${c.group}`}>
                   {c.label}
@@ -123,6 +117,9 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 </td>
                 <td className="l">{m.grade ? `${m.grade}年` : "—"}</td>
                 <td className="l">{m.position ?? "—"}</td>
+                <td className="l">
+                  <UnitBadge m={m} />
+                </td>
                 {cols.map((c) => (
                   <td key={c.key} className="num">
                     {c.fmt(c.get(m))}
