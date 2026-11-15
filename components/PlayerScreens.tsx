@@ -36,20 +36,32 @@ export function InputScreen({ ctx }: { ctx: Ctx }) {
   return (
     <>
       <h2 className="page">記録する</h2>
-      <div className="seg">
-        <button className={tab === "daily" ? "on" : ""} onClick={() => setTab("daily")}>
-          毎日の記録
-        </button>
-        <button className={tab === "training" ? "on" : ""} onClick={() => setTab("training")}>
-          筋トレ
-        </button>
-        <button className={tab === "phys" ? "on" : ""} onClick={() => setTab("phys")}>
-          測定
-        </button>
+      {/* ホームと同じ色のボタン：毎日の記録＝緑と青（出欠と体重）、筋トレ遂行率＝黄土、フィジカル＝赤 */}
+      <div className="menu4 menu3">
+        {(
+          [
+            ["daily", "m-daily", "毎日の記録", "出欠・体重"],
+            ["training", "m-training", "筋トレ遂行率", "今週の評価"],
+            ["phys", "m-physical", "フィジカル", "測定の記録"],
+          ] as const
+        ).map(([k, cls, l, sub]) => (
+          <button key={k} className={`${cls} ${tab === k ? "on" : ""}`} onClick={() => setTab(k)} aria-pressed={tab === k}>
+            <b>{l}</b>
+            <span>{sub}</span>
+          </button>
+        ))}
       </div>
       {tab === "daily" && <DailyForm ctx={ctx} />}
-      {tab === "training" && <TrainingForm ctx={ctx} />}
-      {tab === "phys" && <PhysForm ctx={ctx} />}
+      {tab === "training" && (
+        <div className="panel-training">
+          <TrainingForm ctx={ctx} />
+        </div>
+      )}
+      {tab === "phys" && (
+        <div className="panel-physical">
+          <PhysForm ctx={ctx} />
+        </div>
+      )}
     </>
   );
 }
@@ -107,6 +119,7 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   };
 
   return (
+    <>
     <div className="card">
       <label className="f" style={{ marginTop: 0 }}>
         日付
@@ -117,7 +130,11 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
           <span className={`daytag ${kind}`}>{kind === "practice" ? "この日は練習日です" : "この日はオフ（練習日ではありません）"}</span>
         </div>
       )}
-      <label className="f">出欠</label>
+    </div>
+
+    {/* 出欠カード（緑） */}
+    <div className="card top-green">
+      <h3>出欠</h3>
       {off ? (
         <p className="muted">オフの日は出欠の入力は不要です。体重だけ記録できます。</p>
       ) : (
@@ -145,7 +162,11 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
           </select>
         </>
       )}
-      <label className="f">体重</label>
+    </div>
+
+    {/* 体重カード（青） */}
+    <div className="card top-blue">
+      <h3>体重</h3>
       <div className="stepper">
         <button onClick={() => step(-0.1)}>−</button>
         <input className="t" type="number" inputMode="decimal" step="0.1" value={w} onChange={(e) => setW(e.target.value)} />
@@ -153,10 +174,12 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
         <button onClick={() => step(0.1)}>＋</button>
       </div>
       <div className="prev">{prev ? `前回 ${fmt1(prev.v)}kg（${md(prev.d)}）` : ""}</div>
-      <button className="btn" onClick={save} disabled={busy || ctx.readOnly}>
-        {busy ? "保存中…" : "保存する"}
-      </button>
     </div>
+
+    <button className="btn" style={{ marginTop: 0, marginBottom: 14 }} onClick={save} disabled={busy || ctx.readOnly}>
+      {busy ? "保存中…" : "保存する"}
+    </button>
+    </>
   );
 }
 
