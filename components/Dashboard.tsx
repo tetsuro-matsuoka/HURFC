@@ -2,7 +2,8 @@
 
 // S04 チームダッシュボード（コーチ用ホーム）
 //  上部：4つのメニュー（出欠席率 / 筋トレ遂行率 / 体組成 / フィジカル）。押すと詳細が開く
-//  下部：選手一覧（PlayerTable.tsx）
+//  下部：選手一覧（PlayerTable.tsx）。4つのどれも選んでいないとき（トップ）だけ表示
+//  選択中のボタンをもう一度押すか、「← 選手一覧（トップ）に戻る」でトップに戻る
 
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -88,19 +89,27 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
       <h2 className="page">チームダッシュボード</h2>
       <div className="menu4">
         {menus.map(([k, l, sub]) => (
-          <button key={k} className={`m-${k} ${panel === k ? "on" : ""}`} onClick={() => setPanel(panel === k ? null : k)}>
+          <button key={k} className={`m-${k} ${panel === k ? "on" : ""}`} onClick={() => setPanel(panel === k ? null : k)} aria-pressed={panel === k}>
             <b>{l}</b>
             <span>{sub}</span>
           </button>
         ))}
       </div>
 
+      {/* 詳細を開いているとき：上に「選手一覧に戻る」ボタン。選手一覧は表示しない */}
+      {panel && (
+        <button className="backtop" onClick={() => setPanel(null)}>
+          ← 選手一覧（トップ）に戻る
+        </button>
+      )}
+
       {panel === "attend" && <AttendPanel ctx={ctx} ps={ps} />}
       {panel === "training" && <TrainingPanel ctx={ctx} ps={ps} />}
       {panel === "body" && <BodyPanel ctx={ctx} ps={ps} />}
       {panel === "physical" && <PhysicalPanel ctx={ctx} ps={ps} />}
 
-      <PlayerTable ctx={ctx} />
+      {/* 4つのボタンをどれも選んでいないとき（トップ）だけ表示 */}
+      {!panel && <PlayerTable ctx={ctx} />}
     </>
   );
 }
