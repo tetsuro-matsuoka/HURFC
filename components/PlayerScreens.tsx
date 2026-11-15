@@ -9,6 +9,8 @@ import { RankBoard, type Ctx } from "./Shared";
 import {
   LIFTS,
   addDays,
+  ABSENCE_REASONS,
+  attendLabel,
   attendRate,
   dayKind,
   fmt2,
@@ -32,7 +34,7 @@ import {
   weights,
 } from "@/lib/calc";
 import { saveDaily, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
-import type { Attendance, LiftKey, PhysRec } from "@/lib/types";
+import type { AbsenceReason, Attendance, LiftKey, PhysRec } from "@/lib/types";
 
 /* ---------- S02 選手ダッシュボード ---------- */
 export function PlayerHome({ ctx }: { ctx: Ctx }) {
@@ -64,7 +66,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
             <>
               <div>今日の記録は完了 ✓</div>
               <small>
-                {rec.attendance ?? "オフ"}
+                {attendLabel(rec) ?? "オフ"}
                 {rec.weight ? ` ・ ${fmt1(rec.weight)}kg` : ""}
               </small>
             </>
@@ -204,12 +206,15 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     const prev = before.length ? before[before.length - 1] : latestWeight(m);
     return {
       att: (rec?.attendance ?? null) as Attendance | null,
+      reason: (rec?.attendance === "欠席" ? rec.absence_reason ?? "" : "") as AbsenceReason | "",
       w: rec?.weight != null ? fmt1(rec.weight) : prev ? fmt1(prev.v) : "",
       prev,
     };
   };
   const [date, setDate] = useState(today());
   const [att, setAtt] = useState<Attendance | null>(initial(today()).att);
+  // 欠席理由（欠席を選んだときだけ表示・必須）。登録済みならその理由を復元
+  const [reason, setReason] = useState<AbsenceReason | "">(initial(today()).reason);
   const [w, setW] = useState(initial(today()).w);
   const [busy, setBusy] = useState(false);
   const prev = initial(date).prev;
@@ -221,18 +226,21 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     const v = initial(d);
     setDate(d);
     setAtt(v.att);
+    setReason(v.reason);
     setW(v.w);
   };
   const step = (n: number) => setW((cur) => Math.max(0, Math.round(((parseFloat(cur) || 0) + n) * 10) / 10).toFixed(1));
 
   const save = async () => {
     if (!off && !att) return ctx.toast("出席か欠席を選んでください");
+    if (!off && att === "欠席" && !reason) return ctx.toast("欠席理由を選んでください");
     const weight = w.trim() === "" ? null : parseFloat(w);
     if (off && weight == null) return ctx.toast("体重を入力してください");
     if (weight != null && (isNaN(weight) || weight < 30 || weight > 250)) return ctx.toast("体重の数値を確認してください");
     setBusy(true);
     try {
-      await saveDaily(m.id, date, off ? null : att, weight);
+      // 出席・オフのときは欠席理由を空にする（saveDaily 側でも null にする）
+      await saveDaily(m.id, date, off ? null : att, weight, !off && att === "欠席" && reason ? reason : null);
       await ctx.reload();
       ctx.toast("保存しました ✓");
       ctx.go("home");
@@ -265,6 +273,21 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
             欠席
           </button>
         </div>
+      )}
+      {!off && att === "欠席" && (
+        <>
+          <label className="f" htmlFor="reason">
+            欠席理由（必須）
+          </label>
+          <select id="reason" className="t" value={reason} onChange={(e) => setReason(e.target.value as AbsenceReason | "")}>
+            <option value="">選択してください</option>
+            {ABSENCE_REASONS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </>
       )}
       <label className="f">体重</label>
       <div className="stepper">

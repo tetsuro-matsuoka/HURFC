@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
+import type { AbsenceReason, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -40,6 +40,24 @@ export const METRICS: [MetricKey, string][] = [
 export type Point = { d: string; v: number };
 
 export const GRADES = [1, 2, 3, 4, 5];
+// 欠席理由（この順番でプルダウンに表示）
+export const ABSENCE_REASONS: AbsenceReason[] = ["体調不良", "学校関連", "病院・リハビリ", "冠婚葬祭", "ずる休み", "その他"];
+// 出欠の表示：「出席」/「欠席（体調不良）」/ 理由なしの欠席は「欠席」
+export const attendLabel = (r: { attendance: string | null; absence_reason?: string | null } | undefined) =>
+  !r?.attendance ? null : r.attendance === "欠席" && r.absence_reason ? `欠席（${r.absence_reason}）` : r.attendance;
+// 期間内の欠席理由の内訳（例：「体調不良2・学校関連1」）
+export function absenceSummary(m: Member, from: string, to: string): string {
+  const cnt = new Map<string, number>();
+  Object.entries(m.daily).forEach(([d, r]) => {
+    if (d < from || d > to || r.attendance !== "欠席") return;
+    const k = r.absence_reason ?? "理由未入力";
+    cnt.set(k, (cnt.get(k) ?? 0) + 1);
+  });
+  return [...ABSENCE_REASONS, "理由未入力"]
+    .filter((k) => cnt.has(k))
+    .map((k) => `${k}${cnt.get(k)}`)
+    .join("・");
+}
 // 画面で選べるポジション（上から FW → BK の順）
 export const FW_POSITIONS: Position[] = ["PR", "HO", "LO", "FL", "No.8"];
 export const BK_POSITIONS: Position[] = ["SH", "SO", "CTB", "WTB", "FB"];

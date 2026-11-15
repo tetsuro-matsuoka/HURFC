@@ -22,6 +22,8 @@ import {
   metricLatest,
   metricsOf,
   monthAttendance,
+  absenceSummary,
+  attendLabel,
   dayKind,
   practiceCount,
   phys,
@@ -170,7 +172,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                   <td>{x.m.name}</td>
                   <td>
                     <span className={`chip ${!x.r?.attendance ? "none" : x.r.attendance === "出席" ? "yes" : "no"}`}>
-                      {x.r?.attendance ?? (kind === "off" ? "—" : "未入力")}
+                      {attendLabel(x.r) ?? (kind === "off" ? "—" : "未入力")}
                     </span>
                   </td>
                   <td className="r num">{x.r?.weight ? fmt1(x.r.weight) + "kg" : ""}</td>
@@ -207,6 +209,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                 <th className="r">対象日数</th>
                 <th className="r">出席率</th>
                 <th className="r">欠席率</th>
+                <th>欠席理由</th>
               </tr>
               {month.map((x) => (
                 <tr key={x.m.id} className="click" onClick={() => ctx.openPlayer(x.m.id)}>
@@ -219,6 +222,9 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                     <b>{pct(x.rate)}</b>
                   </td>
                   <td className="r num">{pct(x.absentRate)}</td>
+                  <td className="muted" style={{ whiteSpace: "nowrap", fontSize: 12 }}>
+                    {absenceSummary(x.m, ym + "-01", ym + "-31") || "—"}
+                  </td>
                 </tr>
               ))}
               <tr>
@@ -233,6 +239,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                   <b>{pct(tDays ? (tYes / tDays) * 100 : null)}</b>
                 </td>
                 <td className="r num">{pct(tDays ? (tNo / tDays) * 100 : null)}</td>
+                <td />
               </tr>
             </tbody>
           </table>

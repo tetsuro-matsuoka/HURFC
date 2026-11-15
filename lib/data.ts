@@ -1,7 +1,7 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { Attendance, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
+import type { AbsenceReason, Attendance, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
 import { makePractice, ymd } from "./calc";
 
 function sb() {
@@ -36,7 +36,7 @@ async function fetchAll<T>(table: string, columns: string, orderBy = "id"): Prom
 }
 
 type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null; created_at: string };
-type DailyRow = { user_id: string; date: string; attendance: Attendance | null; weight: number | null };
+type DailyRow = { user_id: string; date: string; attendance: Attendance | null; absence_reason?: AbsenceReason | null; weight: number | null };
 type PhysRow = { user_id: string; date: string } & PhysRec;
 type MetricRecRow = { user_id: string; metric_id: number; date: string; value: number };
 type TrainingRow = { user_id: string; week_start: string; score: number };
@@ -45,7 +45,10 @@ type TrainingRow = { user_id: string; week_start: string; score: number };
 export async function loadAll(): Promise<Members> {
   const [users, daily, physical, mrec, training] = await Promise.all([
     fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at"),
-    fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight"),
+    // 欠席理由の欄（追加SQL その5）がまだ無い場合は、欠席理由なしで読み込む
+    fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,absence_reason,weight").catch(() =>
+      fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight"),
+    ),
     fetchAll<PhysRow>("physical_records", "id,user_id,date,bench_press,squat,deadlift"),
     // 追加SQL（2026-11）が未実行でもアプリが止まらないよう、読めなければ空として扱う
     fetchAll<MetricRecRow>("metric_records", "id,user_id,metric_id,date,value").catch(() => []),
@@ -85,6 +88,7 @@ export async function loadAll(): Promise<Members> {
     if (m[r.user_id])
       m[r.user_id].daily[r.date] = {
         attendance: r.attendance,
+        absence_reason: r.attendance === "欠席" ? r.absence_reason ?? null : null,
         weight: r.weight == null ? null : Number(r.weight),
       };
   });
@@ -101,11 +105,28 @@ export async function loadAll(): Promise<Members> {
 
 // 日次データの保存（同じ日付があれば上書き）
 // attendance が null のとき：オフの日（練習日ではない日）に体重だけ記録する場合
-export async function saveDaily(userId: string, date: string, attendance: Attendance | null, weight: number | null) {
+// 欠席理由は「欠席」のときだけ保存し、出席・オフのときは空（null）にする
+export async function saveDaily(
+  userId: string,
+  date: string,
+  attendance: Attendance | null,
+  weight: number | null,
+  absenceReason: AbsenceReason | null = null,
+) {
+  const absence_reason = attendance === "欠席" ? absenceReason : null;
   const { error } = await sb()
     .from("daily_records")
-    .upsert({ user_id: userId, date, attendance, weight }, { onConflict: "user_id,date" });
-  if (error) throw error;
+    .upsert({ user_id: userId, date, attendance, weight, absence_reason }, { onConflict: "user_id,date" });
+  if (!error) return;
+  // 欠席理由の欄（追加SQL その5）がまだ無い場合は、理由なしで保存する
+  if (error.message?.includes("absence_reason")) {
+    const { error: e2 } = await sb()
+      .from("daily_records")
+      .upsert({ user_id: userId, date, attendance, weight }, { onConflict: "user_id,date" });
+    if (e2) throw e2;
+    return;
+  }
+  throw error;
 }
 
 // フィジカルデータの保存（同じ日付があれば上書き）

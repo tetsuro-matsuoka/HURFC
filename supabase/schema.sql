@@ -323,3 +323,20 @@ drop policy if exists "practice_select" on public.practice_days;
 create policy "practice_select" on public.practice_days for select to authenticated using (public.is_member());
 drop policy if exists "practice_write" on public.practice_days;
 create policy "practice_write" on public.practice_days for all to authenticated using (public.is_coach()) with check (public.is_coach());
+
+-- =============================================================
+-- 追加SQL（2026-11 その5）：欠席理由
+--
+-- （supabase/migrations/20261115_5_absence_reason.sql と同じ内容）
+--
+-- daily_records に absence_reason（欠席理由）を追加します。
+-- 欠席のときだけ入り、出席・オフの日は空（null）です。
+-- =============================================================
+
+alter table public.daily_records add column if not exists absence_reason text;
+
+alter table public.daily_records drop constraint if exists daily_records_absence_reason_check;
+alter table public.daily_records add constraint daily_records_absence_reason_check check (
+  absence_reason is null
+  or absence_reason in ('体調不良', '学校関連', '病院・リハビリ', '冠婚葬祭', 'ずる休み', 'その他')
+);

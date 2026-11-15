@@ -2,12 +2,13 @@
 
 export type Role = "player" | "coach";
 export type Attendance = "出席" | "欠席";
+export type AbsenceReason = "体調不良" | "学校関連" | "病院・リハビリ" | "冠婚葬祭" | "ずる休み" | "その他";
 // ポジション（10種類）。「フロント」「バックロー」「バックス」は以前の区分（既存データ用）
 export type Position = "PR" | "HO" | "LO" | "FL" | "No.8" | "SH" | "SO" | "CTB" | "WTB" | "FB" | "フロント" | "バックロー" | "バックス";
 export type Unit = "FW" | "BK";
 
 // 日次データ（DailyRecords）
-export type DailyRec = { attendance: Attendance | null; weight: number | null };
+export type DailyRec = { attendance: Attendance | null; absence_reason: AbsenceReason | null; weight: number | null };
 
 // フィジカルデータ（PhysicalRecords）
 export type PhysRec = { bench_press: number | null; squat: number | null; deadlift: number | null };
