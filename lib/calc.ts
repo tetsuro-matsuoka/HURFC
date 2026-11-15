@@ -238,12 +238,12 @@ export function trainingAvg(m: Member, n = 4): number | null {
     .filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
-// 筋トレ遂行率（%）：週の月曜日が from 以降の週の点数の平均 ÷ 10 × 100（入力のある週だけ）。from 省略で全期間
+// 筋トレ遂行率（0〜10）：週の月曜日が from 以降の週の点数の平均（入力のある週だけ）。from 省略で全期間
 export function trainingRate(m: Member, from?: string): number | null {
   const v = Object.entries(m.training)
     .filter(([w]) => !from || w >= from)
     .map(([, s]) => s);
-  return v.length ? (v.reduce((a, b) => a + b, 0) / v.length) * 10 : null;
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 // 月別の筋トレ遂行度：週の月曜日がその月に入る週の点数の平均（0〜10。入力のある週だけ）
 export function trainingMonthAvg(m: Member, ym: string): number | null {

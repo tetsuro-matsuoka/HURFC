@@ -76,7 +76,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 
   const menus: [Panel, string, string][] = [
     ["attend", "出欠席率", `今月 ${monthRate == null ? "—" : Math.round(monthRate) + "%"}${streak ? `・連続${streak}回出席中` : ""}`],
-    ["training", "筋トレ遂行率", weekScore == null ? "今週 未入力" : `今週 ${weekScore} / 10`],
+    ["training", "筋トレ遂行率", weekScore == null ? "今週 未入力" : `今週 ${fmt1(weekScore)} / 10`],
     ["body", "体組成", lw ? `${fmt1(lw.v)}kg${w30 ? `（30日前比 ${signed(lw.v - w30.v)}kg）` : ""}` : "体重 未入力"],
     ["physical", "フィジカル", total ? `Big3 ${fmt0(total)}kg${pos >= 0 ? `（${pos + 1}位）` : ""}` : "Big3 未測定"],
   ];
@@ -271,18 +271,15 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
     ["直近30日", from30],
     ["全期間", undefined],
   ];
-  const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
   const weeks = recentWeeks(8);
-  const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] * 10 }));
+  const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }));
   const [ym, setYm] = useState(ymOf(today()));
   const myMonth = trainingMonthAvg(m, ym);
   const teamMonth = avg(ps.map((x) => trainingMonthAvg(x, ym)));
   const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
   return (
     <div className="card">
-      <h3>
-        筋トレ遂行率 <small>点数（0〜10）÷10</small>
-      </h3>
+      <h3>筋トレ遂行率</h3>
       <table className="tbl cmp-tbl" style={{ marginBottom: 10 }}>
         <tbody>
           <tr>
@@ -293,23 +290,23 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
           </tr>
           {rows.map(([l, from]) => {
             // 今週は「今週の分だけ」、それ以外は from 以降の週
-            const pick = (x: (typeof ps)[number]) => (l === "今週" ? (x.training[thisWeek] != null ? x.training[thisWeek] * 10 : null) : trainingRate(x, from));
+            const pick = (x: (typeof ps)[number]) => (l === "今週" ? (x.training[thisWeek] ?? null) : trainingRate(x, from));
             const mine = pick(m);
             const team = avg(ps.map(pick));
             return (
               <tr key={l}>
                 <td>{l}</td>
                 <td className="r num">
-                  <b style={{ fontSize: 18 }}>{pct(mine)}</b>
+                  <b style={{ fontSize: 18 }}>{fmtScore(mine)}</b>
                 </td>
-                <td className="r num">{pct(team)}</td>
+                <td className="r num">{fmtScore(team)}</td>
                 <td className="r num">
                   {mine == null || team == null ? (
                     <span className="muted">—</span>
                   ) : (
                     <b className={mine - team >= 0 ? "up" : "down"}>
                       {mine - team >= 0 ? "▲+" : "▼"}
-                      {Math.round(mine - team)}
+                      {fmt1(mine - team)}
                     </b>
                   )}
                 </td>
