@@ -11,6 +11,7 @@ import LineChart from "./LineChart";
 import PlayerTable from "./PlayerTable";
 import BodyPanel from "./BodyPanel";
 import PhysicalPanel from "./PhysicalPanel";
+import { GROUPS, MonthBar, avg as avgOf, splitGroups } from "./GroupStats";
 import type { Ctx } from "./Shared";
 import {
   addDays,
@@ -30,6 +31,7 @@ import {
   teamTrainingAvg,
   today,
   trainingAvg,
+  trainingMonthAvg,
   wd,
   weekStart,
   ymLabel,
@@ -246,6 +248,64 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
 }
 
 /* ---------- 筋トレ遂行率 ---------- */
+// 月別：選んだ月のチーム・FW・BK の平均と、選手ごとの平均（0〜10。週の月曜日がその月に入る週）
+function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
+  const [ym, setYm] = useState(ymOf(today()));
+  const groups = splitGroups(ps);
+  const f = (v: number | null) => (v == null ? "—" : fmt1(v));
+  const weeksIn = (m: Member) => Object.keys(m.training).filter((w) => w.slice(0, 7) === ym).length;
+  return (
+    <div className="card">
+      <h3>
+        月別の遂行率 <small>0〜10</small>
+      </h3>
+      <MonthBar ym={ym} setYm={setYm} />
+      <div className="bcards" style={{ marginBottom: 10 }}>
+        {GROUPS.map((g) => {
+          const v = avgOf(groups[g.key].map((m) => trainingMonthAvg(m, ym)));
+          return (
+            <div key={g.key} className="bcard" style={{ borderTopColor: g.color }}>
+              <div className="bc-h">
+                <b style={{ color: g.color }}>{g.label}</b>
+                <small>{groups[g.key].length}名</small>
+              </div>
+              <div className="bc-v num">
+                {f(v)}
+                <small>/ 10</small>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="scroll">
+        <table className="tbl">
+          <tbody>
+            <tr>
+              <th>選手</th>
+              <th className="r">平均（0〜10）</th>
+              <th className="r">遂行率</th>
+              <th className="r">入力週</th>
+            </tr>
+            {ps.map((m) => {
+              const v = trainingMonthAvg(m, ym);
+              return (
+                <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
+                  <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
+                  <td className="r num">
+                    <b>{f(v)}</b>
+                  </td>
+                  <td className="r num">{v == null ? "—" : Math.round(v * 10) + "%"}</td>
+                  <td className="r num">{weeksIn(m)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const weeks = recentWeeks(8);
   const cur = weeks[weeks.length - 1];
@@ -282,6 +342,8 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           </p>
         </div>
       </div>
+      <TrainingMonth ps={ps} ctx={ctx} />
+
       <div className="card">
         <h3>
           選手ごとの週次推移 <small>0〜10 ・ 遂行率＝直近8週の平均÷10</small>
