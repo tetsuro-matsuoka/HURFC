@@ -305,3 +305,14 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .legend i{display:inline-block;width:16px;height:4px;border-radius:2px}
+
+/* 項目設定：体重比のチェック欄と ON/OFF バッジ */
+.checkrow{display:flex;align-items:flex-start;gap:10px;margin-top:16px;padding:12px;border-radius:12px;background:var(--bg);font-size:14px;font-weight:700;cursor:pointer}
+.checkrow input{width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--navy)}
+.checkrow small{display:block;font-size:12px;font-weight:400;color:var(--sub);margin-top:2px}
+.ratiobtn{padding:6px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+.ratiobtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.ratiobtn:disabled{opacity:.6}
+/* 選手一覧：体重比の列（元の項目のすぐ右）。少し色を変えて区別 */
+.pt th.ratio{font-style:italic}
+.pt td.ratio{color:#4a5563;background:#fafbfc}

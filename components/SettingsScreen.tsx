@@ -14,10 +14,11 @@ import { isLinked, metricsOf, unitOf } from "@/lib/calc";
 import type { MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
-const EMPTY: MetricInput = { name: "", unit: "", category: "体組成", better: "high" };
+const EMPTY: MetricInput = { name: "", unit: "", category: "体組成", better: "high", show_ratio: false };
 
 // 項目の入力欄（追加と編集で共通）
-function MetricFields({ v, set }: { v: MetricInput; set: (v: MetricInput) => void }) {
+// isWeight：体重そのものの項目（体重比は常に1になるのでチェック欄を出さない）
+function MetricFields({ v, set, isWeight }: { v: MetricInput; set: (v: MetricInput) => void; isWeight?: boolean }) {
   return (
     <>
       <label className="f">項目名</label>
@@ -41,6 +42,15 @@ function MetricFields({ v, set }: { v: MetricInput; set: (v: MetricInput) => voi
           小さいほど良い
         </button>
       </div>
+      {!isWeight && (
+        <label className="checkrow">
+          <input type="checkbox" checked={v.show_ratio} onChange={(e) => set({ ...v, show_ratio: e.target.checked })} />
+          <span>
+            体重比（相対値）も表示する
+            <small>選手一覧・CSVで、この項目のすぐ右に「値 ÷ その日時点の体重」を自動で表示します（選手の入力は今までどおり）</small>
+          </span>
+        </label>
+      )}
     </>
   );
 }
@@ -90,6 +100,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
         <h3>測定項目</h3>
         <p className="muted" style={{ marginBottom: 8 }}>
           ここにある項目が、チームダッシュボードの選手一覧と、選手の「記録する → 測定」に、この順番で表示されます。左の ⋮⋮ をつかんで上下に動かすと並び替えできます。
+          「体重比」を ON にした項目は、選手一覧・CSVでそのすぐ右に体重比（値 ÷ その日時点の体重）も表示します。
         </p>
         {CATEGORIES.map((c) => {
           const list = metricsOf(ctx.metrics, c);
@@ -118,10 +129,26 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                       </div>
                     </div>
                     <div className="ma">
+                      {x.key !== "weight" && (
+                        <button
+                          className={`ratiobtn ${x.show_ratio ? "on" : ""}`}
+                          aria-pressed={x.show_ratio}
+                          disabled={busy}
+                          onClick={() =>
+                            run(
+                              () => updateMetric(x.id, { show_ratio: !x.show_ratio }),
+                              `「${x.name}」の体重比を${x.show_ratio ? "OFF" : "ON"}にしました`,
+                            )
+                          }
+                          title="体重比（相対値）も表示する"
+                        >
+                          体重比 {x.show_ratio ? "ON" : "OFF"}
+                        </button>
+                      )}
                       <button
                         className="btn ghost small"
                         onClick={() => {
-                          setEdit({ name: x.name, unit: x.unit, category: x.category, better: x.better });
+                          setEdit({ name: x.name, unit: x.unit, category: x.category, better: x.better, show_ratio: x.show_ratio });
                           setDialog({ type: "edit", def: x });
                         }}
                       >
@@ -174,7 +201,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
               if (await run(() => updateMetric(dialog.def.id, v), "変更しました")) setDialog(null);
             }}
           >
-            <MetricFields v={edit} set={setEdit} />
+            <MetricFields v={edit} set={setEdit} isWeight={dialog.def.key === "weight"} />
             <button className="btn navy" type="submit" disabled={busy}>
               {busy ? "処理中…" : "保存する"}
             </button>

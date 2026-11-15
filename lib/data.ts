@@ -145,11 +145,15 @@ export async function savePhysical(userId: string, date: string, rec: PhysRec) {
 export type Meta = { metrics: MetricDef[]; settings: Record<string, string>; practice: Practice };
 export async function loadMeta(): Promise<Meta> {
   const [metrics, settings, practice] = await Promise.all([
-    fetchAll<MetricDef>("metrics", "id,key,name,unit,category,better,sort_order").catch(() => []),
+    // 体重比の設定（追加SQL その7）がまだ無い場合は、体重比なしで読み込む
+    fetchAll<MetricDef>("metrics", "id,key,name,unit,category,better,sort_order,show_ratio")
+      .catch(() => fetchAll<MetricDef>("metrics", "id,key,name,unit,category,better,sort_order"))
+      .catch(() => []),
     fetchAll<{ key: string; value: string }>("app_settings", "key,value", "key").catch(() => []),
     // 追加SQL（その4）が未実行なら「練習日の設定なし」として扱う
     fetchAll<{ date: string }>("practice_days", "date", "date").catch(() => []),
   ]);
+  metrics.forEach((x) => (x.show_ratio = x.show_ratio === true));
   metrics.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   return {
     metrics,
@@ -190,13 +194,21 @@ export async function saveTraining(userId: string, weekStart: string, score: num
 }
 
 // ---- 項目設定（コーチのみ。データベース側の権限でも確認）----
-export type MetricInput = { name: string; unit: string; category: MetricCategory; better: "high" | "low" };
+export type MetricInput = { name: string; unit: string; category: MetricCategory; better: "high" | "low"; show_ratio: boolean };
+// 体重比の欄（追加SQL その7）がまだ無いときは、その欄を外してもう一度保存する
+const withoutRatio = ({ show_ratio: _r, ...rest }: Partial<MetricInput>) => rest; // eslint-disable-line @typescript-eslint/no-unused-vars
+const noRatioColumn = (e: { message?: string } | null) => !!e?.message?.includes("show_ratio");
 export async function addMetric(v: MetricInput, sortOrder: number) {
-  const { error } = await sb().from("metrics").insert({ ...v, sort_order: sortOrder });
+  let { error } = await sb().from("metrics").insert({ ...v, sort_order: sortOrder });
+  if (noRatioColumn(error)) ({ error } = await sb().from("metrics").insert({ ...withoutRatio(v), sort_order: sortOrder }));
   if (error) throw error;
 }
-export async function updateMetric(id: number, v: MetricInput) {
-  const { error } = await sb().from("metrics").update(v).eq("id", id);
+export async function updateMetric(id: number, v: Partial<MetricInput>) {
+  let { error } = await sb().from("metrics").update(v).eq("id", id);
+  if (noRatioColumn(error)) {
+    if (Object.keys(withoutRatio(v)).length === 0) throw new Error("体重比の設定を保存できません。データベースの更新（追加SQL その7）が済んでいるか確認してください");
+    ({ error } = await sb().from("metrics").update(withoutRatio(v)).eq("id", id));
+  }
   if (error) throw error;
 }
 // 項目の並び順を保存（ids の順に 0, 1, 2, …）
