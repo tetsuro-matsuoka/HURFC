@@ -92,10 +92,15 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
         ))}
       </div>
 
-      {panel === "attend" && <AttendPanel ctx={ctx} ps={ps} />}
-      {panel === "training" && <TrainingPanel ctx={ctx} ps={ps} />}
-      {panel === "body" && <BodyPanel ctx={ctx} ps={ps} />}
-      {panel === "physical" && <PhysicalPanel ctx={ctx} ps={ps} />}
+      {/* 詳細のカードの上辺に、選んでいるボタンと同じ色の線（出欠＝緑・筋トレ＝黄土・体組成＝青・フィジカル＝赤） */}
+      {panel && (
+        <div className={`panel-${panel}`}>
+          {panel === "attend" && <AttendPanel ctx={ctx} ps={ps} />}
+          {panel === "training" && <TrainingPanel ctx={ctx} ps={ps} />}
+          {panel === "body" && <BodyPanel ctx={ctx} ps={ps} />}
+          {panel === "physical" && <PhysicalPanel ctx={ctx} ps={ps} />}
+        </div>
+      )}
 
       {/* 4つのボタンをどれも選んでいないとき（トップ）だけ表示 */}
       {!panel && <PlayerTable ctx={ctx} />}

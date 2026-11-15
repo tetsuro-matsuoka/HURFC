@@ -125,10 +125,15 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
         ))}
       </div>
 
-      {panel === "attend" && <AttendDetail ctx={ctx} />}
-      {panel === "training" && <TrainingDetail ctx={ctx} />}
-      {panel === "body" && <BodyDetail ctx={ctx} />}
-      {panel === "physical" && <PhysicalDetail ctx={ctx} />}
+      {/* 詳細のカードの上辺に、選んでいるボタンと同じ色の線（出欠＝緑・筋トレ＝黄土・体組成＝青・フィジカル＝赤） */}
+      {panel && (
+        <div className={`panel-${panel}`}>
+          {panel === "attend" && <AttendDetail ctx={ctx} />}
+          {panel === "training" && <TrainingDetail ctx={ctx} />}
+          {panel === "body" && <BodyDetail ctx={ctx} />}
+          {panel === "physical" && <PhysicalDetail ctx={ctx} />}
+        </div>
+      )}
 
     </>
   );
