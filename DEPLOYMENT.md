@@ -149,6 +149,7 @@ Claude がアプリのコードを GitHub に「プルリクエスト（変更�
 - [ ] 選手管理の選手一覧で、左の ⋮⋮ をドラッグして順番を入れ替えられる（スマホでも指で動かせる）
 - [ ] 下部の「日程調整」でカレンダーの日付をタップすると練習日が ON / OFF され、「今月の設定練習日数」が変わる
 - [ ] 練習日を設定すると、「出欠席率」と選手一覧の出席率が練習日ベースで計算される
+- [ ] 「日程調整」の週の設定で練習日数（自動・1〜7日）と筋トレメニュー（A〜B / A〜C / A〜D）を押すと保存され、選手の「記録する → 筋トレ遂行率」に今週のメニューが出る
 
 **選手として**（選手は合言葉なし）
 - [ ] ログアウトし、サンプル選手（例：佐藤 健太）を選ぶだけでログインできる
@@ -196,7 +197,7 @@ Claude がアプリのコードを GitHub に「プルリクエスト（変更�
 - 修正は、Claude などの AI エージェントに「〇〇を変えて GitHub に反映して」と頼めば、この流れで公開まで進みます。
 - データベースの構造（表）を変える修正の場合は、Supabase の SQL Editor で追加の SQL を実行する作業が必要になることがあります（その都度案内します）。
   - `schema.sql` は何度実行しても壊れないように作ってあるので、**最新の `schema.sql` を全部貼り付けて「Run」** すれば OK です（記録は消えません）。
-  - 追加分だけを実行したい場合は、`supabase/migrations/` フォルダ内の該当ファイル（例：`20261115_dashboard_items.sql`、`20261115_2_linked_metrics.sql`、`20261115_3_positions.sql`、`20261115_4_practice_days.sql`、`20261115_5_absence_reason.sql`、`20261115_6_player_category.sql`、`20261115_7_metric_show_ratio.sql`、`20261116_2_weight_timing.sql` の順）を貼り付けて「Run」でも同じ結果になります。
+  - 追加分だけを実行したい場合は、`supabase/migrations/` フォルダ内の該当ファイル（例：`20261115_dashboard_items.sql`、`20261115_2_linked_metrics.sql`、`20261115_3_positions.sql`、`20261115_4_practice_days.sql`、`20261115_5_absence_reason.sql`、`20261115_6_player_category.sql`、`20261115_7_metric_show_ratio.sql`、`20261116_2_weight_timing.sql`、`20261116_3_week_settings.sql` の順）を貼り付けて「Run」でも同じ結果になります。
 
 ### （参考）パソコンでファイルを直接編集したい場合
 
