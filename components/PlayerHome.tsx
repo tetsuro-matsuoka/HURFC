@@ -11,6 +11,7 @@ import MultiLineChart, { type Series } from "./MultiLineChart";
 import { avg, valueAsOf } from "./GroupStats";
 import type { Ctx } from "./Shared";
 import {
+  LIFTS,
   addDays,
   addMonths,
   attendLabel,
@@ -31,6 +32,7 @@ import {
   metricSeries,
   metricsOf,
   monthAttendance,
+  phys,
   playersOf,
   ranking,
   recentWeeks,
@@ -393,6 +395,9 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
           </option>
         ))}
       </select>
+      {def.key === "big3_total" && !ratio ? (
+        <Big3Block ctx={ctx} />
+      ) : (
       <div className="mine2">
         <div>
           <div className="l">最新値</div>
@@ -412,6 +417,7 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
           {!ratio && def.show_ratio && metricRatio(m, def) != null && <div className="s">{fmtRatio(metricRatio(m, def))}倍</div>}
         </div>
       </div>
+      )}
       <div className="rankrow">
         <span className="rankpill">{pos >= 0 ? `チーム ${pos + 1}位 / ${rows.length}人` : "チーム —"}</span>
         {unit && (
@@ -424,5 +430,54 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
         <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} />
       )}
     </div>
+  );
+}
+
+// 『Big3合計』を選んだとき：3種目の自己ベスト（横3列）＋合計・体重比
+// 3種目の名前は「項目設定」で変えていればその名前。各種目の下は「前回」の記録（体重比が ON の種目は体重比も）
+function Big3Block({ ctx }: { ctx: Ctx }) {
+  const m = ctx.me;
+  const mx = maxes(m);
+  const p = phys(m);
+  const lastOf = (k: (typeof LIFTS)[number][0]) => [...p].reverse().find((r) => r[k] != null)?.[k] ?? null;
+  const totalDef = ctx.metrics.find((x) => x.key === "big3_total");
+  const totalRatio = totalDef ? metricRatio(m, totalDef) : mx.ratio;
+  return (
+    <>
+      <div className="big3" style={{ marginBottom: 8 }}>
+        {LIFTS.map(([k, l]) => {
+          const def = ctx.metrics.find((x) => x.key === k);
+          const r = def?.show_ratio ? metricRatio(m, def) : null;
+          const last = lastOf(k);
+          return (
+            <div className="lift" key={k}>
+              <div className="l">{def?.name ?? l}</div>
+              <div className="v num">
+                {fmt0(mx[k])}
+                <small>kg</small>
+              </div>
+              <div className="d">
+                {r != null ? `${fmtRatio(r)}倍` : last != null ? `前回 ${fmt0(last)}` : "—"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="total" style={{ marginTop: 0, marginBottom: 10 }}>
+        <span className="muted">合計（Total）</span>
+        <span className="v num">
+          {fmt0(mx.total)}
+          <small className="muted" style={{ fontSize: 14 }}>
+            {" "}
+            kg
+          </small>
+          {totalRatio != null && (
+            <small className="muted" style={{ fontSize: 14, marginLeft: 8 }}>
+              ×{fmtRatio(totalRatio)}
+            </small>
+          )}
+        </span>
+      </div>
+    </>
   );
 }
