@@ -1,7 +1,8 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { Attendance, MetricCategory, MetricDef, Members, PhysRec, Position, Role } from "./types";
+import type { Attendance, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
+import { makePractice, ymd } from "./calc";
 
 function sb() {
   if (!supabase) throw new Error("Supabase の設定がありません");
@@ -34,7 +35,7 @@ async function fetchAll<T>(table: string, columns: string, orderBy = "id"): Prom
   return out;
 }
 
-type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null };
+type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null; created_at: string };
 type DailyRow = { user_id: string; date: string; attendance: Attendance | null; weight: number | null };
 type PhysRow = { user_id: string; date: string } & PhysRec;
 type MetricRecRow = { user_id: string; metric_id: number; date: string; value: number };
@@ -43,7 +44,7 @@ type TrainingRow = { user_id: string; week_start: string; score: number };
 // 全メンバーと記録を読み込み、画面で使う形に変換する
 export async function loadAll(): Promise<Members> {
   const [users, daily, physical, mrec, training] = await Promise.all([
-    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order"),
+    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at"),
     fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,weight"),
     fetchAll<PhysRow>("physical_records", "id,user_id,date,bench_press,squat,deadlift"),
     // 追加SQL（2026-11）が未実行でもアプリが止まらないよう、読めなければ空として扱う
@@ -60,6 +61,7 @@ export async function loadAll(): Promise<Members> {
         grade: u.grade,
         position: u.position,
         sort_order: u.sort_order,
+        joined: ymd(new Date(u.created_at)),
         daily: {},
         physical: {},
         metrics: {},
@@ -73,6 +75,11 @@ export async function loadAll(): Promise<Members> {
   });
   training.forEach((r) => {
     if (m[r.user_id]) m[r.user_id].training[r.week_start] = Number(r.score);
+  });
+  // 登録より前の記録がある場合（サンプルデータなど）は、最初の記録日から数える
+  Object.values(m).forEach((mm) => {
+    const first = Object.keys(mm.daily).sort()[0];
+    if (first && first < mm.joined) mm.joined = first;
   });
   daily.forEach((r) => {
     if (m[r.user_id])
@@ -93,7 +100,8 @@ export async function loadAll(): Promise<Members> {
 }
 
 // 日次データの保存（同じ日付があれば上書き）
-export async function saveDaily(userId: string, date: string, attendance: Attendance, weight: number | null) {
+// attendance が null のとき：オフの日（練習日ではない日）に体重だけ記録する場合
+export async function saveDaily(userId: string, date: string, attendance: Attendance | null, weight: number | null) {
   const { error } = await sb()
     .from("daily_records")
     .upsert({ user_id: userId, date, attendance, weight }, { onConflict: "user_id,date" });
@@ -109,14 +117,29 @@ export async function savePhysical(userId: string, date: string, rec: PhysRec) {
 }
 
 // 測定項目と設定（評価基準の説明文など）の読み込み
-export type Meta = { metrics: MetricDef[]; settings: Record<string, string> };
+export type Meta = { metrics: MetricDef[]; settings: Record<string, string>; practice: Practice };
 export async function loadMeta(): Promise<Meta> {
-  const [metrics, settings] = await Promise.all([
+  const [metrics, settings, practice] = await Promise.all([
     fetchAll<MetricDef>("metrics", "id,key,name,unit,category,better,sort_order").catch(() => []),
     fetchAll<{ key: string; value: string }>("app_settings", "key,value", "key").catch(() => []),
+    // 追加SQL（その4）が未実行なら「練習日の設定なし」として扱う
+    fetchAll<{ date: string }>("practice_days", "date", "date").catch(() => []),
   ]);
   metrics.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
-  return { metrics, settings: Object.fromEntries(settings.map((x) => [x.key, x.value])) };
+  return {
+    metrics,
+    settings: Object.fromEntries(settings.map((x) => [x.key, x.value])),
+    practice: makePractice(practice.map((x) => x.date)),
+  };
+}
+
+// 練習日の ON / OFF（コーチのみ。データベース側の権限でも確認）
+export async function setPracticeDay(date: string, on: boolean) {
+  const q = on
+    ? sb().from("practice_days").upsert({ date }, { onConflict: "date" })
+    : sb().from("practice_days").delete().eq("date", date);
+  const { error } = await q;
+  if (error) throw error;
 }
 
 // 測定項目の記録を保存（value が null ならその日の記録を消す）

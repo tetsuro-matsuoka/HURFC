@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { configOk, supabase } from "@/lib/supabase";
-import { loadAll, loadMeta, type Meta } from "@/lib/data";
+import { loadAll, loadMeta, setPracticeDay, type Meta } from "@/lib/data";
+import { EMPTY_PRACTICE, makePractice } from "@/lib/calc";
 import type { Members } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
@@ -14,6 +15,7 @@ import { InputScreen, PlayerHome, RankScreen } from "./PlayerScreens";
 import { TeamScreen } from "./Dashboard";
 import { ManageScreen } from "./ManageScreen";
 import { SettingsScreen } from "./SettingsScreen";
+import { ScheduleScreen } from "./ScheduleScreen";
 
 const ICON = {
   home: (
@@ -47,6 +49,13 @@ const ICON = {
       <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
     </svg>
   ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+      <circle cx="12" cy="15.5" r="1.6" fill="currentColor" />
+    </svg>
+  ),
   users: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -58,7 +67,7 @@ const ICON = {
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined = 確認中
   const [members, setMembers] = useState<Members | null>(null);
-  const [meta, setMeta] = useState<Meta>({ metrics: [], settings: {} });
+  const [meta, setMeta] = useState<Meta>({ metrics: [], settings: {}, practice: EMPTY_PRACTICE });
   const [loadErr, setLoadErr] = useState("");
   const [view, setView] = useState<View | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -170,13 +179,41 @@ export default function App() {
     setPlayerId(null);
     window.scrollTo(0, 0);
   };
-  const ctx: Ctx = { members, metrics: meta.metrics, settings: meta.settings, me, readOnly: false, reload, toast, openPlayer: setPlayerId, go };
+  // 練習日の ON / OFF（タップした瞬間に画面へ反映し、裏で保存。失敗したら元に戻す）
+  const togglePractice = async (d: string) => {
+    const before = meta.practice;
+    const on = !before.days.has(d);
+    const next = new Set(before.days);
+    if (on) next.add(d);
+    else next.delete(d);
+    setMeta((cur) => ({ ...cur, practice: makePractice([...next]) }));
+    try {
+      await setPracticeDay(d, on);
+    } catch {
+      setMeta((cur) => ({ ...cur, practice: before }));
+      toast("保存できませんでした。データベースの更新（追加SQL その4）が済んでいるか確認してください");
+    }
+  };
+  const ctx: Ctx = {
+    members,
+    metrics: meta.metrics,
+    settings: meta.settings,
+    practice: meta.practice,
+    togglePractice,
+    me,
+    readOnly: false,
+    reload,
+    toast,
+    openPlayer: setPlayerId,
+    go,
+  };
 
   const tabs: [View, string, ReactNode][] = coach
     ? [
         ["team", "チーム", ICON.team],
         ["settings", "項目設定", ICON.gear],
         ["manage", "選手管理", ICON.users],
+        ["schedule", "日程調整", ICON.calendar],
       ]
     : [
         ["home", "ホーム", ICON.home],
@@ -196,6 +233,8 @@ export default function App() {
         return <TeamScreen ctx={ctx} />;
       case "settings":
         return <SettingsScreen ctx={ctx} />;
+      case "schedule":
+        return <ScheduleScreen ctx={ctx} />;
       case "manage":
         return <ManageScreen ctx={ctx} />;
     }
@@ -228,7 +267,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      {modalMember && <PlayerModal m={modalMember} metrics={meta.metrics} onClose={() => setPlayerId(null)} />}
+      {modalMember && <PlayerModal m={modalMember} metrics={meta.metrics} practice={meta.practice} onClose={() => setPlayerId(null)} />}
       {toastEl}
     </div>
   );

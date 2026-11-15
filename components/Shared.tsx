@@ -26,15 +26,17 @@ import {
   rowTotal,
   weights,
 } from "@/lib/calc";
-import type { Member, MetricDef, Members } from "@/lib/types";
+import type { Member, MetricDef, Members, Practice } from "@/lib/types";
 
-export type View = "home" | "input" | "rank" | "team" | "settings" | "manage";
+export type View = "home" | "input" | "rank" | "team" | "settings" | "manage" | "schedule";
 
 // 画面どうしで受け渡す共通の情報
 export type Ctx = {
   members: Members;
   metrics: MetricDef[]; // 測定項目（項目設定）
   settings: Record<string, string>; // 設定（筋トレ評価基準の説明文など）
+  practice: Practice; // 練習日（日程調整）
+  togglePractice: (date: string) => Promise<void>; // 練習日の ON / OFF（コーチのみ）
   me: Member;
   readOnly: boolean;
   reload: () => Promise<void>;
@@ -110,13 +112,13 @@ function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (
 }
 
 // 選手の詳細（コーチが選手をタップしたときに表示）
-export function PlayerModal({ m, metrics, onClose }: { m: Member; metrics: MetricDef[]; onClose: () => void }) {
+export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metrics: MetricDef[]; practice: Practice; onClose: () => void }) {
   const weeks = recentWeeks(8);
   const x = maxes(m),
     p = phys(m),
     lw = latestWeight(m),
-    r = attendRate(m),
-    r30 = attendRate(m, 30);
+    r = attendRate(m, practice),
+    r30 = attendRate(m, practice, 30);
   return (
     <div className="modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet">

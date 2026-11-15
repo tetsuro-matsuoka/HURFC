@@ -20,6 +20,7 @@ export type Member = {
   grade: number | null; // 学年（1〜6）
   position: Position | null; // ポジション
   sort_order: number | null; // 一覧での並び順（小さいほど上）
+  joined: string; // 出欠席率の計算を始める日（登録日と最初の記録日の早い方）"YYYY-MM-DD"
   daily: Record<string, DailyRec>; // キーは日付 "YYYY-MM-DD"
   physical: Record<string, PhysRec>;
   metrics: Record<number, Record<string, number>>; // 測定項目ごとの記録 { 項目ID: { 日付: 数値 } }
@@ -39,6 +40,9 @@ export type MetricDef = {
 };
 
 export type Members = Record<string, Member>;
+
+// 練習日（日程調整）。days＝練習日の一覧、months＝練習日が1日以上ある月 "YYYY-MM"
+export type Practice = { days: Set<string>; months: Set<string> };
 
 export type LiftKey = "bench_press" | "squat" | "deadlift";
 export type MetricKey = LiftKey | "total" | "ratio";

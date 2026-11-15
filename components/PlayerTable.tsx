@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { attendRate, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
+import { monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
 import { FilterChips, NO_FILTER, UnitBadge, applyFilter, type Filter } from "./PlayerFilter";
 import type { Member } from "@/lib/types";
 
@@ -24,7 +24,15 @@ function buildCols(ctx: Ctx): Col[] {
     ...metricsOf(ctx.metrics, "体組成").map(
       (d): Col => ({ key: "m" + d.id, group: "body", label: d.name, unit: unitOf(d), get: (m) => metricLatest(m, d)?.v ?? null, fmt: fmt2 }),
     ),
-    { key: "att", group: "attend", label: "出席率(30日)", unit: "%", get: (m) => attendRate(m, 30), fmt: (v) => (v == null ? "—" : String(Math.round(v))) },
+    {
+      key: "att",
+      group: "attend",
+      label: "出席率(今月)",
+      unit: "%",
+      // 今月の練習日ベース（練習日の出席日数÷今月の練習日数。今日より後の練習日は数えない）
+      get: (m) => monthAttendance(m, ymOf(today()), ctx.practice).rate,
+      fmt: (v) => (v == null ? "—" : String(Math.round(v))),
+    },
     { key: "train", group: "attend", label: "筋トレ(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
     ...metricsOf(ctx.metrics, "フィジカル").map(
       (d): Col => ({ key: "m" + d.id, group: "phys", label: d.name, unit: unitOf(d), get: (m) => metricBest(m, d), fmt: fmt2 }),

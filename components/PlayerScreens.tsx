@@ -10,6 +10,7 @@ import {
   LIFTS,
   addDays,
   attendRate,
+  dayKind,
   fmt2,
   isLinked,
   metricBest,
@@ -37,9 +38,10 @@ import type { Attendance, LiftKey, PhysRec } from "@/lib/types";
 export function PlayerHome({ ctx }: { ctx: Ctx }) {
   const m = ctx.me,
     t = today(),
-    rec = m.daily[t];
-  const rate = attendRate(m),
-    rate30 = attendRate(m, 30);
+    rec = m.daily[t],
+    kind = dayKind(t, ctx.practice);
+  const rate = attendRate(m, ctx.practice),
+    rate30 = attendRate(m, ctx.practice, 30);
   const lw = latestWeight(m),
     w7 = weightAgo(m, 7);
   const dW = lw && w7 ? lw.v - w7.v : null;
@@ -51,15 +53,25 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 
   return (
     <>
-      <div className={`today ${rec ? "done" : "todo"}`}>
+      <div className={`today ${rec || kind === "off" ? "done" : "todo"}`}>
         <div className="tx">
+          {kind !== "unset" && (
+            <span className={`daytag ${kind}`} style={{ marginBottom: 4, background: "#fff" }}>
+              {kind === "practice" ? "今日は練習日" : "今日はオフ"}
+            </span>
+          )}
           {rec ? (
             <>
-              今日の記録は完了 ✓
+              <div>今日の記録は完了 ✓</div>
               <small>
-                {rec.attendance}
+                {rec.attendance ?? "オフ"}
                 {rec.weight ? ` ・ ${fmt1(rec.weight)}kg` : ""}
               </small>
+            </>
+          ) : kind === "off" ? (
+            <>
+              <div>今日は練習日ではありません</div>
+              <small>出欠の入力は不要です（体重だけ記録できます）</small>
             </>
           ) : (
             <>
@@ -201,6 +213,9 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   const [w, setW] = useState(initial(today()).w);
   const [busy, setBusy] = useState(false);
   const prev = initial(date).prev;
+  // オフの日（練習日ではない日）は出欠の入力なし。体重だけ記録できる
+  const kind = dayKind(date, ctx.practice);
+  const off = kind === "off";
 
   const changeDate = (d: string) => {
     const v = initial(d);
@@ -211,12 +226,13 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   const step = (n: number) => setW((cur) => Math.max(0, Math.round(((parseFloat(cur) || 0) + n) * 10) / 10).toFixed(1));
 
   const save = async () => {
-    if (!att) return ctx.toast("出席か欠席を選んでください");
+    if (!off && !att) return ctx.toast("出席か欠席を選んでください");
     const weight = w.trim() === "" ? null : parseFloat(w);
+    if (off && weight == null) return ctx.toast("体重を入力してください");
     if (weight != null && (isNaN(weight) || weight < 30 || weight > 250)) return ctx.toast("体重の数値を確認してください");
     setBusy(true);
     try {
-      await saveDaily(m.id, date, att, weight);
+      await saveDaily(m.id, date, off ? null : att, weight);
       await ctx.reload();
       ctx.toast("保存しました ✓");
       ctx.go("home");
@@ -232,15 +248,24 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
         日付
       </label>
       <input className="t" type="date" value={date} max={today()} onChange={(e) => e.target.value && changeDate(e.target.value)} />
+      {kind !== "unset" && (
+        <div style={{ marginTop: 8 }}>
+          <span className={`daytag ${kind}`}>{kind === "practice" ? "この日は練習日です" : "この日はオフ（練習日ではありません）"}</span>
+        </div>
+      )}
       <label className="f">出欠</label>
-      <div className="att">
-        <button className={`yes ${att === "出席" ? "on" : ""}`} onClick={() => setAtt("出席")}>
-          出席
-        </button>
-        <button className={`no ${att === "欠席" ? "on" : ""}`} onClick={() => setAtt("欠席")}>
-          欠席
-        </button>
-      </div>
+      {off ? (
+        <p className="muted">オフの日は出欠の入力は不要です。体重だけ記録できます。</p>
+      ) : (
+        <div className="att">
+          <button className={`yes ${att === "出席" ? "on" : ""}`} onClick={() => setAtt("出席")}>
+            出席
+          </button>
+          <button className={`no ${att === "欠席" ? "on" : ""}`} onClick={() => setAtt("欠席")}>
+            欠席
+          </button>
+        </div>
+      )}
       <label className="f">体重</label>
       <div className="stepper">
         <button onClick={() => step(-0.1)}>−</button>
