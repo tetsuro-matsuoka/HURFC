@@ -3,19 +3,18 @@
 // S02 選手ダッシュボード（ホーム）。コーチの「チームダッシュボード」と同じ操作感
 //  ・一番上：今日の記録バナー
 //  ・その下：4つのメニュー（出欠席率 / 筋トレ遂行率 / 体組成 / フィジカル）。押すと詳細、もう一度押すと戻る
-//  ・何も選んでいないとき：体重の推移（自分＋FW/BK平均の点線）と Big3 自己ベスト（チーム順位・FW/BK内順位）
+//  ・何も選んでいないときは、バナーと4つのボタンだけ（中身は各ボタンを押したときに表示）
 
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import LineChart from "./LineChart";
 import MultiLineChart, { type Series } from "./MultiLineChart";
 import { avg, valueAsOf } from "./GroupStats";
 import type { Ctx } from "./Shared";
 import {
-  LIFTS,
   addDays,
   addMonths,
   attendLabel,
+  attendStats,
   attendStreak,
   attendTargets,
   dayKind,
@@ -23,18 +22,15 @@ import {
   fmt1,
   fmt2,
   fmtRatio,
-  isLinked,
   latestWeight,
   maxes,
   md,
   metricBest,
-  metricLatest,
   metricRanking,
   metricRatio,
   metricSeries,
   metricsOf,
   monthAttendance,
-  phys,
   playersOf,
   ranking,
   recentWeeks,
@@ -48,6 +44,9 @@ import {
   weights,
   ymLabel,
   ymOf,
+  weightAt,
+  type Point,
+  type RankRow,
 } from "@/lib/calc";
 import type { Unit } from "@/lib/types";
 
@@ -129,17 +128,6 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
       {panel === "body" && <BodyDetail ctx={ctx} />}
       {panel === "physical" && <PhysicalDetail ctx={ctx} />}
 
-      {!panel && (
-        <div className="grid two">
-          <div className="card">
-            <h3>
-              体重の推移 <small>直近30日</small>
-            </h3>
-            <WeightChart ctx={ctx} days={30} />
-          </div>
-          <Big3Card ctx={ctx} />
-        </div>
-      )}
     </>
   );
 }
@@ -169,69 +157,6 @@ function WeightChart({ ctx, days }: { ctx: Ctx; days: number }) {
     return out;
   }, [ctx.members, m, unit, days]);
   return <MultiLineChart series={series} h={180} />;
-}
-
-/* ---------- Big3 自己ベスト（赤いアクセントライン・チーム順位・区分内順位） ---------- */
-function Big3Card({ ctx }: { ctx: Ctx }) {
-  const m = ctx.me;
-  const mx = maxes(m),
-    p = phys(m),
-    lastP = p[p.length - 1];
-  const rk = ranking(ctx.members, "total"),
-    pos = rk.findIndex((r) => r.id === m.id);
-  const unit = unitOfPosition(m.position);
-  const urk = unit ? rk.filter((r) => unitOfPosition(ctx.members[r.id]?.position) === unit) : [];
-  const upos = urk.findIndex((r) => r.id === m.id);
-
-  return (
-    <div className="card accent-top">
-      <h3 style={{ flexWrap: "wrap" }}>
-        Big3 自己ベスト
-        <span style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {pos >= 0 && (
-            <span className="rankpill">
-              チーム {pos + 1}位 / {rk.length}人
-            </span>
-          )}
-          {unit && upos >= 0 && (
-            <span className="rankpill" style={{ background: UNIT_COLOR[unit] }}>
-              {unit} {upos + 1}位 / {urk.length}人
-            </span>
-          )}
-        </span>
-      </h3>
-      <div className="big3">
-        {LIFTS.map(([k, l]) => (
-          <div className="lift" key={k}>
-            <div className="l">{l}</div>
-            <div className="v num">
-              {fmt0(mx[k])}
-              <small>kg</small>
-            </div>
-            <div className="d">{lastP && lastP[k] ? "前回 " + fmt0(lastP[k]) : ""}</div>
-          </div>
-        ))}
-      </div>
-      <div className="total">
-        <span className="muted">合計（Total）</span>
-        <span className="v num">
-          {fmt0(mx.total)}
-          <small className="muted" style={{ fontSize: 14 }}>
-            {" "}
-            kg
-          </small>
-        </span>
-      </div>
-      {mx.ratio && (
-        <div className="muted" style={{ textAlign: "right" }}>
-          体重比 ×{mx.ratio.toFixed(2)}
-        </div>
-      )}
-      <p className="muted" style={{ marginTop: 8 }}>
-        {lastP ? `最終測定 ${md(lastP.d)}` : "「記録する」→「測定」から測定値を入力できます"}
-      </p>
-    </div>
-  );
 }
 
 /* ---------- 詳細：出欠席率 ---------- */
@@ -264,6 +189,7 @@ function AttendDetail({ ctx }: { ctx: Ctx }) {
       <p className="muted" style={{ marginBottom: 8 }}>
         欠席 {st.no}回 ・ 未入力 {st.none}回
       </p>
+      <TeamCompare ctx={ctx} ym={ym} />
       {days.length ? (
         <table className="tbl">
           <tbody>
@@ -286,6 +212,49 @@ function AttendDetail({ ctx }: { ctx: Ctx }) {
         <div className="empty">この月の記録はありません</div>
       )}
     </div>
+  );
+}
+
+// 自分とチーム全体（選手全員の出席率の平均）の比較：選んだ月 / 直近30日
+function TeamCompare({ ctx, ym }: { ctx: Ctx; ym: string }) {
+  const m = ctx.me;
+  const ps = playersOf(ctx.members);
+  const from30 = addDays(today(), -29);
+  const rows: [string, number | null, number | null][] = [
+    [ymLabel(ym), monthAttendance(m, ym, ctx.practice).rate, avg(ps.map((x) => monthAttendance(x, ym, ctx.practice).rate))],
+    ["直近30日", attendStats(m, ctx.practice, from30, today()).rate, avg(ps.map((x) => attendStats(x, ctx.practice, from30, today()).rate))],
+  ];
+  const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
+  return (
+    <table className="tbl cmp-tbl" style={{ marginBottom: 12 }}>
+      <tbody>
+        <tr>
+          <th />
+          <th className="r">自分</th>
+          <th className="r">チーム平均</th>
+          <th className="r">差</th>
+        </tr>
+        {rows.map(([l, mine, team]) => (
+          <tr key={l}>
+            <td>{l}</td>
+            <td className="r num">
+              <b>{pct(mine)}</b>
+            </td>
+            <td className="r num">{pct(team)}</td>
+            <td className="r num">
+              {mine == null || team == null ? (
+                <span className="muted">—</span>
+              ) : (
+                <b className={mine - team >= 0 ? "up" : "down"}>
+                  {mine - team >= 0 ? "▲+" : "▼"}
+                  {Math.round(mine - team)}
+                </b>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -333,103 +302,127 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   );
 }
 
-/* ---------- 詳細：体組成 ---------- */
+/* ---------- 詳細：体組成（体重のみ） ---------- */
 function BodyDetail({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
   const lw = latestWeight(m),
     w7 = weightAgo(m, 7),
     w30 = weightAgo(m, 30);
-  const others = metricsOf(ctx.metrics, "体組成").filter((x) => x.key !== "weight");
   const diff = (b: { v: number } | null) =>
-    lw && b ? <b className={lw.v - b.v >= 0 ? "up" : "down"}>{signed(lw.v - b.v)}kg</b> : <span className="muted">—</span>;
-  return (
-    <>
-      <div className="card">
-        <div className="sumrow">
-          <div style={{ background: "#e3edf8", color: "#1d4f86" }}>
-            <div className="v num">{lw ? fmt1(lw.v) : "—"}</div>
-            <div className="l">体重（kg）</div>
-          </div>
-          <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
-            <div className="v num" style={{ fontSize: 22 }}>
-              {diff(w7)}
-            </div>
-            <div className="l">7日前比</div>
-          </div>
-          <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
-            <div className="v num" style={{ fontSize: 22 }}>
-              {diff(w30)}
-            </div>
-            <div className="l">30日前比</div>
-          </div>
-        </div>
-        <h3>
-          体重の推移 <small>直近90日</small>
-        </h3>
-        <WeightChart ctx={ctx} days={90} />
-      </div>
-      {others.map((x) => {
-        const s = metricSeries(m, x);
-        const last = s[s.length - 1];
-        return (
-          <MetricCard key={x.id} title={x.name} sub={last ? `最新 ${fmt2(last.v)}${unitOf(x)}（${md(last.d)}）` : "まだ記録がありません"}>
-            <LineChart pts={s} h={120} color="#2563a8" />
-          </MetricCard>
-        );
-      })}
-    </>
-  );
-}
-
-/* ---------- 詳細：フィジカル（全種目の記録・推移） ---------- */
-function PhysicalDetail({ ctx }: { ctx: Ctx }) {
-  const m = ctx.me;
-  const defs = metricsOf(ctx.metrics, "フィジカル");
-  if (!defs.length) return <div className="card empty">フィジカルの項目がありません</div>;
-  return (
-    <>
-      {defs.map((x) => {
-        const s = metricSeries(m, x);
-        const best = metricBest(m, x);
-        const last = metricLatest(m, x);
-        const rows = metricRanking(ctx.members, x);
-        const rpos = rows.findIndex((r) => r.id === m.id);
-        const ratio = x.show_ratio ? metricRatio(m, x) : null;
-        const u = unitOf(x);
-        return (
-          <MetricCard
-            key={x.id}
-            title={x.name}
-            sub={
-              <>
-                自己ベスト <b>{fmt2(best)}{u}</b>
-                {ratio != null && `（${fmtRatio(ratio)}倍）`}
-                {last && ` ・ 最新 ${fmt2(last.v)}${u}`}
-                {rpos >= 0 && ` ・ チーム${rpos + 1}位/${rows.length}人`}
-              </>
-            }
-          >
-            {s.length ? <LineChart pts={s} h={110} color="var(--accent)" /> : <div className="empty">まだ記録がありません</div>}
-          </MetricCard>
-        );
-      })}
-      {defs.some((x) => isLinked(x)) && (
-        <p className="muted" style={{ textAlign: "center" }}>
-          測定値は「記録する → 測定」から入力できます
-        </p>
-      )}
-    </>
-  );
-}
-
-function MetricCard({ title, sub, children }: { title: string; sub: ReactNode; children: ReactNode }) {
+    lw && b ? <b className={lw.v - b.v >= 0 ? "up" : "down"}>{signed(lw.v - b.v)}</b> : <span className="muted">—</span>;
   return (
     <div className="card">
-      <h3 style={{ flexWrap: "wrap" }}>
-        {title} <small>{sub}</small>
+      <div className="sumrow">
+        <div style={{ background: "#e3edf8", color: "#1d4f86" }}>
+          <div className="v num">{lw ? fmt1(lw.v) : "—"}</div>
+          <div className="l">体重（kg）</div>
+        </div>
+        <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
+          <div className="v num" style={{ fontSize: 22 }}>
+            {diff(w7)}
+          </div>
+          <div className="l">7日前比</div>
+        </div>
+        <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
+          <div className="v num" style={{ fontSize: 22 }}>
+            {diff(w30)}
+          </div>
+          <div className="l">30日前比</div>
+        </div>
+      </div>
+      <h3>
+        体重の推移 <small>直近30日</small>
       </h3>
-      {children}
+      <WeightChart ctx={ctx} days={30} />
     </div>
   );
 }
 
+/* ---------- 詳細：フィジカル（プルダウンで種目を選ぶ・1画面に収める） ---------- */
+// 選択肢：項目設定のフィジカル項目。体重比が ON の項目は「〇〇体重比」も
+// 順位は自己ベスト（体重比は自己ベスト÷その日の体重）で、チーム内と自分の区分（FW/BK）内
+function PhysicalDetail({ ctx }: { ctx: Ctx }) {
+  const m = ctx.me;
+  const defs = metricsOf(ctx.metrics, "フィジカル");
+  const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
+  const [sel, setSel] = useState<string | null>(null);
+  const key = sel ?? (first ? "m" + first.id : "");
+  const def = defs.find((x) => "m" + x.id === key || "r" + x.id === key);
+  if (!def) return <div className="card empty">フィジカルの項目がありません</div>;
+  const ratio = key === "r" + def.id;
+
+  const options: [string, string][] = defs.flatMap((x) => {
+    const o: [string, string][] = [["m" + x.id, x.name]];
+    if (x.show_ratio) o.push(["r" + x.id, `${x.name}体重比`]);
+    return o;
+  });
+
+  // 値（体重比なら、その記録の日の体重で割る）
+  const toRatio = (p: Point | null) => {
+    if (!p || !p.v) return null;
+    const w = weightAt(m, p.d);
+    return w ? p.v / w : null;
+  };
+  const series = metricSeries(m, def);
+  const last = series[series.length - 1] ?? null;
+  const latestV = ratio ? toRatio(last) : last?.v ?? null;
+  const bestV = ratio ? metricRatio(m, def) : metricBest(m, def);
+  const f = (v: number | null) => (v == null ? "—" : ratio ? fmtRatio(v) : fmt2(v));
+  const u = ratio ? "倍" : unitOf(def);
+
+  // 順位（自己ベストで）
+  const rows: RankRow[] = ratio
+    ? playersOf(ctx.members)
+        .map((x) => ({ id: x.id, name: x.name, v: metricRatio(x, def) }))
+        .filter((r): r is RankRow => r.v != null)
+        .sort((a, b) => b.v - a.v)
+    : metricRanking(ctx.members, def);
+  const pos = rows.findIndex((r) => r.id === m.id);
+  const unit = unitOfPosition(m.position);
+  const urows = unit ? rows.filter((r) => unitOfPosition(ctx.members[r.id]?.position) === unit) : [];
+  const upos = urows.findIndex((r) => r.id === m.id);
+
+  const chart = ratio ? series.map((p) => ({ d: p.d, v: toRatio(p) })).filter((p): p is Point => p.v != null) : series;
+
+  return (
+    <div className="card accent-top">
+      <select className="t phys-sel" style={{ width: "100%", marginBottom: 10 }} value={key} onChange={(e) => setSel(e.target.value)} aria-label="種目を選ぶ">
+        {options.map(([k, l]) => (
+          <option key={k} value={k}>
+            {l}
+          </option>
+        ))}
+      </select>
+      <div className="mine2">
+        <div>
+          <div className="l">最新値</div>
+          <div className="v num">
+            {f(latestV)}
+            <small>{u}</small>
+          </div>
+          {!ratio && def.show_ratio && toRatio(last) != null && <div className="s">{fmtRatio(toRatio(last))}倍</div>}
+          {last && <div className="s">{md(last.d)}</div>}
+        </div>
+        <div>
+          <div className="l">自己ベスト</div>
+          <div className="v num">
+            {f(bestV)}
+            <small>{u}</small>
+          </div>
+          {!ratio && def.show_ratio && metricRatio(m, def) != null && <div className="s">{fmtRatio(metricRatio(m, def))}倍</div>}
+        </div>
+      </div>
+      <div className="rankrow">
+        <span className="rankpill">{pos >= 0 ? `チーム ${pos + 1}位 / ${rows.length}人` : "チーム —"}</span>
+        {unit && (
+          <span className="rankpill" style={{ background: UNIT_COLOR[unit] }}>
+            {upos >= 0 ? `${unit} ${upos + 1}位 / ${urows.length}人` : `${unit} —`}
+          </span>
+        )}
+      </div>
+      {chart.length >= 2 && (
+        <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} />
+      )}
+    </div>
+  );
+}

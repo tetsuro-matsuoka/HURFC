@@ -333,3 +333,14 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 
 /* 選手ホーム：Big3 自己ベストのカードに ALL-IN の赤いアクセントライン */
 .card.accent-top{border-top:4px solid var(--accent)}
+
+/* 選手ホーム：フィジカルの「最新値 / 自己ベスト」と順位バッジ（1画面に収まるコンパクト表示） */
+.mine2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.mine2>div{background:var(--bg);border-radius:12px;padding:10px 12px}
+.mine2 .l{font-size:12px;color:var(--sub);font-weight:700}
+.mine2 .v{font-size:28px;font-weight:700;line-height:1.15}
+.mine2 .v small{font-size:13px;color:var(--sub);margin-left:3px;font-weight:500}
+.mine2 .s{font-size:12px;color:var(--sub)}
+.rankrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+/* 出欠：自分とチーム平均の比較 */
+.cmp-tbl td,.cmp-tbl th{padding:7px 6px}
