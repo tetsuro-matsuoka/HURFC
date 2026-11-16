@@ -284,21 +284,28 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
   const ps = playersOf(ctx.members);
   const thisWeek = weekStart(today());
-  const from30 = weekStart(addDays(today(), -29)); // 直近30日＝この30日にかかる週（4〜5週）
-  const rows: [string, string | undefined][] = [
-    [weekShort(thisWeek), thisWeek],
-    ["直近30日", from30],
-  ];
-  const weeks = recentWeeks(8);
-  const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }));
+  const from4 = recentWeeks(4)[0]; // 直近4週の最初の週（月曜日）
   const [ym, setYm] = useState(ymOf(today()));
-  const myMonth = trainingMonthAvg(m, ym);
-  const teamMonth = avg(ps.map((x) => trainingMonthAvg(x, ym)));
   const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
-  // 一番上のサマリー：この週（月曜〜日曜）の遂行率と、トータル平均（全期間）
+  // 1. 一番上のサマリー：この週（月曜〜日曜）の遂行率と、トータル平均（全期間）
   const weekScore = m.training[thisWeek] ?? null;
   const totalAvg = trainingRate(m);
-  const menu = ctx.weeks[thisWeek]?.menu ?? DEFAULT_MENU;
+  const menuOf = (w: string) => ctx.weeks[w]?.menu ?? DEFAULT_MENU;
+  // 3. 比較表：選んだ月・直近4週を、自分とチーム平均（選手ごとの平均の平均）で
+  const rows: [string, (x: Member) => number | null][] = [
+    [ymLabel(ym), (x) => trainingMonthAvg(x, ym)],
+    ["直近4週", (x) => trainingRate(x, from4)],
+  ];
+  // 4. 推移グラフ（直近8週）
+  const pts = recentWeeks(8)
+    .filter((w) => m.training[w] != null)
+    .map((w) => ({ d: w, v: m.training[w] }));
+  // 5. 週ごとの一覧：この週から、いちばん古い記録の週まで（新しい週が上。未入力の週も表示）
+  const recorded = Object.keys(m.training).sort();
+  const weeksList: string[] = [];
+  if (recorded.length) for (let w = thisWeek; w >= recorded[0]; w = addDays(w, -7)) weeksList.push(w);
+  else weeksList.push(thisWeek);
+
   return (
     <div className="card">
       <div className="sum2 tr2">
@@ -308,7 +315,7 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
             {weekScore == null ? "—" : fmt1(weekScore)}
             <small>/ 10</small>
           </div>
-          <div className="s">メニュー {menuLabel(menu)}</div>
+          <div className="s">メニュー {menuLabel(menuOf(thisWeek))}</div>
         </div>
         <div>
           <div className="l">トータル平均</div>
@@ -319,7 +326,10 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
           <div className="s">全期間</div>
         </div>
       </div>
-      <table className="tbl cmp-tbl" style={{ marginBottom: 10 }}>
+
+      <MonthBar ym={ym} setYm={setYm} />
+
+      <table className="tbl cmp-tbl" style={{ marginBottom: 12 }}>
         <tbody>
           <tr>
             <th />
@@ -327,16 +337,14 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
             <th className="r">チーム平均</th>
             <th className="r">差</th>
           </tr>
-          {rows.map(([l, from]) => {
-            // 1行目（その週：月曜〜日曜）はその週の分だけ、それ以外は from 以降の週
-            const pick = (x: (typeof ps)[number]) => (from === thisWeek ? (x.training[thisWeek] ?? null) : trainingRate(x, from));
+          {rows.map(([l, pick]) => {
             const mine = pick(m);
             const team = avg(ps.map(pick));
             return (
               <tr key={l}>
                 <td>{l}</td>
                 <td className="r num">
-                  <b style={{ fontSize: 18 }}>{fmtScore(mine)}</b>
+                  <b>{fmtScore(mine)}</b>
                 </td>
                 <td className="r num">{fmtScore(team)}</td>
                 <td className="r num">
@@ -354,30 +362,30 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
           })}
         </tbody>
       </table>
-      {/* 月別：選んだ月の自分とチーム平均（0〜10） */}
-      <MonthBar ym={ym} setYm={setYm} />
-      <div className="mrow2">
-        <div>
-          <span className="l">自分</span>
-          <b className="num">{fmtScore(myMonth)}</b>
+
+      {pts.length >= 2 && (
+        <div style={{ marginBottom: 12 }}>
+          <LineChart pts={pts} h={110} color="#a16207" />
         </div>
-        <div>
-          <span className="l">チーム平均</span>
-          <b className="num">{fmtScore(teamMonth)}</b>
-        </div>
-        <div>
-          <span className="l">差</span>
-          {myMonth == null || teamMonth == null ? (
-            <span className="muted">—</span>
-          ) : (
-            <b className={`num ${myMonth - teamMonth >= 0 ? "up" : "down"}`}>
-              {myMonth - teamMonth >= 0 ? "▲+" : "▼"}
-              {fmt1(myMonth - teamMonth)}
-            </b>
-          )}
-        </div>
-      </div>
-      {pts.length >= 2 && <LineChart pts={pts} h={100} color="var(--warn)" />}
+      )}
+
+      <table className="tbl">
+        <tbody>
+          {weeksList.map((w) => {
+            const v = m.training[w];
+            return (
+              <tr key={w}>
+                <td>
+                  {weekShort(w)} <span className="muted">{menuOf(w)}</span>
+                </td>
+                <td className="r">
+                  <span className={`chip ${v == null ? "none" : "tr"}`}>{v == null ? "未入力" : `${fmt1(v)} / 10`}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

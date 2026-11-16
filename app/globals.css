@@ -377,11 +377,6 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .trank li.t1.me{background:linear-gradient(90deg,#fff6dc,var(--accent-soft))}
 .trank .you{font-style:normal;font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:middle}
 
-/* 選手ホーム：筋トレの月別（自分・チーム平均・差を1行で） */
-.mrow2{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:10px}
-.mrow2>div{background:var(--bg);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column}
-.mrow2 .l{font-size:11px;color:var(--sub);font-weight:700}
-.mrow2 b{font-size:17px}
 
 /* 4つのボタンで開いた詳細のカード：上辺に選んでいるボタンと同じ色の線（選手・コーチ共通） */
 .panel-attend .card{border-top:4px solid #1f8a5b}
@@ -488,3 +483,5 @@ svg.chart{touch-action:pan-y}
 /* 出欠席率・筋トレ遂行率の2列の枠：中の文字にも余白を付けない（ほかの見た目の設定が混ざらないように） */
 .sum2>div{align-self:stretch}
 .sum2>div>*{margin:0;padding:0;border:0}
+/* 筋トレ遂行率の週ごとの一覧の点数（黄土） */
+.chip.tr{background:#fef3c7;color:#92400e}
