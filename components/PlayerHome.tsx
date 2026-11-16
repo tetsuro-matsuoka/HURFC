@@ -34,6 +34,7 @@ import {
   playersOf,
   ranking,
   trainingRate,
+  teamTrainingAvg,
   DEFAULT_MENU,
   menuLabel,
   trainingMonthAvg,
@@ -296,10 +297,13 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
     [ymLabel(ym), (x) => trainingMonthAvg(x, ym)],
     ["直近4週", (x) => trainingRate(x, from4)],
   ];
-  // 4. 推移グラフ（直近8週）
+  // 4. 推移グラフ（直近8週）：自分と、各週のチーム平均（入力した選手の平均）
   const pts = recentWeeks(8)
     .filter((w) => m.training[w] != null)
     .map((w) => ({ d: w, v: m.training[w] }));
+  const teamPts = recentWeeks(8)
+    .map((w) => ({ d: w, v: teamTrainingAvg(ps, w) }))
+    .filter((p): p is { d: string; v: number } => p.v != null);
   // 5. 週ごとの一覧：この週から、いちばん古い記録の週まで（新しい週が上。未入力の週も表示）
   const recorded = Object.keys(m.training).sort();
   const weeksList: string[] = [];
@@ -363,9 +367,16 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
         </tbody>
       </table>
 
-      {pts.length >= 2 && (
+      {pts.length >= 1 && (
         <div style={{ marginBottom: 12 }}>
-          <LineChart pts={pts} h={110} color="#a16207" />
+          <MultiLineChart
+            h={150}
+            minRange={2}
+            series={[
+              { label: "自分", color: "#a16207", pts, dots: true },
+              { label: "チーム平均", color: "#8a929c", pts: teamPts, dash: true },
+            ]}
+          />
         </div>
       )}
 
