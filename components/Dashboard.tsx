@@ -136,47 +136,39 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
     tDays = month.reduce((a, x) => a + x.days, 0);
   const pCount = practiceCount(ctx.practice, ym);
   const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
-  // トータル（全期間）のチーム累計：月別と同じ計算（練習日ベース・今日より後と入部前は数えない）
-  const all = ps.map((m) => attendStats(m, ctx.practice, "0000-01-01", today()));
-  const aYes = all.reduce((a, x) => a + x.yes, 0),
-    aNo = all.reduce((a, x) => a + x.no, 0),
+  // トータル（全期間）：分母＝今日までに開催した練習日数 × 今の登録選手数、分子＝その練習日の出席の延べ回数
+  //   練習日を1日も設定していないときだけ、今までどおり出欠を記録した日をもとに計算
+  const t = today();
+  const held = [...ctx.practice.days].filter((x) => x <= t);
+  let aYes: number, aDays: number, aNote: string;
+  if (held.length) {
+    aYes = ps.reduce((a, m) => a + held.filter((x) => m.daily[x]?.attendance === "出席").length, 0);
+    aDays = held.length * ps.length;
+    aNote = `出席 ${aYes} / 対象 ${aDays}回（練習${held.length}回 × ${ps.length}名）`;
+  } else {
+    const all = ps.map((m) => attendStats(m, ctx.practice, "0000-01-01", t));
+    aYes = all.reduce((a, x) => a + x.yes, 0);
     aDays = all.reduce((a, x) => a + x.days, 0);
+    aNote = `出席 ${aYes} / 対象 ${aDays}回（練習日が未設定のため記録した日で計算）`;
+  }
 
   return (
     <>
-    {/* 一番上：トータル（全期間）のチーム累計。選手画面と同じ緑の角丸カードを3列で */}
+    {/* 1. 一番上：トータル（全期間）。左に出席率を大きく、右に欠席理由統計（全期間）のボタン */}
     <div className="card">
-      <h3>
-        トータル <small>全期間・チーム全体</small>
-      </h3>
-      <div className="sum2 sum3 att2" style={{ marginBottom: 0 }}>
-        <div className="alltime">
-          <div className="l">トータル出席</div>
-          <div className="v num">
-            {aYes}
-            <small>回</small>
-          </div>
-          <div className="s">延べ回数</div>
-        </div>
-        <div className="alltime">
-          <div className="l">トータル欠席</div>
-          <div className="v num">
-            {aNo}
-            <small>回</small>
-          </div>
-          <div className="s">延べ回数</div>
-        </div>
-        <div className="alltime">
-          <div className="l">トータル出席率</div>
+      <div className="att-total">
+        <div className="att-total-main">
+          <div className="l">トータル出席率 <small>全期間・チーム全体</small></div>
           <div className="v num">
             {aDays ? Math.round((aYes / aDays) * 100) : "—"}
             <small>%</small>
           </div>
-          <div className="s">対象 {aDays}回</div>
+          <div className="s">{aNote}</div>
         </div>
+        <AbsenceButton ps={ps} from={null} to={t} title="欠席理由統計（全期間）" empty="欠席記録はありません" />
       </div>
     </div>
-    <div className="grid two">
+    {/* 2. 中段：当日の出欠状況 */}
       <div className="card">
         <h3>当日の出欠状況</h3>
         <div className="datebar">
@@ -231,9 +223,9 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         ) : (
           <div className="empty">選手が登録されていません</div>
         )}
-        <AbsenceStats ps={ps} />
       </div>
 
+      {/* 3. 下段：月別の出欠状況。月のサマリーの下に、上と同じ「欠席理由統計」ボタン（その月だけ） */}
       <div className="card">
         <h3>月別の出欠席率</h3>
         <Stepper
@@ -242,6 +234,19 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           onNext={() => setYm(addMonths(ym, 1))}
           nextDisabled={ym >= ymOf(today())}
         />
+        <div className="att-total month">
+          <div className="att-total-main">
+            <div className="l">{ymLabel(ym)}の出席率 <small>チーム全体</small></div>
+            <div className="v num">
+              {tDays ? Math.round((tYes / tDays) * 100) : "—"}
+              <small>%</small>
+            </div>
+            <div className="s">
+              出席 {tYes} / 対象 {tDays}回
+            </div>
+          </div>
+          <AbsenceButton ps={ps} from={ym + "-01"} to={ym + "-31"} title={`欠席理由統計（${ymLabel(ym)}）`} empty="この月の欠席記録はありません" />
+        </div>
         <p className="muted" style={{ marginBottom: 8 }}>
           {pCount
             ? `設定練習日数：${pCount}日。出席率＝練習日の出席日数÷練習日数（今日より後の練習日と、入部前の日は数えません）`
@@ -294,7 +299,6 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           </table>
         </div>
       </div>
-    </div>
     </>
   );
 }
@@ -437,52 +441,50 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   );
 }
 
-/* ---------- 欠席理由統計（ボタンで開閉）：理由ごとの回数と割合。今月 / 全期間 ---------- */
-function AbsenceStats({ ps }: { ps: Member[] }) {
+/* ---------- 欠席理由統計ボタン：押すとモーダルで、理由ごとの回数と割合（多い順・棒グラフ付き） ----------
+   トータル（全期間）と月別で同じボタン。from〜to の期間で集計（from が null なら全期間） */
+function AbsenceButton({ ps, from, to, title, empty }: { ps: Member[]; from: string | null; to: string; title: string; empty: string }) {
   const [open, setOpen] = useState(false);
-  const [range, setRange] = useState<"month" | "all">("month");
-  const t = today();
-  const [ym, setYm] = useState(ymOf(t));
-  // 月別：選んだ月の1日〜末日（今日より後は記録がないので末日まででよい）／全期間：すべて
-  const list = range === "month" ? absenceCounts(ps, ym + "-01", ym + "-31") : absenceCounts(ps, null, t);
+  const list = absenceCounts(ps, from, to);
   const total = list.reduce((a, x) => a + x.n, 0);
   const max = Math.max(1, ...list.map((x) => x.n));
   return (
-    <div className="abs-stats">
-      <button className={`abs-toggle ${open ? "on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open}>
-        欠席理由統計 <span>{open ? "⌃" : "⌄"}</span>
+    <>
+      <button className="abs-btn" onClick={() => setOpen(true)}>
+        欠席理由統計
       </button>
       {open && (
-        <div className="abs-body">
-          <div className="seg" style={{ marginBottom: 10 }}>
-            <button className={range === "month" ? "on" : ""} onClick={() => setRange("month")}>
-              月別
-            </button>
-            <button className={range === "all" ? "on" : ""} onClick={() => setRange("all")}>
-              全期間
-            </button>
-          </div>
-          {range === "month" && <MonthBar ym={ym} setYm={setYm} />}
-          <div className="muted" style={{ margin: "8px 0" }}>
-            欠席 合計 <b className="num">{total}</b> 回
-          </div>
-          {total ? (
-            list.map((x) => (
-              <div key={x.reason} className={`abs-row ${x.n ? "" : "zero"}`}>
-                <span className="abs-l">{x.reason}</span>
-                <span className="abs-bar">
-                  <i style={{ width: `${(x.n / max) * 100}%` }} />
-                </span>
-                <span className="abs-v num">
-                  {x.n}回 <small>{Math.round((x.n / total) * 100)}%</small>
-                </span>
+        <div className="modal" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
+          <div className="sheet">
+            <div className="hd">
+              <h2>{title}</h2>
+              <button className="x" onClick={() => setOpen(false)} aria-label="閉じる">
+                ×
+              </button>
+            </div>
+            <div className="card">
+              <div className="muted" style={{ marginBottom: 8 }}>
+                欠席 合計 <b className="num">{total}</b> 回
               </div>
-            ))
-          ) : (
-            <div className="empty">{range === "month" ? "この月の欠席記録はありません" : "欠席記録はありません"}</div>
-          )}
+              {total ? (
+                list.map((x) => (
+                  <div key={x.reason} className={`abs-row ${x.n ? "" : "zero"}`}>
+                    <span className="abs-l">{x.reason}</span>
+                    <span className="abs-bar">
+                      <i style={{ width: `${(x.n / max) * 100}%` }} />
+                    </span>
+                    <span className="abs-v num">
+                      {x.n}回 <small>{Math.round((x.n / total) * 100)}%</small>
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="empty">{empty}</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
