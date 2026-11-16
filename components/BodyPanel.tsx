@@ -12,7 +12,7 @@ import LineChart from "./LineChart";
 import MultiLineChart from "./MultiLineChart";
 import { DateBar, GroupCards, PeriodSeg, avg, groupTrend, splitGroups, valueAsOf, type GroupKey, type Period } from "./GroupStats";
 import type { Ctx } from "./Shared";
-import { fmt1, fmt2, latestWeight, metricLatest, metricsOf, today, unitOf, weightAgo, weights } from "@/lib/calc";
+import { fmt1, latestWeight, metricLatest, metricsOf, today, unitOf, weightAgo, weights, fmtMetric } from "@/lib/calc";
 import type { Member } from "@/lib/types";
 
 export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
@@ -94,7 +94,7 @@ function PlayerBodyTable({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                   <td className="r num">{diffCell(lw && a30 ? lw.v - a30.v : null)}</td>
                   {defs.map((x) => (
                     <td className="r num" key={x.id}>
-                      {fmt2(metricLatest(m, x)?.v)}
+                      {fmtMetric(x, metricLatest(m, x)?.v)}
                     </td>
                   ))}
                 </tr>

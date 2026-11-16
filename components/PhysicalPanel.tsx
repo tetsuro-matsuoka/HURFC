@@ -12,7 +12,7 @@ import { Fragment, useMemo, useState } from "react";
 import MultiLineChart from "./MultiLineChart";
 import { DateBar, GroupCards, PeriodSeg, avg, groupTrend, splitGroups, type GroupKey, type Period } from "./GroupStats";
 import { RankRows, type Ctx } from "./Shared";
-import { LIFTS, fmt2, fmtRatio, md, metricBest, metricRatio, metricSeries, metricsOf, phys, today, unitOf, weights, type Point, type RankRow } from "@/lib/calc";
+import { LIFTS, fmtRatio, md, metricBest, metricRatio, metricSeries, metricsOf, phys, today, unitOf, weights, type Point, type RankRow, fmtMetric, fmtMinSec, isMinSec } from "@/lib/calc";
 import type { LiftKey, Member, MetricDef } from "@/lib/types";
 
 type Mode = "latest" | "best";
@@ -99,7 +99,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   }
 
   const unit = ratio ? "倍" : unitOf(def);
-  const fmtV = (v: number) => (ratio ? fmtRatio(v) : fmt2(v));
+  const fmtV = (v: number) => (ratio ? fmtRatio(v) : fmtMetric(def, v));
   const at = (g: GroupKey, day: string) =>
     avg(groups[g].map((m) => {
       const c = caches.get(m.id);
@@ -123,8 +123,8 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
     const rr = def.show_ratio && c ? valueAt(c, def, mode, true, d) : null;
     return (
       <>
-        {fmt2(r.v)}
-        <small> {unitOf(def)}</small>
+        {fmtMetric(def, r.v)}
+        {unitOf(def) && <small> {unitOf(def)}</small>}
         {rr != null && <small className="rk-ratio">（{fmtRatio(rr)}倍）</small>}
       </>
     );
@@ -164,7 +164,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       <div className="card">
         <h3>全体・FW・BK の推移 <small>{label}</small></h3>
         <PeriodSeg period={period} setPeriod={setPeriod} />
-        <MultiLineChart series={chart} digits={ratio ? 2 : 1} minRange={ratio ? 0.2 : 1} />
+        <MultiLineChart series={chart} digits={ratio ? 2 : 1} minRange={ratio ? 0.2 : 1} fmt={!ratio && isMinSec(def) ? fmtMinSec : undefined} />
       </div>
 
       <div className="card">
@@ -209,7 +209,7 @@ function BestTable({ ctx, ps, defs }: { ctx: Ctx; ps: Member[]; defs: MetricDef[
                   <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
                   {defs.map((x) => (
                     <Fragment key={x.id}>
-                      <td className="r num">{fmt2(metricBest(m, x))}</td>
+                      <td className="r num">{fmtMetric(x, metricBest(m, x))}</td>
                       {x.show_ratio && <td className="r num ratio">{fmtRatio(metricRatio(m, x))}</td>}
                     </Fragment>
                   ))}

@@ -19,9 +19,10 @@ type Props = {
   digits?: number;
   unit?: string;
   note?: (d: string) => string;
+  fmt?: (v: number) => string; // 目盛り・吹き出しの数値の表示（タイム種目は 4:50 の形など）
 };
 
-export default function LineChart({ pts, h = 170, color = "var(--accent)", label = true, width, minRange = 2, digits = 1, unit = "", note }: Props) {
+export default function LineChart({ pts, h = 170, color = "var(--accent)", label = true, width, minRange = 2, digits = 1, unit = "", note, fmt }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const tip = useChartTip(ref); // タップ／マウスで吹き出し（小さなグラフ label=false では使わない）
   const [w, setW] = useState(width ?? 600);
@@ -80,7 +81,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
             <g key={i}>
               <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="#e7e8e4" strokeWidth={1} />
               <text x={L - 6} y={Y(v) + 4} textAnchor="end">
-                {v.toFixed(digits)}
+                {fmt ? fmt(v) : v.toFixed(digits)}
               </text>
             </g>
           ))}
@@ -111,7 +112,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
         <TipBox x={X(act.d)} w={w}>
           <div className="tip-d">{md(act.d)}</div>
           <div className="tip-v">
-            {fmtV(act.v)}
+            {fmt ? fmt(act.v) : fmtV(act.v)}
             {unit && ` ${unit}`}
           </div>
           {note?.(act.d) && <div className={`tip-n ${note(act.d) === "時間未記録" ? "none" : ""}`}>{note(act.d)}</div>}

@@ -10,7 +10,7 @@ import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
-import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, metricsOf, unitOf } from "@/lib/calc";
+import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, isMinSec, metricsOf, unitOf } from "@/lib/calc";
 import type { Menu, MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
@@ -24,7 +24,8 @@ function MetricFields({ v, set, isWeight }: { v: MetricInput; set: (v: MetricInp
       <label className="f">項目名</label>
       <input className="t" value={v.name} onChange={(e) => set({ ...v, name: e.target.value })} required placeholder="例：30mスプリント" />
       <label className="f">単位</label>
-      <input className="t" value={v.unit} onChange={(e) => set({ ...v, unit: e.target.value })} placeholder="例：秒、kg、%、cm（不要なら空欄）" />
+      <input className="t" value={v.unit} onChange={(e) => set({ ...v, unit: e.target.value })} placeholder="例：秒、kg、%、cm、分:秒（不要なら空欄）" />
+      <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>「分:秒」にすると（または種目名に「ブロンコ」を含むと）、4分50秒のようなタイムで入力・表示します（小さいほど上位）。</p>
       <label className="f">カテゴリ</label>
       <div className="seg" style={{ marginBottom: 0 }}>
         {CATEGORIES.map((c) => (
@@ -124,6 +125,7 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                       <b>
                         {x.name}
                         {unitOf(x) && <span className="muted">（{unitOf(x)}）</span>}
+                        {isMinSec(x) && <span className="muted">（タイム 分:秒）</span>}
                       </b>
                       <div className="muted" style={{ fontSize: 12 }}>
                         {x.better === "low" ? "小さいほど良い" : "大きいほど良い"}

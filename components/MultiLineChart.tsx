@@ -12,8 +12,9 @@ export type Series = { label: string; color: string; pts: Point[]; dash?: boolea
 
 // minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
 // unit：吹き出しの単位 / note：吹き出しで1本目の線（自分）に添える文（例：「練習後」）
-type Props = { series: Series[]; h?: number; digits?: number; minRange?: number; unit?: string; note?: (d: string) => string };
-export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note }: Props) {
+// fmt：目盛り・吹き出しの数値の表示（タイム種目は 4:50 の形など）
+type Props = { series: Series[]; h?: number; digits?: number; minRange?: number; unit?: string; note?: (d: string) => string; fmt?: (v: number) => string };
+export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note, fmt }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const tip = useChartTip(ref);
   const [w, setW] = useState(600);
@@ -44,7 +45,7 @@ export default function MultiLineChart({ series, h = 200, digits = 1, minRange =
       {all.length < 2 || dates[0] === dates[dates.length - 1] ? (
         <div className="empty">データが2日分以上になるとグラフを表示します</div>
       ) : (
-        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} />
+        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} fmt={fmt} />
       )}
     </div>
   );
@@ -61,6 +62,7 @@ function Chart({
   tip,
   unit,
   note,
+  fmt,
 }: {
   series: Series[];
   w: number;
@@ -72,6 +74,7 @@ function Chart({
   tip: ReturnType<typeof useChartTip>;
   unit: string;
   note?: (d: string) => string;
+  fmt?: (v: number) => string;
 }) {
   const vs = series.flatMap((s) => s.pts.map((p) => p.v));
   let lo = Math.min(...vs),
@@ -100,7 +103,7 @@ function Chart({
   const allDates = [...new Set(series.flatMap((s) => s.pts.map((p) => p.d)))].sort();
   const act = tip.active;
   const at = (s: Series) => (act ? s.pts.find((p) => p.d === act) ?? null : null);
-  const fmtV = (v: number) => v.toFixed(Math.max(digits, 1));
+  const fmtV = (v: number) => (fmt ? fmt(v) : v.toFixed(Math.max(digits, 1)));
   return (
     <div style={{ position: "relative" }}>
     <svg className="chart" viewBox={`0 0 ${w} ${h}`} width="100%" style={{ display: "block", height: h }}>
@@ -108,7 +111,7 @@ function Chart({
         <g key={i}>
           <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="#e7e8e4" strokeWidth={1} />
           <text x={L - 6} y={Y(v) + 4} textAnchor="end">
-            {v.toFixed(digits)}
+            {fmt ? fmt(v) : v.toFixed(digits)}
           </text>
         </g>
       ))}

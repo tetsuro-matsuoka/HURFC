@@ -3,7 +3,7 @@
 // 選手向け画面
 //  S03 データ入力（S02 ホームとランキングは PlayerHome.tsx）
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { Ctx } from "./Shared";
 import {
   LIFTS,
@@ -14,7 +14,6 @@ import {
   menuLabel,
   WEIGHT_TIMINGS,
   dayKind,
-  fmt2,
   isLinked,
   metricBest,
   metricLatest,
@@ -30,6 +29,8 @@ import {
   rowTotal,
   today,
   weights,
+  fmtMetric,
+  isMinSec,
 } from "@/lib/calc";
 import { saveDaily, saveErrorText, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
 import type { AbsenceReason, Attendance, LiftKey, PhysRec, WeightTiming } from "@/lib/types";
@@ -300,8 +301,24 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
   const defs = ctx.metrics.filter((x) => !isLinked(x));
   // Big3の名前は項目設定で変更した名前を使う
   const liftName = (k: LiftKey, l: string) => ctx.metrics.find((x) => x.key === k)?.name ?? l;
+  // タイム種目（分:秒）は「分:秒」の文字で持つ（例 "4:50"）。保存するときに総秒数に直す
   const initialX = (d: string): Record<number, string> =>
-    Object.fromEntries(defs.map((x) => [x.id, m.metrics[x.id]?.[d] != null ? String(m.metrics[x.id][d]) : ""]));
+    Object.fromEntries(
+      defs.map((x) => {
+        const v = m.metrics[x.id]?.[d];
+        if (v == null) return [x.id, ""];
+        return [x.id, isMinSec(x) ? `${Math.floor(v / 60)}:${Math.round(v % 60)}` : String(v)];
+      }),
+    );
+  // "分:秒" → 総秒数（空なら null、おかしな値なら NaN）
+  const toSeconds = (t: string): number | null => {
+    const [mi = "", se = ""] = t.split(":");
+    if (mi.trim() === "" && se.trim() === "") return null;
+    const a = mi.trim() === "" ? 0 : Number(mi),
+      b = se.trim() === "" ? 0 : Number(se);
+    if (!Number.isInteger(a) || a < 0 || isNaN(b) || b < 0 || b >= 60) return NaN;
+    return a * 60 + b;
+  };
   const [date, setDate] = useState(today());
   const [vals, setVals] = useState<Record<LiftKey, string>>(initial(today()));
   const [xv, setXv] = useState<Record<number, string>>(initialX(today()));
@@ -321,7 +338,7 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
     });
     const xs = defs.map((x) => {
       const t = (xv[x.id] ?? "").trim();
-      const n = t === "" ? null : parseFloat(t);
+      const n = isMinSec(x) ? toSeconds(t) : t === "" ? null : parseFloat(t);
       if (n != null && (isNaN(n) || n < 0 || n > 100000)) bad = true;
       return { metricId: x.id, value: n };
     });
@@ -408,6 +425,34 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
                 return (
                   <div key={x.id}>
                     <label className="f">{x.name}</label>
+                    {isMinSec(x) ? (
+                      // タイム種目：「[ 4 ] 分 [ 50 ] 秒」
+                      <div className="stepper minsec">
+                        {[0, 1].map((i) => {
+                          const parts = (xv[x.id] ?? "").split(":");
+                          return (
+                            <Fragment key={i}>
+                              <input
+                                className="t"
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                max={i ? 59 : undefined}
+                                value={parts[i] ?? ""}
+                                onChange={(e) => {
+                                  const next = [parts[0] ?? "", parts[1] ?? ""];
+                                  next[i] = e.target.value;
+                                  setXv((cur) => ({ ...cur, [x.id]: next.join(":") }));
+                                }}
+                                aria-label={i ? "秒" : "分"}
+                                style={{ fontSize: 24 }}
+                              />
+                              <span className="unit">{i ? "秒" : "分"}</span>
+                            </Fragment>
+                          );
+                        })}
+                      </div>
+                    ) : (
                     <div className="stepper">
                       <input
                         className="t"
@@ -422,9 +467,10 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
                         {unitOf(x)}
                       </span>
                     </div>
+                    )}
                     <div className="prev">
-                      {last ? `前回 ${fmt2(last.v)}${unitOf(x)}（${md(last.d)}）` : "まだ記録がありません"}
-                      {best != null && ` ・ 自己ベスト ${fmt2(best)}${unitOf(x)}`}
+                      {last ? `前回 ${fmtMetric(x, last.v)}${unitOf(x)}（${md(last.d)}）` : "まだ記録がありません"}
+                      {best != null && ` ・ 自己ベスト ${fmtMetric(x, best)}${unitOf(x)}`}
                     </div>
                   </div>
                 );

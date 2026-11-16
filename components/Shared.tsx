@@ -13,7 +13,6 @@ import {
   weightAt,
   weightNote,
   timingText,
-  fmt2,
   metricSeries,
   recentWeeks,
   type RankRow,
@@ -25,6 +24,9 @@ import {
   phys,
   rowTotal,
   weights,
+  fmtMetric,
+  fmtMinSec,
+  isMinSec,
 } from "@/lib/calc";
 import type { Category, Member, MetricDef, Members, Practice, WeekSetting } from "@/lib/types";
 
@@ -181,11 +183,11 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
               <h3>
                 {def.name}{" "}
                 <small>
-                  最新 {fmt2(s[s.length - 1].v)}
+                  最新 {fmtMetric(def, s[s.length - 1].v)}
                   {unitOf(def)}（{md(s[s.length - 1].d)}）
                 </small>
               </h3>
-              <LineChart pts={s} h={120} color="var(--navy)" />
+              <LineChart pts={s} h={120} color="var(--navy)" fmt={isMinSec(def) ? fmtMinSec : undefined} />
             </div>
           );
         })}
