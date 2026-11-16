@@ -9,6 +9,8 @@ import {
   LIFTS,
   addDays,
   ABSENCE_REASONS,
+  attendLabel,
+  wd,
   CRITERIA_KEY,
   DEFAULT_MENU,
   menuLabel,
@@ -147,7 +149,20 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
       <label className="f" style={{ marginTop: 0 }}>
         日付
       </label>
-      <input className="t" type="date" value={date} max={today()} onChange={(e) => e.target.value && changeDate(e.target.value)} />
+      {/* iPhone の日付ピッカーでも選んだ日がすぐ反映されるよう、onInput と onChange の両方で受け取る */}
+      <input
+        className="t"
+        type="date"
+        value={date}
+        max={today()}
+        onChange={(e) => e.target.value && changeDate(e.target.value.slice(0, 10))}
+        onInput={(e) => (e.target as HTMLInputElement).value && changeDate((e.target as HTMLInputElement).value.slice(0, 10))}
+      />
+      {/* その日に保存済みかどうか */}
+      <div className="saved-state">
+        {md(date)}（{wd(date)}）：
+        {m.daily[date] ? <b>保存済み（{attendLabel(m.daily[date]) ?? "出欠なし"}{m.daily[date].weight != null ? `・${fmt1(m.daily[date].weight)}kg` : ""}）</b> : "まだ記録していません"}
+      </div>
       {kind !== "unset" && (
         <div style={{ marginTop: 8 }}>
           <span className={`daytag ${kind}`}>{kind === "practice" ? "この日は練習日です" : "この日はオフ（練習日ではありません）"}</span>
@@ -215,7 +230,7 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     </div>
 
     <button className="btn" style={{ marginTop: 0, marginBottom: 14 }} onClick={save} disabled={busy || ctx.readOnly}>
-      {busy ? "保存中…" : "保存する"}
+      {busy ? "保存中…" : `${md(date)}（${wd(date)}）の記録を保存する`}
     </button>
     </>
   );

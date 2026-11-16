@@ -467,15 +467,21 @@ svg.chart{touch-action:pan-y}
 
 
 /* 選手ホーム『出欠席率』『筋トレ遂行率』の一番上の2列サマリー（同じ大きさ・余白・文字） */
-.sum2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}
-.sum2>div{border-radius:16px;padding:10px 12px;border:1.5px solid;min-height:92px;display:flex;flex-direction:column}
-.sum2 .l{font-size:12px;font-weight:700}
-.sum2 .v{font-size:30px;font-weight:700;line-height:1.15}
+/* 2つの枠は「同じ高さ・幅・余白・文字」。行の高さを固定し、文字は折り返さない（折り返すと片方だけ高くなるため） */
+.sum2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:12px;margin-bottom:12px;align-items:stretch}
+.sum2>div{box-sizing:border-box;height:100%;min-width:0;border-radius:16px;padding:10px 12px;border:1.5px solid;display:grid;grid-template-rows:18px 40px 18px;align-content:start}
+.sum2 .l,.sum2 .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum2 .l{font-size:12px;font-weight:700;line-height:18px}
+.sum2 .v{font-size:30px;font-weight:700;line-height:40px;white-space:nowrap}
 .sum2 .v small{font-size:13px;color:var(--sub);margin-left:3px;font-weight:500}
-.sum2 .s{font-size:12px;color:var(--sub);margin-top:auto}
+.sum2 .s{font-size:12px;color:var(--sub);line-height:18px}
 /* 出欠席率：今月＝明るい緑 / トータル＝深いフォレストグリーン */
 .att2>div.now{background:#ecfdf5;border-color:#6ee7b7;color:#059669}
 .att2>div.total{background:rgba(220,252,231,.8);border-color:#16a34a;color:#14532d}
 /* 筋トレ遂行率：その週＝明るい黄土 / トータル平均＝深い黄土 */
 .tr2>div:first-child{background:#fffbeb;border-color:#fcd34d;color:#b45309}
 .tr2>div:last-child{background:rgba(254,243,199,.8);border-color:#b45309;color:#78350f}
+
+/* 記録する → 毎日の記録：選んだ日に保存済みかどうか */
+.saved-state{margin-top:8px;font-size:12.5px;color:var(--sub)}
+.saved-state b{color:var(--ok)}
