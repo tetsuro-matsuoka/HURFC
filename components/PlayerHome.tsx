@@ -25,7 +25,7 @@ import {
   maxes,
   md,
   metricBest,
-  metricRanking,
+  metricLatest,
   metricRatio,
   metricSeries,
   metricsOf,
@@ -55,7 +55,7 @@ import {
   fmtMinSec,
   isMinSec,
 } from "@/lib/calc";
-import type { Unit } from "@/lib/types";
+import type { Member, Unit } from "@/lib/types";
 
 type Panel = "attend" | "training" | "body" | "physical";
 const UNIT_COLOR: Record<Unit, string> = { FW: "#2563a8", BK: "#e07b00" };
@@ -401,6 +401,8 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
   const [sel, setSel] = useState<string | null>(null);
+  // 表示の基準：自己ベスト／最新値（上の自分の記録・順位と、下のランキングが連動）
+  const [mode, setMode] = useState<"best" | "latest">("best");
   const key = sel ?? (first ? "m" + first.id : "");
   const def = defs.find((x) => "m" + x.id === key || "r" + x.id === key);
   if (!def) return <div className="card empty">フィジカルの項目がありません</div>;
@@ -419,19 +421,39 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
     return w ? p.v / w : null;
   };
   const series = metricSeries(m, def);
-  const last = series[series.length - 1] ?? null;
-  const latestV = ratio ? toRatio(last) : last?.v ?? null;
-  const bestV = ratio ? metricRatio(m, def) : metricBest(m, def);
   const f = (v: number | null) => (v == null ? "—" : ratio ? fmtRatio(v) : fmtMetric(def, v));
   const u = ratio ? "倍" : unitOf(def);
 
-  // 順位（自己ベストで）
-  const rows: RankRow[] = ratio
-    ? playersOf(ctx.members)
-        .map((x) => ({ id: x.id, name: x.name, v: metricRatio(x, def) }))
-        .filter((r): r is RankRow => r.v != null)
-        .sort((a, b) => b.v - a.v)
-    : metricRanking(ctx.members, def);
+  // 選手1人の値（基準に合わせて）。表示しているのと同じ記録の体重比も返す
+  //  自己ベスト：タイム系は最小・それ以外は最大（項目の「良い向き」）。体重比はその記録の日の体重で割る
+  //  最新値：いちばん新しい記録。Big3合計は3種目それぞれの最新の記録の合計
+  const valueOf = (x: Member): { v: number | null; d: string | null; r: number | null } => {
+    const w = (pt: Point | null) => {
+      const wt = pt && pt.v ? weightAt(x, pt.d) : null;
+      return pt && wt ? pt.v / wt : null;
+    };
+    if (mode === "best") {
+      const v = metricBest(x, def);
+      const r = metricRatio(x, def);
+      return ratio ? { v: r, d: null, r: null } : { v, d: null, r };
+    }
+    let pt: Point | null;
+    if (def.key === "big3_total") {
+      const lp = LIFTS.map(([k]) => [...phys(x)].reverse().find((row) => row[k] != null)).filter(Boolean);
+      const vals = LIFTS.map(([k]) => [...phys(x)].reverse().find((row) => row[k] != null)?.[k] ?? null);
+      const sum = vals.reduce<number>((a, b) => a + (Number(b) || 0), 0);
+      const d = lp.map((row) => row!.d).sort().pop() ?? null;
+      pt = sum > 0 && d ? { d, v: sum } : null;
+    } else pt = metricLatest(x, def);
+    return ratio ? { v: w(pt), d: pt?.d ?? null, r: null } : { v: pt?.v ?? null, d: pt?.d ?? null, r: w(pt) };
+  };
+  const mine = valueOf(m);
+
+  // 順位（選んだ基準で）。体重比は大きい順、それ以外は良い向きの順
+  const rows: RankRow[] = playersOf(ctx.members)
+    .map((x) => ({ id: x.id, name: x.name, v: valueOf(x).v }))
+    .filter((r): r is RankRow => r.v != null)
+    .sort((a, b) => (!ratio && def.better === "low" ? a.v - b.v : b.v - a.v));
   const pos = rows.findIndex((r) => r.id === m.id);
   const unit = unitOfPosition(m.position);
   const urows = unit ? rows.filter((r) => unitOfPosition(ctx.members[r.id]?.position) === unit) : [];
@@ -449,26 +471,26 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
           </option>
         ))}
       </select>
+      <div className="seg" style={{ marginBottom: 10 }}>
+        <button className={mode === "best" ? "on" : ""} onClick={() => setMode("best")}>
+          自己ベスト
+        </button>
+        <button className={mode === "latest" ? "on" : ""} onClick={() => setMode("latest")}>
+          最新値
+        </button>
+      </div>
       {def.key === "big3_total" && !ratio ? (
-        <Big3Block ctx={ctx} />
+        <Big3Block ctx={ctx} mode={mode} />
       ) : (
-      <div className="mine2">
-        <div>
-          <div className="l">最新値</div>
-          <div className="v num">
-            {f(latestV)}
-            <small>{u}</small>
-          </div>
-          {!ratio && def.show_ratio && toRatio(last) != null && <div className="s">{fmtRatio(toRatio(last))}倍</div>}
-          {last && <div className="s">{md(last.d)}</div>}
+      <div className="mine1">
+        <div className="l">{mode === "best" ? "自己ベスト" : "最新値"}</div>
+        <div className="v num">
+          {f(mine.v)}
+          {u && <small>{u}</small>}
         </div>
-        <div>
-          <div className="l">自己ベスト</div>
-          <div className="v num">
-            {f(bestV)}
-            <small>{u}</small>
-          </div>
-          {!ratio && def.show_ratio && metricRatio(m, def) != null && <div className="s">{fmtRatio(metricRatio(m, def))}倍</div>}
+        <div className="s">
+          {!ratio && def.show_ratio && mine.r != null && `${fmtRatio(mine.r)}倍`}
+          {mine.d && `${!ratio && def.show_ratio && mine.r != null ? " ・ " : ""}${md(mine.d)}`}
         </div>
       </div>
       )}
@@ -488,7 +510,7 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
       {/* 下段：選んだ種目のチームランキング */}
       <div className="card">
         <h3>
-          チームランキング <small>{options.find(([k]) => k === key)?.[1]}・自己ベスト</small>
+          {mode === "best" ? "自己ベストランキング" : "最新値ランキング"} <small>{options.find(([k]) => k === key)?.[1]}</small>
         </h3>
         <TeamRanking
           ctx={ctx}
@@ -525,32 +547,42 @@ function TeamRanking({ ctx, rows, fmtV }: { ctx: Ctx; rows: RankRow[]; fmtV: (v:
   );
 }
 
-// 『Big3合計』を選んだとき：3種目の自己ベスト（横3列）＋合計・体重比
-// 3種目の名前は「項目設定」で変えていればその名前。各種目の下は「前回」の記録（体重比が ON の種目は体重比も）
-function Big3Block({ ctx }: { ctx: Ctx }) {
+// 『Big3合計』を選んだとき：3種目（横3列）＋合計・体重比
+//  自己ベスト：種目ごとの自己ベストと、その合計 / 最新値：種目ごとのいちばん新しい記録と、その合計
+// 3種目の名前は「項目設定」で変えていればその名前
+function Big3Block({ ctx, mode }: { ctx: Ctx; mode: "best" | "latest" }) {
   const m = ctx.me;
   const mx = maxes(m);
   const p = phys(m);
-  const lastOf = (k: (typeof LIFTS)[number][0]) => [...p].reverse().find((r) => r[k] != null)?.[k] ?? null;
+  const lastRow = (k: (typeof LIFTS)[number][0]) => [...p].reverse().find((r) => r[k] != null) ?? null;
+  const vals = LIFTS.map(([k]) => (mode === "best" ? mx[k] : lastRow(k)?.[k] ?? null));
+  const total = vals.reduce<number>((a, b) => a + (Number(b) || 0), 0) || null;
+  // 体重比：自己ベストは各記録の日の体重、最新値はいちばん新しい記録の日の体重
   const totalDef = ctx.metrics.find((x) => x.key === "big3_total");
-  const totalRatio = totalDef ? metricRatio(m, totalDef) : mx.ratio;
+  const latestDay = LIFTS.map(([k]) => lastRow(k)?.d ?? "").sort().pop();
+  const totalRatio =
+    mode === "best"
+      ? totalDef
+        ? metricRatio(m, totalDef)
+        : mx.ratio
+      : total && latestDay && weightAt(m, latestDay)
+        ? total / (weightAt(m, latestDay) as number)
+        : null;
   return (
     <>
       <div className="big3" style={{ marginBottom: 8 }}>
-        {LIFTS.map(([k, l]) => {
+        {LIFTS.map(([k, l], i) => {
           const def = ctx.metrics.find((x) => x.key === k);
-          const r = def?.show_ratio ? metricRatio(m, def) : null;
-          const last = lastOf(k);
+          const r = mode === "best" && def?.show_ratio ? metricRatio(m, def) : null;
+          const row = lastRow(k);
           return (
             <div className="lift" key={k}>
               <div className="l">{def?.name ?? l}</div>
               <div className="v num">
-                {fmt0(mx[k])}
+                {fmt0(vals[i])}
                 <small>kg</small>
               </div>
-              <div className="d">
-                {r != null ? `${fmtRatio(r)}倍` : last != null ? `前回 ${fmt0(last)}` : "—"}
-              </div>
+              <div className="d">{r != null ? `${fmtRatio(r)}倍` : mode === "latest" && row ? md(row.d) : ""}</div>
             </div>
           );
         })}
@@ -558,7 +590,7 @@ function Big3Block({ ctx }: { ctx: Ctx }) {
       <div className="total" style={{ marginTop: 0, marginBottom: 10 }}>
         <span className="muted">合計（Total）</span>
         <span className="v num">
-          {fmt0(mx.total)}
+          {fmt0(total)}
           <small className="muted" style={{ fontSize: 14 }}>
             {" "}
             kg

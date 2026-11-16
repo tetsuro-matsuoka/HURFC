@@ -453,3 +453,10 @@ svg.chart{touch-action:pan-y}
 .ph th small{display:block;font-weight:400;color:var(--sub)}
 .ph .ph-d{position:sticky;left:0;z-index:1;text-align:left;font-weight:700;border-right:2px solid var(--line)}
 .ph thead .ph-d{z-index:3}
+
+/* 選手ホーム『フィジカル』：選んだ基準（自己ベスト／最新値）の自分の記録 */
+.mine1{background:var(--bg);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+.mine1 .l{font-size:12px;color:var(--sub);font-weight:700}
+.mine1 .v{font-size:32px;font-weight:700;line-height:1.15}
+.mine1 .v small{font-size:14px;color:var(--sub);margin-left:3px;font-weight:500}
+.mine1 .s{font-size:12px;color:var(--sub);min-height:16px}
