@@ -42,21 +42,32 @@ const LIFT_ORDER: LiftKey[] = ["squat", "bench_press", "deadlift"];
 export function InputScreen({ ctx }: { ctx: Ctx }) {
   // 最初はボタンだけ。押すと入力フォームが開き、もう一度押すと閉じる（ホームと同じ操作）
   const [tab, setTab] = useState<"daily" | "training" | "phys" | null>(null);
+  // 今日の記録状況（右側のバッジ）
+  const m = ctx.me;
+  const t = today();
+  const dailyState = m.daily[t] ? "入力済" : dayKind(t, ctx.practice) === "off" ? "オフ" : "未入力";
+  const trainingState = m.training[weekStart(t)] != null ? "入力済" : "未入力";
+  // フィジカルは毎日測るものではないので、今日測った記録があるときだけ「入力済」、ないときは矢印
+  const physState = m.physical[t] || Object.values(m.metrics).some((r) => r[t] != null) ? "入力済" : null;
   return (
     <>
       <h2 className="page">記録する</h2>
-      {/* ホームと同じ色のボタン：毎日の記録＝緑と青（出欠と体重）、筋トレ遂行率＝黄土、フィジカル＝赤 */}
+      {/* 横幅いっぱいの縦1列。左＝色の線・名前・説明、右＝今日の記録状況（入力済 / 未入力）
+          色はホームと同じ：毎日の記録＝緑と青（出欠と体重）、筋トレ遂行率＝黄土、フィジカル＝赤 */}
       <div className="menu4 menu3">
         {(
           [
-            ["daily", "m-daily", "毎日の記録", "出欠・体重"],
-            ["training", "m-training", "筋トレ遂行率", "週ごとの評価"],
-            ["phys", "m-physical", "フィジカル", "測定の記録"],
+            ["daily", "m-daily", "毎日の記録", "出欠・体重", dailyState],
+            ["training", "m-training", "筋トレ遂行率", "今週の評価", trainingState],
+            ["phys", "m-physical", "フィジカル", "測定の記録", physState],
           ] as const
-        ).map(([k, cls, l, sub]) => (
+        ).map(([k, cls, l, sub, st]) => (
           <button key={k} className={`${cls} ${tab === k ? "on" : ""}`} onClick={() => setTab(tab === k ? null : k)} aria-pressed={tab === k}>
-            <b>{l}</b>
-            <span>{sub}</span>
+            <span className="mi-l">
+              <b>{l}</b>
+              <span>{sub}</span>
+            </span>
+            {st ? <em className={`mi-st ${st === "入力済" ? "done" : st === "未入力" ? "todo" : ""}`}>{st}</em> : <em className="mi-arrow">{tab === k ? "⌄" : "›"}</em>}
           </button>
         ))}
       </div>
