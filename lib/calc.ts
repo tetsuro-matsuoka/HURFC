@@ -56,6 +56,18 @@ export const timingText = (r: { weight_timing?: WeightTiming | null } | undefine
 // 出欠の表示：「出席」/「欠席（体調不良）」/ 理由なしの欠席は「欠席」
 export const attendLabel = (r: { attendance: string | null; absence_reason?: string | null } | undefined) =>
   !r?.attendance ? null : r.attendance === "欠席" && r.absence_reason ? `欠席（${r.absence_reason}）` : r.attendance;
+// 期間内の欠席理由ごとの回数（全選手の合計）。多い順。from 省略で全期間
+export function absenceCounts(players: Member[], from: string | null, to: string): { reason: string; n: number }[] {
+  const cnt = new Map<string, number>();
+  players.forEach((m) =>
+    Object.entries(m.daily).forEach(([d, r]) => {
+      if ((from && d < from) || d > to || r.attendance !== "欠席") return;
+      const k = r.absence_reason ?? "理由未入力";
+      cnt.set(k, (cnt.get(k) ?? 0) + 1);
+    }),
+  );
+  return [...ABSENCE_REASONS, "理由未入力"].map((reason) => ({ reason, n: cnt.get(reason) ?? 0 })).sort((a, b) => b.n - a.n);
+}
 // 期間内の欠席理由の内訳（例：「体調不良2・学校関連1」）
 export function absenceSummary(m: Member, from: string, to: string): string {
   const cnt = new Map<string, number>();
@@ -297,9 +309,20 @@ export const recentWeeks = (n: number) => {
   const cur = weekStart(today());
   return Array.from({ length: n }, (_, i) => addDays(cur, -7 * (n - 1 - i)));
 };
-// 直近 n 週の平均点（入力のある週だけで計算）
+// チーム全体のサマリー週：全選手の記録をまとめて summaryWeek と同じ決め方（コーチ画面用）
+export function teamSummaryWeek(players: Member[], d = today()) {
+  const all: Record<string, number> = {};
+  players.forEach((m) => Object.entries(m.training).forEach(([w, v]) => v != null && (all[w] = v)));
+  return summaryWeek(all, d);
+}
+// 直近で終わった n 週（前週まで。進行中の今週は含めない）の月曜日（古い順）
+export const doneWeeks = (n: number) => {
+  const prev = addDays(weekStart(today()), -7);
+  return Array.from({ length: n }, (_, i) => addDays(prev, -7 * (n - 1 - i)));
+};
+// 直近で終わった n 週の平均点（入力のある週だけで計算。進行中の今週は含めない）
 export function trainingAvg(m: Member, n = 4): number | null {
-  const v = recentWeeks(n)
+  const v = doneWeeks(n)
     .map((w) => m.training[w])
     .filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;

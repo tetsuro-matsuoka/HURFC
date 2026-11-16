@@ -15,6 +15,8 @@ import {
   timingText,
   metricSeries,
   recentWeeks,
+  summaryWeek,
+  weekShort,
   type RankRow,
   fmt0,
   fmt1,
@@ -82,6 +84,7 @@ export function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; 
 // 選手の詳細（コーチが選手をタップしたときに表示）
 export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metrics: MetricDef[]; practice: Practice; onClose: () => void }) {
   const weeks = recentWeeks(8);
+  const sw = summaryWeek(m.training);
   const x = maxes(m),
     p = phys(m),
     lw = latestWeight(m),
@@ -112,6 +115,15 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
               <small>kg</small>
             </div>
             <div className="s">{lw ? `${md(lw.d)}${weightNote(m.daily[lw.d])}` : ""}</div>
+          </div>
+          {/* 筋トレ遂行率：直近で終わった週（前週）。選手画面・ダッシュボードと同じ週 */}
+          <div className="kpi">
+            <div className="l">筋トレ遂行率</div>
+            <div className="v num">
+              {m.training[sw] == null ? "—" : fmt1(m.training[sw])}
+              <small>/ 10</small>
+            </div>
+            <div className="s">{weekShort(sw)}</div>
           </div>
         </div>
         <div className="card">
