@@ -613,6 +613,26 @@ function PhysHistory({ ctx }: { ctx: Ctx }) {
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const hist = new Map(defs.map((x) => [x.id, new Map(metricSeries(m, x).map((pt) => [pt.d, pt.v]))]));
   const dates = [...new Set([...hist.values()].flatMap((mp) => [...mp.keys()]))].sort().reverse();
+
+  // 👑：その測定日までに記録されたチーム全員の全記録の中で1位（同率1位を含む）
+  //  タイム系など「小さいほど良い」項目は最小、それ以外（重量・距離・モメンタムなど）は最大
+  const team = new Map(
+    defs.map((x) => [
+      x.id,
+      playersOf(ctx.members)
+        .flatMap((p) => metricSeries(p, x))
+        .sort((a, b) => (a.d < b.d ? -1 : 1)),
+    ]),
+  );
+  const isTeamTop = (x: (typeof defs)[number], d: string, v: number) => {
+    const low = x.better === "low";
+    let best: number | null = null;
+    for (const pt of team.get(x.id) ?? []) {
+      if (pt.d > d) break;
+      if (best == null || (low ? pt.v < best : pt.v > best)) best = pt.v;
+    }
+    return best != null && Math.abs(v - best) < 1e-9;
+  };
   return (
     <div className="card">
       <h3>
@@ -638,8 +658,10 @@ function PhysHistory({ ctx }: { ctx: Ctx }) {
                   <td className="ph-d">{md(d)}</td>
                   {defs.map((x) => {
                     const v = hist.get(x.id)?.get(d);
+                    const top = v != null && isTeamTop(x, d, v);
                     return (
-                      <td key={x.id} className="num">
+                      <td key={x.id} className={`num ${top ? "ph-top" : ""}`}>
+                        {top && <span className="crown">👑</span>}
                         {x.key === "big3_total" ? <b>{fmtMetric(x, v)}</b> : fmtMetric(x, v)}
                       </td>
                     );
@@ -652,6 +674,7 @@ function PhysHistory({ ctx }: { ctx: Ctx }) {
       ) : (
         <div className="empty">まだ記録がありません</div>
       )}
+      {dates.length > 0 && <p className="muted" style={{ marginTop: 6, fontSize: 11 }}>👑 その測定日時点のチーム内トップ記録</p>}
     </div>
   );
 }
