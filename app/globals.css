@@ -519,3 +519,8 @@ svg.chart{touch-action:pan-y}
 .abs-bar i{display:block;height:100%;background:var(--ng);border-radius:999px}
 .abs-v{white-space:nowrap;text-align:right;font-weight:700}
 .abs-v small{color:var(--sub);font-weight:400;margin-left:2px}
+/* コーチの出欠：トータルの3列カード（sum2 と同じ見た目で3列均等） */
+.sum2.sum3{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sum3>div{padding:10px 8px}
+.sum3 .v{font-size:24px}
+@media(max-width:380px){.sum3 .l{font-size:11px}.sum3 .v{font-size:21px}}
