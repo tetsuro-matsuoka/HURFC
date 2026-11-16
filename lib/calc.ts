@@ -321,8 +321,21 @@ export function teamTrainingAvg(players: Member[], ws: string): number | null {
 export const LINKED_KEYS = ["weight", "bench_press", "squat", "deadlift", "big3_total"];
 export const isLinked = (def: MetricDef) => def.key != null && LINKED_KEYS.includes(def.key);
 
-// 単位の表示（空欄・「なし」は表示しない）
-export const unitOf = (def: { unit: string }) => {
+// タイム種目（分:秒）：単位が「分:秒」または種目名に「ブロンコ」を含む。値は総秒数で保存し、小さいほど上位
+export const isMinSec = (def: { name: string; unit: string }) => /^分\s*[:：]\s*秒$/.test((def.unit ?? "").trim()) || def.name.includes("ブロンコ");
+// 秒数 → 「4:50」（マイナスは差の表示用：「-0:05」）
+export function fmtMinSec(sec: number | null | undefined): string {
+  if (sec == null || isNaN(sec)) return "—";
+  const sign = sec < 0 ? "-" : "";
+  const t = Math.round(Math.abs(sec));
+  return `${sign}${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+}
+// 項目の値の表示（タイム種目は 4:50、それ以外は小数第2位まで）
+export const fmtMetric = (def: { name: string; unit: string }, v: number | null | undefined) => (isMinSec(def) ? fmtMinSec(v) : fmt2(v));
+
+// 単位の表示（空欄・「なし」は表示しない。タイム種目は 4:50 で分かるので単位を出さない）
+export const unitOf = (def: { name: string; unit: string }) => {
+  if (isMinSec(def)) return "";
   const u = (def.unit ?? "").trim();
   return u === "" || u === "なし" ? "" : u;
 };

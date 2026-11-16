@@ -20,7 +20,6 @@ import {
   dayKind,
   fmt0,
   fmt1,
-  fmt2,
   fmtRatio,
   latestWeight,
   maxes,
@@ -52,6 +51,9 @@ import {
   weightAt,
   type Point,
   type RankRow,
+  fmtMetric,
+  fmtMinSec,
+  isMinSec,
 } from "@/lib/calc";
 import type { Unit } from "@/lib/types";
 
@@ -420,7 +422,7 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
   const last = series[series.length - 1] ?? null;
   const latestV = ratio ? toRatio(last) : last?.v ?? null;
   const bestV = ratio ? metricRatio(m, def) : metricBest(m, def);
-  const f = (v: number | null) => (v == null ? "—" : ratio ? fmtRatio(v) : fmt2(v));
+  const f = (v: number | null) => (v == null ? "—" : ratio ? fmtRatio(v) : fmtMetric(def, v));
   const u = ratio ? "倍" : unitOf(def);
 
   // 順位（自己ベストで）
@@ -479,7 +481,7 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
         )}
       </div>
       {chart.length >= 2 && (
-        <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} />
+        <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} fmt={!ratio && isMinSec(def) ? fmtMinSec : undefined} />
       )}
       </div>
 
@@ -491,7 +493,7 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
         <TeamRanking
           ctx={ctx}
           rows={rows}
-          fmtV={(v) => (ratio ? `${fmtRatio(v)}倍` : `${fmt2(v)}${u}`)}
+          fmtV={(v) => (ratio ? `${fmtRatio(v)}倍` : `${fmtMetric(def, v)}${u}`)}
         />
       </div>
     </>

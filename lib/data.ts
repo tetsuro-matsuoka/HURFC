@@ -2,7 +2,7 @@
 
 import { supabase } from "./supabase";
 import type { AbsenceReason, Attendance, Category, Menu, WeekSetting, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
-import { makePractice, ymd } from "./calc";
+import { isMinSec, makePractice, ymd } from "./calc";
 
 function sb() {
   if (!supabase) throw new Error("Supabase の設定がありません");
@@ -184,7 +184,10 @@ export async function loadMeta(): Promise<Meta> {
     ),
   ]);
   const weekMap: Record<string, WeekSetting> = Object.fromEntries(weeks.map((w) => [w.week_start, { days: w.practice_days, menu: w.menu }]));
-  metrics.forEach((x) => (x.show_ratio = x.show_ratio === true));
+  metrics.forEach((x) => {
+    x.show_ratio = x.show_ratio === true;
+    if (isMinSec(x)) x.better = "low"; // タイム種目（分:秒）は小さいほど上位
+  });
   metrics.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   return {
     metrics,

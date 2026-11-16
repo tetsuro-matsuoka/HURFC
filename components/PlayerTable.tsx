@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { fmtRatio, metricRatio, absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
+import { fmtMinSec, isMinSec, fmtRatio, metricRatio, absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
 import { CategoryButton, FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import type { Member, MetricDef } from "@/lib/types";
 
@@ -26,7 +26,9 @@ type Col = {
 
 // 項目の列。「体重比」が ON の項目は、すぐ右に体重比の列（値÷その記録日時点の体重・小数第2位）を付ける
 function metricCols(def: MetricDef, group: Group, get: (m: Member) => number | null): Col[] {
-  const base: Col = { key: "m" + def.id, group, label: def.name, unit: unitOf(def), get, fmt: fmt2 };
+  // タイム種目（分:秒）は 4:50 の形で表示（平均も同じ形）
+  const mmss = isMinSec(def);
+  const base: Col = { key: "m" + def.id, group, label: def.name, unit: unitOf(def), get, fmt: mmss ? fmtMinSec : fmt2, avgFmt: mmss ? fmtMinSec : undefined };
   if (!def.show_ratio || def.key === "weight") return [base];
   return [base, { key: "r" + def.id, group, label: `${def.name}体重比`, unit: "", get: (m) => metricRatio(m, def), fmt: fmtRatio, avgFmt: fmtRatio, ratio: true }];
 }
