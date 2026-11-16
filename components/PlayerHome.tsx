@@ -34,6 +34,9 @@ import {
   playersOf,
   ranking,
   trainingRate,
+  trainingAvg,
+  DEFAULT_MENU,
+  menuLabel,
   trainingMonthAvg,
   weekShort,
   recentWeeks,
@@ -192,7 +195,7 @@ function AttendDetail({ ctx }: { ctx: Ctx }) {
             ["トータル", total],
           ] as const
         ).map(([l, x]) => (
-          <div key={l}>
+          <div key={l} className={l === "今月" ? "now" : "total"}>
             <div className="l">{l}</div>
             <div className="v num">{x.days ? pct(x.rate) : "—"}</div>
             <div className="s num">
@@ -294,9 +297,31 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const myMonth = trainingMonthAvg(m, ym);
   const teamMonth = avg(ps.map((x) => trainingMonthAvg(x, ym)));
   const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
+  // 一番上のサマリー：この週（月曜〜日曜）の遂行率と、4週平均
+  const weekScore = m.training[thisWeek] ?? null;
+  const avg4 = trainingAvg(m, 4);
+  const menu = ctx.weeks[thisWeek]?.menu ?? DEFAULT_MENU;
   return (
     <div className="card">
-      <h3>筋トレ遂行率</h3>
+      <div className="tr2">
+        <div>
+          <div className="l">{weekShort(thisWeek)}</div>
+          <div className="v num">
+            {weekScore == null ? "—" : fmt1(weekScore)}
+            <small>/ 10</small>
+          </div>
+          <div className="s">メニュー {menuLabel(menu)}</div>
+        </div>
+        <div>
+          <div className="l">4週平均</div>
+          <div className="v num">
+            {avg4 == null ? "—" : fmt1(avg4)}
+            <small>/ 10</small>
+          </div>
+          <div className="s">入力した週の平均</div>
+        </div>
+      </div>
+      <h3>チームと比べる</h3>
       <table className="tbl cmp-tbl" style={{ marginBottom: 10 }}>
         <tbody>
           <tr>
