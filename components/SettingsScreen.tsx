@@ -10,8 +10,8 @@ import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
-import { isLinked, metricsOf, unitOf } from "@/lib/calc";
-import type { MetricCategory, MetricDef } from "@/lib/types";
+import { CRITERIA_KEY, DEFAULT_MENU, MENUS, MENU_TIMES, isLinked, metricsOf, unitOf } from "@/lib/calc";
+import type { Menu, MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
 const EMPTY: MetricInput = { name: "", unit: "", category: "体組成", better: "high", show_ratio: false };
@@ -60,7 +60,11 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<{ type: "edit" | "del"; def: MetricDef } | null>(null);
   const [edit, setEdit] = useState<MetricInput>(EMPTY);
-  const [criteria, setCriteria] = useState(ctx.settings.training_criteria ?? "");
+  // 筋トレ遂行率の評価基準：メニュー（A〜B / A〜C / A〜D）ごとに編集・保存
+  const [cMenu, setCMenu] = useState<Menu>(DEFAULT_MENU);
+  const [criteria, setCriteria] = useState<Record<Menu, string>>(
+    () => Object.fromEntries(MENUS.map((x) => [x, ctx.settings[CRITERIA_KEY[x]] ?? ""])) as Record<Menu, string>,
+  );
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
     setBusy(true);
@@ -182,11 +186,32 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       </div>
 
       <div className="card">
-        <h3>筋トレ遂行度の評価基準</h3>
-        <p className="muted">選手が「記録する → 筋トレ」で0〜10を選ぶときに表示される説明文です。</p>
-        <textarea className="t" rows={8} value={criteria} onChange={(e) => setCriteria(e.target.value)} style={{ marginTop: 10, lineHeight: 1.7 }} />
-        <button className="btn navy" disabled={busy} onClick={() => run(() => saveSetting("training_criteria", criteria), "評価基準を保存しました")}>
-          {busy ? "処理中…" : "保存する"}
+        <h3>筋トレ遂行率の評価基準</h3>
+        <p className="muted">
+          日程調整で設定した週のメニューに合わせて、選手の「記録する → 筋トレ遂行率」に表示されます。メニューごとに書き分けられます。
+        </p>
+        <div className="seg" style={{ margin: "10px 0 0" }}>
+          {MENUS.map((x) => (
+            <button key={x} className={cMenu === x ? "on" : ""} onClick={() => setCMenu(x)}>
+              {x}
+              <small style={{ display: "block", fontSize: 10, fontWeight: 400 }}>{MENU_TIMES[x]}</small>
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="t"
+          rows={8}
+          value={criteria[cMenu]}
+          onChange={(e) => setCriteria((cur) => ({ ...cur, [cMenu]: e.target.value }))}
+          placeholder={`${cMenu}（${MENU_TIMES[cMenu]}）の週の評価基準`}
+          style={{ marginTop: 10, lineHeight: 1.7 }}
+        />
+        <button
+          className="btn navy"
+          disabled={busy}
+          onClick={() => run(() => saveSetting(CRITERIA_KEY[cMenu], criteria[cMenu]), `${cMenu} の評価基準を保存しました`)}
+        >
+          {busy ? "処理中…" : `${cMenu} の評価基準を保存する`}
         </button>
       </div>
 

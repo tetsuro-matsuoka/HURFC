@@ -32,6 +32,8 @@ import {
   today,
   trainingAvg,
   trainingMonthAvg,
+  CRITERIA_KEY,
+  DEFAULT_MENU,
   wd,
   weightNote,
   weekStart,
@@ -323,7 +325,9 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const teamPts = weeks.map((w) => ({ d: w, v: teamTrainingAvg(ps, w) })).filter((p): p is { d: string; v: number } => p.v != null);
   const curAvg = teamTrainingAvg(ps, cur);
   const entered = ps.filter((m) => m.training[cur] != null).length;
-  const criteria = ctx.settings.training_criteria;
+  // 今週のメニュー（日程調整）に合わせた評価基準（項目設定）
+  const menu = ctx.weeks[weekStart(today())]?.menu ?? DEFAULT_MENU;
+  const criteria = ctx.settings[CRITERIA_KEY[menu]];
 
   return (
     <>
@@ -347,7 +351,9 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           <LineChart pts={teamPts} h={130} color="var(--ok)" />
         </div>
         <div className="card">
-          <h3>評価基準</h3>
+          <h3>
+            評価基準 <small>今週は {menu}</small>
+          </h3>
           <p className="muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
             {criteria || "まだ設定されていません（「項目設定」から入力できます）"}
           </p>

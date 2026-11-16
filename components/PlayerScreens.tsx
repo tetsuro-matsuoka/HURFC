@@ -9,8 +9,8 @@ import {
   LIFTS,
   addDays,
   ABSENCE_REASONS,
+  CRITERIA_KEY,
   DEFAULT_MENU,
-  menuItems,
   menuLabel,
   WEIGHT_TIMINGS,
   dayKind,
@@ -222,7 +222,9 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
   const [ws, setWs] = useState(cur);
   const [busy, setBusy] = useState(false);
   const score = m.training[ws];
-  const criteria = ctx.settings.training_criteria;
+  // その週のメニュー（日程調整）と、そのメニュー用の評価基準（項目設定）
+  const menu = ctx.weeks[ws]?.menu ?? DEFAULT_MENU;
+  const criteria = ctx.settings[CRITERIA_KEY[menu]];
 
   const pick = async (n: number) => {
     if (busy || ctx.readOnly) return;
@@ -257,13 +259,7 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
         </p>
         {/* コーチが「日程調整」で設定したその週の筋トレメニュー（未設定は A〜C） */}
         <div className="menu-of-week">
-          今週のメニュー
-          <div className="mw-items">
-            {menuItems(ctx.weeks[ws]?.menu ?? DEFAULT_MENU).map((x) => (
-              <span key={x}>{x}</span>
-            ))}
-          </div>
-          <small>{menuLabel(ctx.weeks[ws]?.menu ?? DEFAULT_MENU)} をどれだけやり切れたかを 0〜10 で選んでください</small>
+          今週は <b>{menuLabel(menu)}</b> です
         </div>
         <div className="score11">
           {Array.from({ length: 11 }, (_, n) => (
@@ -278,7 +274,9 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
       </div>
       {criteria && (
         <div className="card">
-          <h3>評価基準</h3>
+          <h3>
+            評価基準 <small>{menu}</small>
+          </h3>
           <p className="muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
             {criteria}
           </p>

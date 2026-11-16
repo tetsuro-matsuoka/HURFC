@@ -189,7 +189,8 @@ export async function loadMeta(): Promise<Meta> {
   return {
     metrics,
     settings: Object.fromEntries(settings.map((x) => [x.key, x.value])),
-    practice: makePractice(practice.map((x) => x.date), weekDaysOf(weekMap)),
+    // 週ごとの練習日数の設定は使わない（出席率はカレンダーの練習日で計算）
+    practice: makePractice(practice.map((x) => x.date)),
     weeks: weekMap,
   };
 }

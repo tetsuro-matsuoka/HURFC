@@ -119,7 +119,10 @@ export function dayKind(d: string, p: Practice): DayKind {
 export const MENUS: Menu[] = ["A〜B", "A〜C", "A〜D"];
 export const DEFAULT_MENU: Menu = "A〜C";
 export const menuItems = (menu: Menu) => ["A", "B", "C", "D"].slice(0, menu === "A〜B" ? 2 : menu === "A〜C" ? 3 : 4);
-export const menuLabel = (menu: Menu) => `${menuItems(menu).join("・")}（${menuItems(menu).length}種目）`;
+export const menuLabel = (menu: Menu) => menuItems(menu).join("・"); // 例：「A・B・C」
+// 筋トレ遂行率の評価基準の保存先（項目設定）。A〜C は以前からの基準をそのまま使う
+export const CRITERIA_KEY: Record<Menu, string> = { "A〜B": "training_criteria_ab", "A〜C": "training_criteria", "A〜D": "training_criteria_ad" };
+export const MENU_TIMES: Record<Menu, string> = { "A〜B": "週2回", "A〜C": "週3回", "A〜D": "週4回" };
 
 // その週の練習日数（コーチが設定していればその日数、なければカレンダーの練習日の数）
 export function weekPracticeCount(p: Practice, ws: string): number {

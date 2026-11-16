@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { configOk, supabase } from "@/lib/supabase";
-import { adminCall, loadAll, loadMeta, saveWeekSetting, setPracticeDay, weekDaysOf, type Meta } from "@/lib/data";
+import { adminCall, loadAll, loadMeta, saveWeekSetting, setPracticeDay, type Meta } from "@/lib/data";
 import { EMPTY_PRACTICE, makePractice } from "@/lib/calc";
 import type { Category, Members, WeekSetting } from "@/lib/types";
 import Login from "./Login";
@@ -210,11 +210,11 @@ export default function App() {
       toast(e instanceof Error ? e.message : "カテゴリーを保存できませんでした");
     }
   };
-  // 週ごとの設定（練習日数・筋トレメニュー）。押した瞬間に反映し、裏で保存。失敗したら元に戻す
+  // 週ごとの設定（筋トレメニュー）。押した瞬間に反映し、裏で保存。失敗したら元に戻す
   const setWeek = async (ws: string, v: WeekSetting) => {
     const before = meta;
     const apply = (weeks: Record<string, WeekSetting>) =>
-      setMeta((cur) => ({ ...cur, weeks, practice: makePractice([...cur.practice.days], weekDaysOf(weeks)) }));
+      setMeta((cur) => ({ ...cur, weeks }));
     apply({ ...meta.weeks, [ws]: v });
     try {
       await saveWeekSetting(ws, v);
