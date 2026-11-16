@@ -331,7 +331,9 @@ export function fmtMinSec(sec: number | null | undefined): string {
   return `${sign}${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
 // 項目の値の表示（タイム種目は 4:50、それ以外は小数第2位まで）
-export const fmtMetric = (def: { name: string; unit: string }, v: number | null | undefined) => (isMinSec(def) ? fmtMinSec(v) : fmt2(v));
+// 自動計算の項目（スプリントモメンタム）は小数第1位
+export const fmtMetric = (def: { name: string; unit: string; derived?: unknown }, v: number | null | undefined) =>
+  isMinSec(def) ? fmtMinSec(v) : def.derived ? fmt1(v) : fmt2(v);
 
 // 単位の表示（空欄・「なし」は表示しない。タイム種目は 4:50 で分かるので単位を出さない）
 export const unitOf = (def: { name: string; unit: string }) => {
@@ -340,8 +342,31 @@ export const unitOf = (def: { name: string; unit: string }) => {
   return u === "" || u === "なし" ? "" : u;
 };
 
+// スプリントモメンタム（自動計算）：名前に「モメンタム」を含む項目
+export const isMomentum = (def: { name: string }) => def.name.includes("モメンタム");
+// 基準にするスプリント項目を選ぶ：名前の「10m」「30m」などから距離を読み取り、10m → 30m → いちばん短い距離 の順
+export function pickSprint(metrics: MetricDef[]): { sprintId: number; dist: number } | undefined {
+  const c = metrics
+    .filter((x) => !isMomentum(x) && x.category === "フィジカル")
+    .map((x) => ({ x, dist: Number(x.name.match(/(\d+(?:\.\d+)?)\s*[mｍＭM](?![a-zA-Z])/)?.[1]) }))
+    .filter((c) => c.dist > 0 && /スプリント|走|ダッシュ|sprint/i.test(c.x.name));
+  const pick = c.find((y) => y.dist === 10) ?? c.find((y) => y.dist === 30) ?? c.sort((a, b) => a.dist - b.dist)[0];
+  return pick ? { sprintId: pick.x.id, dist: pick.dist } : undefined;
+}
+
 export function metricSeries(m: Member, def: MetricDef): Point[] {
   if (def.key === "weight") return weights(m);
+  if (def.derived) {
+    // スプリントモメンタム＝体重(kg) × 距離(m) ÷ タイム(秒)。体重はその測定日（なければ直前、それも無ければ最新）
+    const { sprintId, dist } = def.derived;
+    return Object.entries(m.metrics[sprintId] ?? {})
+      .map(([d, t]) => {
+        const w = weightAt(m, d);
+        return w && t > 0 ? { d, v: (w * dist) / t } : null;
+      })
+      .filter((p): p is Point => p != null)
+      .sort((a, b) => (a.d < b.d ? -1 : 1));
+  }
   if (def.key === "bench_press" || def.key === "squat" || def.key === "deadlift") {
     const k = def.key;
     return phys(m)

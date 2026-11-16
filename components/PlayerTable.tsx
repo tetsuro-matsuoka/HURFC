@@ -29,7 +29,7 @@ type Col = {
 function metricCols(def: MetricDef, group: Group, get: (m: Member) => number | null): Col[] {
   // タイム種目（分:秒）は 4:50 の形で表示（平均も同じ形）
   const mmss = isMinSec(def);
-  const base: Col = { key: "m" + def.id, group, label: def.name, unit: unitOf(def), get, fmt: mmss ? fmtMinSec : fmt2, avgFmt: mmss ? fmtMinSec : undefined };
+  const base: Col = { key: "m" + def.id, group, label: def.name, unit: unitOf(def), get, fmt: mmss ? fmtMinSec : def.derived ? fmt1 : fmt2, avgFmt: mmss ? fmtMinSec : undefined };
   if (!def.show_ratio || def.key === "weight") return [base];
   return [base, { key: "r" + def.id, group, label: `${def.name}体重比`, unit: "", get: (m) => metricRatio(m, def), fmt: fmtRatio, avgFmt: fmtRatio, ratio: true }];
 }
