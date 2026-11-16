@@ -385,11 +385,17 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .panel-physical .card{border-top:4px solid #e8432b}
 
 /* 記録する：ホームと同じ色のボタン3つ */
-.menu4.menu3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.menu3 button{padding:12px 10px;min-width:0}
-.menu3 button b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media(max-width:480px){.menu3 button{padding:10px 6px 10px 8px}.menu3 button b{font-size:13px}.menu3 button span{font-size:11px}}
-/* 毎日の記録：左の線を上半分＝緑（出欠）・下半分＝青（体重）のツートンに */
+/* 「記録する」のメニュー：横幅いっぱいの縦1列・スリムな横長カード */
+.menu4.menu3{grid-template-columns:1fr;gap:8px}
+.menu3 button{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;min-width:0;width:100%}
+.menu3 .mi-l{display:flex;flex-direction:column;gap:2px;min-width:0}
+.menu3 .mi-l b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu3 .mi-l span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu3 .mi-st{flex:none;font-style:normal;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:#eef0ee;color:#6b7280}
+.menu3 .mi-st.done{background:var(--cs);color:var(--c)}
+.menu3 .mi-st.todo{background:#fff4e5;color:#c2410c}
+.menu3 button.on .mi-st.done{background:#fff}
+.menu3 .mi-arrow{flex:none;font-style:normal;font-size:22px;line-height:1;color:var(--c)}
 .menu4 .m-daily{--c:#1f8a5b;--cs:#e0f3ea;border-left-color:transparent;background:linear-gradient(#1f8a5b 0 50%,#2563a8 50% 100%) left top/6px 100% no-repeat border-box,#fff}
 .menu4 .m-daily.on{border-color:#1f8a5b;border-left-color:transparent;background:linear-gradient(#1f8a5b 0 50%,#2563a8 50% 100%) left top/6px 100% no-repeat border-box,linear-gradient(90deg,#e0f3ea,#e3edf8)}
 /* 入力カードの上辺の色（出欠＝緑・体重＝青） */
