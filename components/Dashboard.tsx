@@ -330,14 +330,21 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   // 今週のメニュー（日程調整）に合わせた評価基準（項目設定）
   const menu = ctx.weeks[weekStart(today())]?.menu ?? DEFAULT_MENU;
   const criteria = ctx.settings[CRITERIA_KEY[menu]];
+  const [showCrit, setShowCrit] = useState(false);
 
   return (
     <>
-      <div className="grid two">
-        <div className="card">
-          <h3>
-            チーム平均 <small>{weekLabel(cur)}</small>
+      {/* 1カラム：見出しの横にその週のメニューと「評価基準」ボタン（押したときだけ開く） */}
+      <div className="card">
+          <h3 style={{ flexWrap: "wrap" }}>
+            チーム平均 <small>{weekLabel(cur)}（{menu}）</small>
+            <button className={`crit-toggle ${showCrit ? "on" : ""}`} onClick={() => setShowCrit(!showCrit)} aria-expanded={showCrit}>
+              評価基準
+            </button>
           </h3>
+          {showCrit && (
+            <p className="crit-text">{criteria || "まだ設定されていません（「項目設定」から入力できます）"}</p>
+          )}
           <div className="kpi" style={{ padding: 0 }}>
             <div className="v num">
               {curAvg == null ? "—" : fmt1(curAvg)}
@@ -351,15 +358,6 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             チーム平均の推移 <small>直近8週</small>
           </h3>
           <LineChart pts={teamPts} h={130} color="var(--ok)" />
-        </div>
-        <div className="card">
-          <h3>
-            評価基準 <small>{weekLabel(weekStart(today()))}は {menu}</small>
-          </h3>
-          <p className="muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
-            {criteria || "まだ設定されていません（「項目設定」から入力できます）"}
-          </p>
-        </div>
       </div>
       <TrainingMonth ps={ps} ctx={ctx} />
 
