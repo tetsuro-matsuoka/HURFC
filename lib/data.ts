@@ -92,11 +92,6 @@ export async function loadAll(): Promise<Members> {
   training.forEach((r) => {
     if (m[r.user_id]) m[r.user_id].training[r.week_start] = Number(r.score);
   });
-  // 登録より前の記録がある場合（サンプルデータなど）は、最初の記録日から数える
-  Object.values(m).forEach((mm) => {
-    const first = Object.keys(mm.daily).sort()[0];
-    if (first && first < mm.joined) mm.joined = first;
-  });
   daily.forEach((r) => {
     if (m[r.user_id])
       m[r.user_id].daily[r.date.slice(0, 10)] = {
@@ -114,6 +109,13 @@ export async function loadAll(): Promise<Members> {
         squat: r.squat == null ? null : Number(r.squat),
         deadlift: r.deadlift == null ? null : Number(r.deadlift),
       };
+  });
+  // 出席率を数え始める日（入部日）＝「登録した日」と「いちばん古い記録の日」の早いほう
+  // ※ 必ず出欠の記録（daily）を読み込んだ「後」で決める。前で決めると記録が0件の状態で判定され、
+  //    登録日より前の練習日（例：登録 11/12 → 11/11）に後から入力した出席が集計から漏れていた
+  Object.values(m).forEach((mm) => {
+    const first = Object.keys(mm.daily).sort()[0];
+    if (first && first < mm.joined) mm.joined = first;
   });
   return m;
 }
