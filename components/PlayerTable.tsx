@@ -153,8 +153,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 ({ g, n }) =>
                   n > 0 && (
                     <th key={g} colSpan={n} className={`g-${g} gh`}>
-                      {/* 横にスクロールしても、左に固定した名前の列の下に隠れないように */}
-                      <span>{GROUP_LABEL[g]}</span>
+                      {GROUP_LABEL[g]}
                     </th>
                   ),
               )}
@@ -163,8 +162,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               <th className="s1 g-basic">名前</th>
               <th className="g-basic l">学年</th>
               <th className="g-basic l">ポジション</th>
-              <th className="g-basic l">FW/BK</th>
-              <th className="g-basic l">カテゴリー</th>
+              <th className="g-basic c">FW/BK</th>
+              <th className="g-basic c">カテゴリー</th>
               {cols.map((c) => (
                 <th key={c.key} className={`g-${c.group} ${c.ratio ? "ratio" : ""}`}>
                   {c.label}
@@ -181,10 +180,10 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 </td>
                 <td className="l">{m.grade ? `${m.grade}年` : "—"}</td>
                 <td className="l">{m.position ?? "—"}</td>
-                <td className="l">
+                <td className="c">
                   <UnitBadge m={m} />
                 </td>
-                <td className="l">
+                <td className="c">
                   <CategoryButton m={m} onChange={(c) => ctx.setCategory(m.id, c)} />
                 </td>
                 {cols.map((c) => (
@@ -203,8 +202,8 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 </td>
                 <td className="l">—</td>
                 <td className="l">—</td>
-                <td className="l">—</td>
-                <td className="l">—</td>
+                <td className="c">—</td>
+                <td className="c">—</td>
                 {cols.map((c) => {
                   const v = average(rows, c);
                   return (
