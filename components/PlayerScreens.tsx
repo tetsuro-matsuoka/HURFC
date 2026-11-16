@@ -304,7 +304,7 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
   };
   // 項目設定で追加した項目（その日の記録があれば表示）
   // 入力欄を出すのは、体重・Big3（専用の入力欄あり）以外の項目。並び順は項目設定どおり
-  const defs = ctx.metrics.filter((x) => !isLinked(x));
+  const defs = ctx.metrics.filter((x) => !isLinked(x) && !x.derived); // 自動計算（スプリントモメンタム）も入力しない
   // Big3の名前は項目設定で変更した名前を使う
   const liftName = (k: LiftKey, l: string) => ctx.metrics.find((x) => x.key === k)?.name ?? l;
   // タイム種目（分:秒）は「分:秒」の文字で持つ（例 "4:50"）。保存するときに総秒数に直す

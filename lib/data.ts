@@ -2,7 +2,7 @@
 
 import { supabase } from "./supabase";
 import type { AbsenceReason, Attendance, Category, Menu, WeekSetting, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
-import { isMinSec, makePractice, ymd } from "./calc";
+import { isMinSec, isMomentum, makePractice, pickSprint, ymd } from "./calc";
 
 function sb() {
   if (!supabase) throw new Error("Supabase の設定がありません");
@@ -187,6 +187,14 @@ export async function loadMeta(): Promise<Meta> {
   metrics.forEach((x) => {
     x.show_ratio = x.show_ratio === true;
     if (isMinSec(x)) x.better = "low"; // タイム種目（分:秒）は小さいほど上位
+  });
+  // スプリントモメンタムは、体重とスプリントタイムから自動計算（大きいほど上位）
+  const sprint = pickSprint(metrics);
+  metrics.forEach((x) => {
+    if (isMomentum(x) && sprint) {
+      x.derived = sprint;
+      x.better = "high";
+    }
   });
   metrics.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   return {

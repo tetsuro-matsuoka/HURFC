@@ -49,6 +49,8 @@ export type MetricDef = {
   category: MetricCategory;
   better: "high" | "low"; // 大きいほど良い / 小さいほど良い
   show_ratio: boolean; // true：選手一覧・CSVで体重比（値÷その日時点の体重）も表示
+  // 自動計算の項目（スプリントモメンタム）：基準にするスプリント項目と距離（m）。読み込み時に決める
+  derived?: { sprintId: number; dist: number };
   sort_order: number;
 };
 

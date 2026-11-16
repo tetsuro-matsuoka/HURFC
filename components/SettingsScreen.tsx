@@ -10,7 +10,7 @@ import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
-import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, isMinSec, metricsOf, unitOf } from "@/lib/calc";
+import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, isMinSec, isMomentum, metricsOf, unitOf } from "@/lib/calc";
 import type { Menu, MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
@@ -132,6 +132,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                         {x.key === "weight" && " ・ 「毎日の記録」の体重を使用"}
                         {(x.key === "bench_press" || x.key === "squat" || x.key === "deadlift") && " ・ 「測定」のBig3入力を使用"}
                         {x.key === "big3_total" && " ・ Big3の自己ベストから自動計算"}
+                        {x.derived && ` ・ 体重 × ${x.derived.dist}m ÷ 「${ctx.metrics.find((y) => y.id === x.derived?.sprintId)?.name}」のタイムで自動計算`}
+                        {!x.derived && isMomentum(x) && " ・ 自動計算には「10mスプリント」などのスプリント項目（秒）が必要です"}
                       </div>
                     </div>
                     <div className="ma">
