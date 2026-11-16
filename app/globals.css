@@ -485,3 +485,6 @@ svg.chart{touch-action:pan-y}
 /* 記録する → 毎日の記録：選んだ日に保存済みかどうか */
 .saved-state{margin-top:8px;font-size:12.5px;color:var(--sub)}
 .saved-state b{color:var(--ok)}
+/* 出欠席率・筋トレ遂行率の2列の枠：中の文字にも余白を付けない（ほかの見た目の設定が混ざらないように） */
+.sum2>div{align-self:stretch}
+.sum2>div>*{margin:0;padding:0;border:0}

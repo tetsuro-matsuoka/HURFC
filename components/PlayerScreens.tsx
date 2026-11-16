@@ -89,25 +89,33 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     };
   };
   const [date, setDate] = useState(today());
-  const [att, setAtt] = useState<Attendance | null>(initial(today()).att);
+  // 入力中の値は「どの日付の入力か」と一緒に持つ。日付と合わないとき（別の日の入力が残っているとき）は使わず、
+  // その日に保存済みの値（無ければ未選択・空欄）を表示する
+  type Edit = { d: string; att: Attendance | null; reason: AbsenceReason | ""; w: string; timing: WeightTiming | null };
+  const [edit, setEdit] = useState<Edit>(() => ({ d: today(), ...initial(today()) }));
+  const cur: Edit = edit.d === date ? edit : { d: date, ...initial(date) };
+  const att = cur.att,
+    reason = cur.reason,
+    w = cur.w,
+    timing = cur.timing;
+  const put = (v: Partial<Edit>) => setEdit({ ...cur, ...v, d: date });
+  const setAtt = (v: Attendance | null) => put({ att: v });
   // 欠席理由（欠席を選んだときだけ表示・必須）。登録済みならその理由を復元
-  const [reason, setReason] = useState<AbsenceReason | "">(initial(today()).reason);
-  const [w, setW] = useState(initial(today()).w);
+  const setReason = (v: AbsenceReason | "") => put({ reason: v });
+  const setW = (f: string | ((c: string) => string)) => put({ w: typeof f === "function" ? f(cur.w) : f });
   // 体重の測定タイミング（4つのボタンから選ぶだけ。時刻は記録しない）
-  const [timing, setTiming] = useState<WeightTiming | null>(initial(today()).timing);
+  const setTiming = (v: WeightTiming | null) => put({ timing: v });
   const [busy, setBusy] = useState(false);
   const prev = initial(date).prev;
   // オフの日（練習日ではない日）は出欠の入力なし。体重だけ記録できる
   const kind = dayKind(date, ctx.practice);
   const off = kind === "off";
 
+  // 日付を変えたら、その日に保存済みの値（無ければ出欠は未選択・体重は空欄）から入力し直す
   const changeDate = (d: string) => {
-    const v = initial(d);
-    setDate(d);
-    setAtt(v.att);
-    setReason(v.reason);
-    setW(v.w);
-    setTiming(v.timing);
+    const dd = d > today() ? today() : d;
+    setDate(dd);
+    setEdit({ d: dd, ...initial(dd) });
   };
   // −／＋：空欄のときは前回の体重から始める
   const step = (n: number) =>
@@ -149,15 +157,30 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
       <label className="f" style={{ marginTop: 0 }}>
         日付
       </label>
-      {/* iPhone の日付ピッカーでも選んだ日がすぐ反映されるよう、onInput と onChange の両方で受け取る */}
-      <input
-        className="t"
-        type="date"
-        value={date}
-        max={today()}
-        onChange={(e) => e.target.value && changeDate(e.target.value.slice(0, 10))}
-        onInput={(e) => (e.target as HTMLInputElement).value && changeDate((e.target as HTMLInputElement).value.slice(0, 10))}
-      />
+      {/* ‹ › で1日ずつ切り替え（スマホの日付ピッカーが反応しにくい場合も確実に変えられる）。真ん中の欄からカレンダーでも選べる */}
+      <div className="datebar" style={{ marginBottom: 0 }}>
+        <button type="button" onClick={() => changeDate(addDays(date, -1))} aria-label="前の日">
+          ‹
+        </button>
+        <input
+          className="t"
+          type="date"
+          value={date}
+          max={today()}
+          style={{ flex: 1, minWidth: 0 }}
+          onChange={(e) => e.target.value && changeDate(e.target.value.slice(0, 10))}
+          onInput={(e) => (e.target as HTMLInputElement).value && changeDate((e.target as HTMLInputElement).value.slice(0, 10))}
+        />
+        <button
+          type="button"
+          onClick={() => date < today() && changeDate(addDays(date, 1))}
+          disabled={date >= today()}
+          style={date >= today() ? { opacity: 0.3 } : undefined}
+          aria-label="次の日"
+        >
+          ›
+        </button>
+      </div>
       {/* その日に保存済みかどうか */}
       <div className="saved-state">
         {md(date)}（{wd(date)}）：
