@@ -26,11 +26,12 @@ import {
   maxes,
   md,
   phys,
-  rowTotal,
   today,
   weights,
   fmtMetric,
   isMinSec,
+  metricSeries,
+  metricsOf,
 } from "@/lib/calc";
 import { saveDaily, saveErrorText, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
 import type { AbsenceReason, Attendance, LiftKey, PhysRec, WeightTiming } from "@/lib/types";
@@ -81,7 +82,8 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     return {
       att: (rec?.attendance ?? null) as Attendance | null,
       reason: (rec?.attendance === "欠席" ? rec.absence_reason ?? "" : "") as AbsenceReason | "",
-      w: rec?.weight != null ? fmt1(rec.weight) : prev ? fmt1(prev.v) : "",
+      // その日に保存済みの値だけを入れる（無ければ空欄。前日の値が残って重複保存されないように）
+      w: rec?.weight != null ? fmt1(rec.weight) : "",
       timing: (rec?.weight_timing ?? null) as WeightTiming | null,
       prev,
     };
@@ -107,7 +109,12 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
     setW(v.w);
     setTiming(v.timing);
   };
-  const step = (n: number) => setW((cur) => Math.max(0, Math.round(((parseFloat(cur) || 0) + n) * 10) / 10).toFixed(1));
+  // −／＋：空欄のときは前回の体重から始める
+  const step = (n: number) =>
+    setW((cur) => {
+      const base = cur.trim() === "" ? prev?.v ?? 0 : parseFloat(cur) || 0;
+      return Math.max(0, Math.round((base + n) * 10) / 10).toFixed(1);
+    });
 
   const save = async () => {
     if (!off && !att) return ctx.toast("出席か欠席を選んでください");
@@ -292,7 +299,8 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
   const p = phys(m),
     mx = maxes(m);
   const initial = (d: string): Record<LiftKey, string> => {
-    const src = m.physical[d] ?? p[p.length - 1] ?? null;
+    // その日に保存済みの値だけを入れる（無ければ空欄。前回の値は下に「自己ベスト」などで表示）
+    const src = m.physical[d] ?? null;
     const v = (k: LiftKey) => (src && src[k] != null ? String(src[k]) : "");
     return { bench_press: v("bench_press"), squat: v("squat"), deadlift: v("deadlift") };
   };
@@ -324,8 +332,18 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
   const [xv, setXv] = useState<Record<number, string>>(initialX(today()));
   const [busy, setBusy] = useState(false);
 
+  // 測定履歴用：フィジカルの項目ごとの { 日付: 値 }
+  const physDefs = metricsOf(ctx.metrics, "フィジカル");
+  const histOf = new Map(physDefs.map((x) => [x.id, new Map(metricSeries(m, x).map((pt) => [pt.d, pt.v]))]));
+  const histDates = [...new Set([...histOf.values()].flatMap((mp) => [...mp.keys()]))].sort().reverse();
+
+  // −／＋：空欄のときは前回の記録から始める
+  const lastLift = (k: LiftKey) => [...p].reverse().find((r) => r[k] != null)?.[k] ?? 0;
   const step = (k: LiftKey, n: number) =>
-    setVals((cur) => ({ ...cur, [k]: String(Math.max(0, Math.round(((parseFloat(cur[k]) || 0) + n) * 10) / 10)) }));
+    setVals((cur) => {
+      const base = cur[k].trim() === "" ? Number(lastLift(k)) : parseFloat(cur[k]) || 0;
+      return { ...cur, [k]: String(Math.max(0, Math.round((base + n) * 10) / 10)) };
+    });
 
   const save = async () => {
     const rec: PhysRec = { bench_press: null, squat: null, deadlift: null };
@@ -483,7 +501,8 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
           {busy ? "保存中…" : "保存する"}
         </button>
       </div>
-      {p.length > 0 && (
+      {/* 測定履歴：項目設定のフィジカルの項目すべて（Big3・Big3合計・ブロンコなど。並び順どおり）。新しい日が上 */}
+      {histDates.length > 0 && (
         <div className="card">
           <h3>測定履歴</h3>
           <div className="scroll">
@@ -491,29 +510,26 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
               <tbody>
                 <tr>
                   <th>日付</th>
-                  {LIFTS.map((l) => (
-                    <th className="r" key={l[0]}>
-                      {l[2]}
+                  {physDefs.map((x) => (
+                    <th className="r" key={x.id} style={{ whiteSpace: "nowrap" }}>
+                      {x.name}
+                      {unitOf(x) && <small className="muted">({unitOf(x)})</small>}
                     </th>
                   ))}
-                  <th className="r">合計</th>
                 </tr>
-                {p
-                  .slice()
-                  .reverse()
-                  .map((r) => (
-                    <tr key={r.d}>
-                      <td>{md(r.d)}</td>
-                      {LIFTS.map(([k]) => (
-                        <td className="r num" key={k}>
-                          {fmt0(r[k])}
+                {histDates.map((d) => (
+                  <tr key={d}>
+                    <td>{md(d)}</td>
+                    {physDefs.map((x) => {
+                      const v = histOf.get(x.id)?.get(d);
+                      return (
+                        <td className="r num" key={x.id}>
+                          {x.key === "big3_total" ? <b>{fmtMetric(x, v)}</b> : fmtMetric(x, v)}
                         </td>
-                      ))}
-                      <td className="r num">
-                        <b>{fmt0(rowTotal(r))}</b>
-                      </td>
-                    </tr>
-                  ))}
+                      );
+                    })}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
