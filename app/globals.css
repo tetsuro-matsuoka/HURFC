@@ -435,7 +435,12 @@ svg.chart{touch-action:pan-y}
 .crit-toggle.on{background:#a96a00;color:#fff}
 .crit-text{white-space:pre-wrap;line-height:1.8;font-size:13px;color:var(--ink);background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px}
 
-/* 選手一覧：1段目のグループ見出しは左寄せ。文字は左に固定した名前の列のすぐ右に止まる（横スクロールで隠れない） */
-.pt thead tr:first-child th.gh{text-align:left}
-.pt th.gh span{position:sticky;left:106px;display:inline-block}
-@media(max-width:600px){.pt th.gh span{left:78px}}
+/* 選手一覧の見出し
+   1段目：各グループの枠の中で中央揃え（動かない）。左に固定した名前の列が上に重なる（重なり順・背景色あり）
+   2段目：下のデータと同じ揃え方（文字＝左、FW/BK・カテゴリー＝中央、数値＝右）。上揃え・改行なし */
+.pt thead tr:first-child th.gh{text-align:center;z-index:2}
+.pt thead th.s1{z-index:4}
+.pt .c{text-align:center}
+.pt thead tr:nth-child(2) th{text-align:right}
+.pt thead tr:nth-child(2) th.l,.pt thead tr:nth-child(2) th.s1{text-align:left}
+.pt thead tr:nth-child(2) th.c{text-align:center}
