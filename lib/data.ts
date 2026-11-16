@@ -141,7 +141,21 @@ export async function saveDaily(
   for (const [i, row] of tries.entries()) {
     const { error } = await sb().from("daily_records").upsert(row, { onConflict: "user_id,date" });
     // 戻り値 timingSaved：測った時間を保存できたか（データベースに欄が無く、外して保存した場合は false）
-    if (!error) return { timingSaved: i === 0 };
+    if (!error) {
+      // 保存できたかを読み直して確認（出欠が入っていない／日付が違う などを見逃さないため）
+      const { data: back, error: e2 } = await sb()
+        .from("daily_records")
+        .select("date,attendance,weight")
+        .eq("user_id", userId)
+        .eq("date", date)
+        .maybeSingle();
+      if (e2) throw e2;
+      if (!back) throw new Error(`${date} の記録が見つかりません（保存の権限を確認してください）`);
+      if ((back.attendance ?? null) !== (attendance ?? null)) {
+        throw new Error(`${date} の出欠が保存されていません（保存した値：${back.attendance ?? "空"}）`);
+      }
+      return { timingSaved: i === 0 };
+    }
     last = error;
     const missingColumn =
       error.code === "PGRST204" || error.code === "42703" || /absence_reason|weight_timing|weight_time/.test(error.message ?? "");
