@@ -344,25 +344,32 @@ export const unitOf = (def: { name: string; unit: string }) => {
 
 // スプリントモメンタム（自動計算）：名前に「モメンタム」を含む項目
 export const isMomentum = (def: { name: string }) => def.name.includes("モメンタム");
-// 基準にするスプリント項目を選ぶ：名前の「10m」「30m」などから距離を読み取り、10m → 30m → いちばん短い距離 の順
+// 基準にするスプリント項目を選ぶ：項目名に「30m」「10m」を含むフィジカルの項目（両方あれば 30m を優先）
 export function pickSprint(metrics: MetricDef[]): { sprintId: number; dist: number } | undefined {
   const c = metrics
     .filter((x) => !isMomentum(x) && x.category === "フィジカル")
-    .map((x) => ({ x, dist: Number(x.name.match(/(\d+(?:\.\d+)?)\s*[mｍＭM](?![a-zA-Z])/)?.[1]) }))
-    .filter((c) => c.dist > 0 && /スプリント|走|ダッシュ|sprint/i.test(c.x.name));
-  const pick = c.find((y) => y.dist === 10) ?? c.find((y) => y.dist === 30) ?? c.sort((a, b) => a.dist - b.dist)[0];
+    .map((x) => ({ x, dist: Number(x.name.match(/(\d+(?:\.\d+)?)\s*[mｍＭM](?![a-zA-Z])/)?.[1]) }));
+  const pick = c.find((y) => y.dist === 30) ?? c.find((y) => y.dist === 10);
   return pick ? { sprintId: pick.x.id, dist: pick.dist } : undefined;
 }
 
 export function metricSeries(m: Member, def: MetricDef): Point[] {
   if (def.key === "weight") return weights(m);
   if (def.derived) {
-    // スプリントモメンタム＝体重(kg) × 距離(m) ÷ タイム(秒)。体重はその測定日（なければ直前、それも無ければ最新）
+    // スプリントモメンタム＝その日の体重(kg) × 距離(m) ÷ その日のタイム(秒)
+    // 体重は「スプリントを測った日と同じ日付」の記録だけを使う（別の日の体重は使わない。無ければ計算しない＝—）
+    // 日付は年月日（YYYY-MM-DD）だけで比べる
     const { sprintId, dist } = def.derived;
+    const sameDayWeight = new Map(
+      Object.entries(m.daily)
+        .filter(([, r]) => r.weight != null && r.weight > 0)
+        .map(([d, r]) => [d.slice(0, 10), Number(r.weight)]),
+    );
     return Object.entries(m.metrics[sprintId] ?? {})
       .map(([d, t]) => {
-        const w = weightAt(m, d);
-        return w && t > 0 ? { d, v: (w * dist) / t } : null;
+        const day = d.slice(0, 10);
+        const w = sameDayWeight.get(day);
+        return w && t > 0 ? { d: day, v: (w * dist) / t } : null;
       })
       .filter((p): p is Point => p != null)
       .sort((a, b) => (a.d < b.d ? -1 : 1));

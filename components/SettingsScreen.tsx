@@ -132,8 +132,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                         {x.key === "weight" && " ・ 「毎日の記録」の体重を使用"}
                         {(x.key === "bench_press" || x.key === "squat" || x.key === "deadlift") && " ・ 「測定」のBig3入力を使用"}
                         {x.key === "big3_total" && " ・ Big3の自己ベストから自動計算"}
-                        {x.derived && ` ・ 体重 × ${x.derived.dist}m ÷ 「${ctx.metrics.find((y) => y.id === x.derived?.sprintId)?.name}」のタイムで自動計算`}
-                        {!x.derived && isMomentum(x) && " ・ 自動計算には「10mスプリント」などのスプリント項目（秒）が必要です"}
+                        {x.derived && ` ・ 同じ日の体重 × ${x.derived.dist}m ÷ 「${ctx.metrics.find((y) => y.id === x.derived?.sprintId)?.name}」のタイムで自動計算`}
+                        {!x.derived && isMomentum(x) && " ・ 自動計算には、名前に「30m」か「10m」を含むスプリント項目（秒）が必要です"}
                       </div>
                     </div>
                     <div className="ma">

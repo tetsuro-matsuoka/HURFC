@@ -51,7 +51,10 @@ function buildCols(ctx: Ctx): Col[] {
       fmt: (v) => (v == null ? "—" : String(Math.round(v))),
     },
     { key: "train", group: "train", label: "筋トレ遂行率(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
-    ...metricsOf(ctx.metrics, "フィジカル").flatMap((d) => metricCols(d, "phys", (m) => metricBest(m, d))),
+    ...metricsOf(ctx.metrics, "フィジカル").flatMap((d) =>
+      // スプリントモメンタム（自動計算）は、体重とスプリントを同じ日に記録した最新の日の値
+      metricCols(d, "phys", (m) => (d.derived ? metricLatest(m, d)?.v ?? null : metricBest(m, d))),
+    ),
   ];
 }
 
