@@ -12,7 +12,8 @@ import { fmtMinSec, isMinSec, fmtRatio, metricRatio, absenceSummary, monthAttend
 import { CategoryButton, FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import type { Member, MetricDef } from "@/lib/types";
 
-type Group = "body" | "attend" | "phys";
+// 上の4つのボタンと同じ名前・色：体組成＝青 / 出欠席率＝緑 / 筋トレ遂行率＝黄土 / フィジカル＝赤（基本情報はグレー）
+type Group = "body" | "attend" | "train" | "phys";
 type Col = {
   key: string;
   group: Group;
@@ -33,7 +34,7 @@ function metricCols(def: MetricDef, group: Group, get: (m: Member) => number | n
   return [base, { key: "r" + def.id, group, label: `${def.name}体重比`, unit: "", get: (m) => metricRatio(m, def), fmt: fmtRatio, avgFmt: fmtRatio, ratio: true }];
 }
 
-const GROUP_LABEL: Record<Group, string> = { body: "体組成指標", attend: "出欠・筋トレ", phys: "フィジカル指標" };
+const GROUP_LABEL: Record<Group, string> = { body: "体組成", attend: "出欠席率", train: "筋トレ遂行率", phys: "フィジカル" };
 
 // 表示する列（項目設定の内容と並び順から組み立てる）
 //  体組成：最新値 / フィジカル：自己ベスト / 出欠・筋トレ：アプリで集計
@@ -49,7 +50,7 @@ function buildCols(ctx: Ctx): Col[] {
       get: (m) => monthAttendance(m, ymOf(today()), ctx.practice).rate,
       fmt: (v) => (v == null ? "—" : String(Math.round(v))),
     },
-    { key: "train", group: "attend", label: "筋トレ(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
+    { key: "train", group: "train", label: "筋トレ遂行率(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
     ...metricsOf(ctx.metrics, "フィジカル").flatMap((d) => metricCols(d, "phys", (m) => metricBest(m, d))),
   ];
 }
@@ -81,7 +82,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
     { key: "other", label: "その他平均", ms: ms.filter((m) => m.category !== "レギュラー") },
   ];
   const showCompare = filter.category == null && rows.some((m) => m.category != null);
-  const groups = (["body", "attend", "phys"] as Group[]).map((g) => ({ g, n: cols.filter((c) => c.group === g).length }));
+  const groups = (["body", "attend", "train", "phys"] as Group[]).map((g) => ({ g, n: cols.filter((c) => c.group === g).length }));
 
   // 全選手・全項目をCSVで保存（Excelで文字化けしないよう先頭にBOMを付ける）
   const downloadCsv = () => {
@@ -151,8 +152,9 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               {groups.map(
                 ({ g, n }) =>
                   n > 0 && (
-                    <th key={g} colSpan={n} className={`g-${g}`}>
-                      {GROUP_LABEL[g]}
+                    <th key={g} colSpan={n} className={`g-${g} gh`}>
+                      {/* 横にスクロールしても、左に固定した名前の列の下に隠れないように */}
+                      <span>{GROUP_LABEL[g]}</span>
                     </th>
                   ),
               )}
