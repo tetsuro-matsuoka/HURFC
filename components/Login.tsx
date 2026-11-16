@@ -80,7 +80,7 @@ export default function Login() {
         <div className="brand">
           ALL-<b>IN</b>
         </div>
-        <p>数字を意識して、強くなる。</p>
+        <p>すべてを、ラグビーに。</p>
       </div>
 
       {loadErr && <div className="err-msg">{loadErr}</div>}

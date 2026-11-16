@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "ALL-IN",
-  description: "数字を意識して、強くなる。選手向けフィジカル・モチベーション管理アプリ",
+  description: "すべてを、ラグビーに。選手向けフィジカル・モチベーション管理アプリ",
 };
 
 export const viewport: Viewport = {
