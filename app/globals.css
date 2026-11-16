@@ -422,3 +422,9 @@ svg.chart{touch-action:pan-y}
 .menu-of-week{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;margin-top:8px;text-align:center;font-size:12px;font-weight:700}
 .menu-of-week{font-size:14px}
 .menu-of-week b{font-family:Oswald,"Noto Sans JP",sans-serif;font-size:20px;margin:0 4px;color:#7a5200}
+
+/* 項目設定：筋トレ遂行率の評価基準（押したときだけ開く3つのボタン） */
+.crit-btns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.crit-btns button{padding:9px 4px;border-radius:10px;background:var(--bg);border:2px solid transparent;font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.3}
+.crit-btns button small{display:block;font-size:10.5px;font-weight:400;color:var(--sub)}
+.crit-btns button.on{background:var(--warn-soft);border-color:#a96a00;color:#7a5200}

@@ -36,6 +36,7 @@ import {
   ranking,
   trainingRate,
   trainingMonthAvg,
+  weekShort,
   recentWeeks,
   today,
   unitOf,
@@ -78,7 +79,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 
   const menus: [Panel, string, string][] = [
     ["attend", "出欠席率", `今月 ${monthRate == null ? "—" : Math.round(monthRate) + "%"}${streak ? `・連続${streak}回出席中` : ""}`],
-    ["training", "筋トレ遂行率", weekScore == null ? "今週 未入力" : `今週 ${fmt1(weekScore)} / 10`],
+    ["training", "筋トレ遂行率", `${weekShort(weekStart(t))} ${weekScore == null ? "未入力" : `${fmt1(weekScore)} / 10`}`],
     ["body", "体組成", lw ? `${fmt1(lw.v)}kg${w30 ? `（30日前比 ${signed(lw.v - w30.v)}kg）` : ""}` : "体重 未入力"],
     ["physical", "フィジカル", total ? `Big3 ${fmt0(total)}kg${pos >= 0 ? `（${pos + 1}位）` : ""}` : "Big3 未測定"],
   ];
@@ -275,7 +276,7 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const thisWeek = weekStart(today());
   const from30 = weekStart(addDays(today(), -29)); // 直近30日＝この30日にかかる週（4〜5週）
   const rows: [string, string | undefined][] = [
-    ["今週", thisWeek],
+    [weekShort(thisWeek), thisWeek],
     ["直近30日", from30],
     ["全期間", undefined],
   ];
@@ -297,8 +298,8 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
             <th className="r">差</th>
           </tr>
           {rows.map(([l, from]) => {
-            // 今週は「今週の分だけ」、それ以外は from 以降の週
-            const pick = (x: (typeof ps)[number]) => (l === "今週" ? (x.training[thisWeek] ?? null) : trainingRate(x, from));
+            // 1行目（その週：月曜〜日曜）はその週の分だけ、それ以外は from 以降の週
+            const pick = (x: (typeof ps)[number]) => (from === thisWeek ? (x.training[thisWeek] ?? null) : trainingRate(x, from));
             const mine = pick(m);
             const team = avg(ps.map(pick));
             return (
