@@ -464,21 +464,18 @@ svg.chart{touch-action:pan-y}
 .ph td.ph-top{background:#fff6dc;color:#7a5200;font-weight:700}
 .ph .crown{font-size:11px;margin-right:2px}
 
-/* 選手ホーム『出欠席率』：今月とトータルの2列（緑） */
-.att2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.att2>div{border-radius:16px;padding:10px 12px;border:1px solid}
-/* 今月＝あざやかな緑 / トータル＝落ち着いた深い緑 */
-.att2>div.now{background:rgba(236,253,245,.7);color:#059669;border-color:#a7f3d0}
-.att2>div.total{background:rgba(240,253,250,.7);color:#0f766e;border-color:#99f6e4}
-.att2 .l{font-size:12px;font-weight:700}
-.att2 .v{font-size:30px;font-weight:700;line-height:1.15}
-.att2 .s{font-size:12px;color:var(--sub)}
 
-/* 選手ホーム『筋トレ遂行率』：一番上の2列サマリー（黄土色。出欠席率と同じ形） */
-.tr2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.tr2>div{border-radius:16px;padding:10px 12px;border:1px solid #fcd34d;background:rgba(255,251,235,.8);color:#b45309}
-.tr2>div:last-child{background:rgba(254,252,232,.8);color:#a16207;border-color:#fde68a}
-.tr2 .l{font-size:12px;font-weight:700}
-.tr2 .v{font-size:30px;font-weight:700;line-height:1.15}
-.tr2 .v small{font-size:13px;color:var(--sub);margin-left:3px;font-weight:500}
-.tr2 .s{font-size:11.5px;color:var(--sub)}
+
+/* 選手ホーム『出欠席率』『筋トレ遂行率』の一番上の2列サマリー（同じ大きさ・余白・文字） */
+.sum2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}
+.sum2>div{border-radius:16px;padding:10px 12px;border:1.5px solid;min-height:92px;display:flex;flex-direction:column}
+.sum2 .l{font-size:12px;font-weight:700}
+.sum2 .v{font-size:30px;font-weight:700;line-height:1.15}
+.sum2 .v small{font-size:13px;color:var(--sub);margin-left:3px;font-weight:500}
+.sum2 .s{font-size:12px;color:var(--sub);margin-top:auto}
+/* 出欠席率：今月＝明るい緑 / トータル＝深いフォレストグリーン */
+.att2>div.now{background:#ecfdf5;border-color:#6ee7b7;color:#059669}
+.att2>div.total{background:rgba(220,252,231,.8);border-color:#16a34a;color:#14532d}
+/* 筋トレ遂行率：その週＝明るい黄土 / トータル平均＝深い黄土 */
+.tr2>div:first-child{background:#fffbeb;border-color:#fcd34d;color:#b45309}
+.tr2>div:last-child{background:rgba(254,243,199,.8);border-color:#b45309;color:#78350f}

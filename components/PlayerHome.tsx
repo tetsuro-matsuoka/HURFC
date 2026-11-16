@@ -34,7 +34,6 @@ import {
   playersOf,
   ranking,
   trainingRate,
-  trainingAvg,
   DEFAULT_MENU,
   menuLabel,
   trainingMonthAvg,
@@ -188,7 +187,7 @@ function AttendDetail({ ctx }: { ctx: Ctx }) {
   const total = attendStats(m, ctx.practice, "0000-01-01", today());
   return (
     <div className="card">
-      <div className="att2">
+      <div className="sum2 att2">
         {(
           [
             ["今月", now],
@@ -289,7 +288,6 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const rows: [string, string | undefined][] = [
     [weekShort(thisWeek), thisWeek],
     ["直近30日", from30],
-    ["全期間", undefined],
   ];
   const weeks = recentWeeks(8);
   const pts = weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }));
@@ -297,13 +295,13 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const myMonth = trainingMonthAvg(m, ym);
   const teamMonth = avg(ps.map((x) => trainingMonthAvg(x, ym)));
   const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
-  // 一番上のサマリー：この週（月曜〜日曜）の遂行率と、4週平均
+  // 一番上のサマリー：この週（月曜〜日曜）の遂行率と、トータル平均（全期間）
   const weekScore = m.training[thisWeek] ?? null;
-  const avg4 = trainingAvg(m, 4);
+  const totalAvg = trainingRate(m);
   const menu = ctx.weeks[thisWeek]?.menu ?? DEFAULT_MENU;
   return (
     <div className="card">
-      <div className="tr2">
+      <div className="sum2 tr2">
         <div>
           <div className="l">{weekShort(thisWeek)}</div>
           <div className="v num">
@@ -313,15 +311,14 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
           <div className="s">メニュー {menuLabel(menu)}</div>
         </div>
         <div>
-          <div className="l">4週平均</div>
+          <div className="l">トータル平均</div>
           <div className="v num">
-            {avg4 == null ? "—" : fmt1(avg4)}
+            {totalAvg == null ? "—" : fmt1(totalAvg)}
             <small>/ 10</small>
           </div>
-          <div className="s">入力した週の平均</div>
+          <div className="s">全期間</div>
         </div>
       </div>
-      <h3>チームと比べる</h3>
       <table className="tbl cmp-tbl" style={{ marginBottom: 10 }}>
         <tbody>
           <tr>
