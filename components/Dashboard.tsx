@@ -23,12 +23,13 @@ import {
   md,
   monthAttendance,
   absenceSummary,
-  attendLabel,
   dayKind,
   practiceCount,
   playersOf,
   recentWeeks,
   teamTrainingAvg,
+  teamSummaryWeek,
+  absenceCounts,
   today,
   trainingAvg,
   trainingMonthAvg,
@@ -37,8 +38,6 @@ import {
   CRITERIA_KEY,
   DEFAULT_MENU,
   wd,
-  weightNote,
-  weekStart,
   ymLabel,
   ymOf,
 } from "@/lib/calc";
@@ -74,13 +73,14 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
   // ボタンに出す概要
   const todayYes = ps.filter((m) => m.daily[t]?.attendance === "出席").length;
   const todayOff = dayKind(t, ctx.practice) === "off";
-  const weekAvg = teamTrainingAvg(ps, weekStart(t));
+  const sw = teamSummaryWeek(ps, t); // 直近で終わった週（前週）
+  const weekAvg = teamTrainingAvg(ps, sw);
   const wAvg = avg(ps.map((m) => latestWeight(m)?.v ?? null));
   const bigAvg = avg(ps.map((m) => maxes(m).total));
 
   const menus: [Panel, string, string][] = [
     ["attend", "出欠席率", todayOff ? "今日はオフ（練習日ではありません）" : `今日 出席 ${todayYes}/${ps.length}名`],
-    ["training", "筋トレ遂行率", `${weekShort(weekStart(t))} 平均 ${weekAvg == null ? "—" : fmt1(weekAvg)} / 10`],
+    ["training", "筋トレ遂行率", `${weekShort(sw)} 平均 ${weekAvg == null ? "—" : fmt1(weekAvg)} / 10`],
     ["body", "体組成", `平均体重 ${wAvg == null ? "—" : fmt1(wAvg) + "kg"}`],
     ["physical", "フィジカル", `Big3合計 平均 ${bigAvg == null ? "—" : fmt0(bigAvg) + "kg"}`],
   ];
@@ -178,19 +178,13 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
               {sorted.map((x) => (
                 <tr key={x.m.id} className="click" onClick={() => ctx.openPlayer(x.m.id)}>
                   <td>{x.m.name}</td>
-                  <td>
+                  <td className="r">
+                    {/* 出欠だけをすっきり表示。欠席のときは選手が選んだ理由を横にバッジで */}
                     <span className={`chip ${!x.r?.attendance ? "none" : x.r.attendance === "出席" ? "yes" : "no"}`}>
-                      {attendLabel(x.r) ?? (kind === "off" ? "—" : "未入力")}
+                      {x.r?.attendance ?? (kind === "off" ? "—" : "未入力")}
                     </span>
+                    {x.r?.attendance === "欠席" && <span className="chip reason">{x.r.absence_reason ?? "理由未入力"}</span>}
                   </td>
-                  <td className="r num">{x.r?.weight ? (
-                      <>
-                        {fmt1(x.r.weight)}kg
-                        {weightNote(x.r) && <small className="muted"> {weightNote(x.r)}</small>}
-                      </>
-                    ) : (
-                      ""
-                    )}</td>
                 </tr>
               ))}
             </tbody>
@@ -198,6 +192,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         ) : (
           <div className="empty">選手が登録されていません</div>
         )}
+        <AbsenceStats ps={ps} />
       </div>
 
       <div className="card">
@@ -323,12 +318,13 @@ function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
 
 function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const weeks = recentWeeks(8);
-  const cur = weeks[weeks.length - 1];
+  // 上のチーム平均は、直近で終わった週（前週）。選手画面・ダッシュボードのボタンと同じ決め方
+  const cur = teamSummaryWeek(ps);
   const teamPts = weeks.map((w) => ({ d: w, v: teamTrainingAvg(ps, w) })).filter((p): p is { d: string; v: number } => p.v != null);
   const curAvg = teamTrainingAvg(ps, cur);
   const entered = ps.filter((m) => m.training[cur] != null).length;
-  // 今週のメニュー（日程調整）に合わせた評価基準（項目設定）
-  const menu = ctx.weeks[weekStart(today())]?.menu ?? DEFAULT_MENU;
+  // その週のメニュー（日程調整）に合わせた評価基準（項目設定）
+  const menu = ctx.weeks[cur]?.menu ?? DEFAULT_MENU;
   const criteria = ctx.settings[CRITERIA_KEY[menu]];
   const [showCrit, setShowCrit] = useState(false);
 
@@ -375,7 +371,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
                     {md(w)}〜
                   </th>
                 ))}
-                <th className="r">8週平均</th>
+                <th className="r">8週平均<br /><small className="muted">前週まで</small></th>
               </tr>
               {ps.map((m) => {
                 const a = trainingAvg(m, 8);
@@ -398,5 +394,52 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         </div>
       </div>
     </>
+  );
+}
+
+/* ---------- 欠席理由統計（ボタンで開閉）：理由ごとの回数と割合。今月 / 全期間 ---------- */
+function AbsenceStats({ ps }: { ps: Member[] }) {
+  const [open, setOpen] = useState(false);
+  const [range, setRange] = useState<"month" | "all">("month");
+  const t = today();
+  const list = absenceCounts(ps, range === "month" ? ymOf(t) + "-01" : null, t);
+  const total = list.reduce((a, x) => a + x.n, 0);
+  const max = Math.max(1, ...list.map((x) => x.n));
+  return (
+    <div className="abs-stats">
+      <button className={`abs-toggle ${open ? "on" : ""}`} onClick={() => setOpen(!open)} aria-expanded={open}>
+        欠席理由統計 <span>{open ? "⌃" : "⌄"}</span>
+      </button>
+      {open && (
+        <div className="abs-body">
+          <div className="seg" style={{ marginBottom: 10 }}>
+            <button className={range === "month" ? "on" : ""} onClick={() => setRange("month")}>
+              今月（{ymLabel(ymOf(t))}）
+            </button>
+            <button className={range === "all" ? "on" : ""} onClick={() => setRange("all")}>
+              全期間
+            </button>
+          </div>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            欠席 合計 <b className="num">{total}</b> 回
+          </div>
+          {total ? (
+            list.map((x) => (
+              <div key={x.reason} className={`abs-row ${x.n ? "" : "zero"}`}>
+                <span className="abs-l">{x.reason}</span>
+                <span className="abs-bar">
+                  <i style={{ width: `${(x.n / max) * 100}%` }} />
+                </span>
+                <span className="abs-v num">
+                  {x.n}回 <small>{Math.round((x.n / total) * 100)}%</small>
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="empty">この期間の欠席はありません</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

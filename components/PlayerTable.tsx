@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { fmtMinSec, isMinSec, fmtRatio, metricRatio, absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, unitOf, unitOfPosition } from "@/lib/calc";
+import { fmtMinSec, isMinSec, fmtRatio, metricRatio, absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, teamSummaryWeek, weekShort, unitOf, unitOfPosition } from "@/lib/calc";
 import { CategoryButton, FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import type { Member, MetricDef } from "@/lib/types";
 
@@ -50,6 +50,8 @@ function buildCols(ctx: Ctx): Col[] {
       get: (m) => monthAttendance(m, ymOf(today()), ctx.practice).rate,
       fmt: (v) => (v == null ? "—" : String(Math.round(v))),
     },
+    // 前週（直近で終わった週。選手画面・ダッシュボードと同じ週）と、前週までの4週平均
+    { key: "trainw", group: "train", label: `筋トレ遂行率(${weekShort(teamSummaryWeek(playersOf(ctx.members)))})`, unit: "/10", get: (m) => m.training[teamSummaryWeek(playersOf(ctx.members))] ?? null, fmt: fmt1 },
     { key: "train", group: "train", label: "筋トレ遂行率(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
     ...metricsOf(ctx.metrics, "フィジカル").flatMap((d) =>
       // スプリントモメンタム（自動計算）は、体重とスプリントを同じ日に記録した最新の日の値
