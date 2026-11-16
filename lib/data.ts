@@ -87,7 +87,7 @@ export async function loadAll(): Promise<Members> {
   mrec.forEach((r) => {
     const mm = m[r.user_id];
     if (!mm) return;
-    (mm.metrics[r.metric_id] ??= {})[r.date] = Number(r.value);
+    (mm.metrics[r.metric_id] ??= {})[r.date.slice(0, 10)] = Number(r.value);
   });
   training.forEach((r) => {
     if (m[r.user_id]) m[r.user_id].training[r.week_start] = Number(r.score);
@@ -99,7 +99,7 @@ export async function loadAll(): Promise<Members> {
   });
   daily.forEach((r) => {
     if (m[r.user_id])
-      m[r.user_id].daily[r.date] = {
+      m[r.user_id].daily[r.date.slice(0, 10)] = {
         attendance: r.attendance,
         absence_reason: r.attendance === "欠席" ? r.absence_reason ?? null : null,
         weight_timing: r.weight_timing ?? null,
@@ -109,7 +109,7 @@ export async function loadAll(): Promise<Members> {
   });
   physical.forEach((r) => {
     if (m[r.user_id])
-      m[r.user_id].physical[r.date] = {
+      m[r.user_id].physical[r.date.slice(0, 10)] = {
         bench_press: r.bench_press == null ? null : Number(r.bench_press),
         squat: r.squat == null ? null : Number(r.squat),
         deadlift: r.deadlift == null ? null : Number(r.deadlift),
@@ -201,7 +201,7 @@ export async function loadMeta(): Promise<Meta> {
     metrics,
     settings: Object.fromEntries(settings.map((x) => [x.key, x.value])),
     // 週ごとの練習日数の設定は使わない（出席率はカレンダーの練習日で計算）
-    practice: makePractice(practice.map((x) => x.date)),
+    practice: makePractice(practice.map((x) => x.date.slice(0, 10))),
     weeks: weekMap,
   };
 }
