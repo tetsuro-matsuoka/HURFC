@@ -445,8 +445,11 @@ svg.chart{touch-action:pan-y}
 .pt thead tr:nth-child(2) th.l,.pt thead tr:nth-child(2) th.s1{text-align:left}
 .pt thead tr:nth-child(2) th.c{text-align:center}
 
-/* 選手ホーム『フィジカル』：選んだ種目の測定履歴（押すと開く） */
-.hist{margin-top:10px}
-.hist summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--sub);padding:6px 0}
-.hist .tbl td{padding:6px}
-.hist .star{color:var(--gold);margin-right:4px}
+/* 選手ホーム『フィジカル』：測定履歴（全種目・横スクロール。左端の測定日は固定） */
+.ph-wrap{overflow:auto;max-height:60vh;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
+.ph{border-collapse:separate;border-spacing:0;font-size:13px;white-space:nowrap}
+.ph th,.ph td{padding:7px 10px;border-bottom:1px solid var(--line);background:#fff;text-align:right}
+.ph thead th{position:sticky;top:0;z-index:2;background:#fde7e3;color:#a8301c;font-size:11px;font-weight:700;vertical-align:top}
+.ph th small{display:block;font-weight:400;color:var(--sub)}
+.ph .ph-d{position:sticky;left:0;z-index:1;text-align:left;font-weight:700;border-right:2px solid var(--line)}
+.ph thead .ph-d{z-index:3}

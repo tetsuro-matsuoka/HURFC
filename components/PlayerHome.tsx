@@ -483,26 +483,6 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
       {chart.length >= 2 && (
         <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} fmt={!ratio && isMinSec(def) ? fmtMinSec : undefined} />
       )}
-      {/* 選んだ種目の測定履歴（新しい日が上。自己ベストに★） */}
-      {chart.length > 0 && (
-        <details className="hist">
-          <summary>測定履歴（{chart.length}回）</summary>
-          <table className="tbl">
-            <tbody>
-              {[...chart].reverse().map((pt) => (
-                <tr key={pt.d}>
-                  <td>{md(pt.d)}</td>
-                  <td className="r num">
-                    {pt.v === bestV && <span className="star">★</span>}
-                    {f(pt.v)}
-                    {u && <small className="muted"> {u}</small>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-      )}
       </div>
 
       {/* 下段：選んだ種目のチームランキング */}
@@ -516,6 +496,8 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
           fmtV={(v) => (ratio ? `${fmtRatio(v)}倍` : `${fmtMetric(def, v)}${u}`)}
         />
       </div>
+
+      <PhysHistory ctx={ctx} />
     </>
   );
 }
@@ -589,5 +571,55 @@ function Big3Block({ ctx }: { ctx: Ctx }) {
         </span>
       </div>
     </>
+  );
+}
+
+// 測定履歴（全種目）：日付ごとに、項目設定のフィジカル種目すべて（Big3・Big3合計・ブロンコなど）を横に並べた表
+// 左端の「測定日」の列は固定。横にスライドすると、その日に測った全種目の数値が見られる（新しい日が上）
+function PhysHistory({ ctx }: { ctx: Ctx }) {
+  const m = ctx.me;
+  const defs = metricsOf(ctx.metrics, "フィジカル");
+  const hist = new Map(defs.map((x) => [x.id, new Map(metricSeries(m, x).map((pt) => [pt.d, pt.v]))]));
+  const dates = [...new Set([...hist.values()].flatMap((mp) => [...mp.keys()]))].sort().reverse();
+  return (
+    <div className="card">
+      <h3>
+        測定履歴 <small>全種目・横にスライド</small>
+      </h3>
+      {dates.length ? (
+        <div className="ph-wrap">
+          <table className="ph">
+            <thead>
+              <tr>
+                <th className="ph-d">測定日</th>
+                {defs.map((x) => (
+                  <th key={x.id}>
+                    {x.name}
+                    {unitOf(x) && <small>({unitOf(x)})</small>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dates.map((d) => (
+                <tr key={d}>
+                  <td className="ph-d">{md(d)}</td>
+                  {defs.map((x) => {
+                    const v = hist.get(x.id)?.get(d);
+                    return (
+                      <td key={x.id} className="num">
+                        {x.key === "big3_total" ? <b>{fmtMetric(x, v)}</b> : fmtMetric(x, v)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="empty">まだ記録がありません</div>
+      )}
+    </div>
   );
 }
