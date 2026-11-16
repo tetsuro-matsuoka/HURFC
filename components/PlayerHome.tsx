@@ -39,6 +39,7 @@ import {
   menuLabel,
   trainingMonthAvg,
   weekShort,
+  summaryWeek,
   recentWeeks,
   today,
   unitOf,
@@ -75,7 +76,8 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
   // ボタンに出す概要
   const monthRate = monthAttendance(m, ymOf(t), ctx.practice).rate;
   const totalRate = attendStats(m, ctx.practice, "0000-01-01", t).rate; // トータル（全期間）
-  const weekScore = m.training[weekStart(t)];
+  const sw = summaryWeek(m.training, t); // 直近で終わった週（詳細画面のサマリーと同じ週）
+  const weekScore = m.training[sw];
   const lw = latestWeight(m),
     w30 = weightAgo(m, 30);
   const rk = ranking(ctx.members, "total"),
@@ -84,7 +86,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 
   const menus: [Panel, string, string][] = [
     ["attend", "出欠席率", `今月 ${monthRate == null ? "—" : Math.round(monthRate) + "%"}・トータル ${totalRate == null ? "—" : Math.round(totalRate) + "%"}`],
-    ["training", "筋トレ遂行率", `${weekShort(weekStart(t))} ${weekScore == null ? "未入力" : `${fmt1(weekScore)} / 10`}`],
+    ["training", "筋トレ遂行率", `${weekShort(sw)} ${weekScore == null ? "未入力" : `${fmt1(weekScore)} / 10`}`],
     ["body", "体組成", lw ? `${fmt1(lw.v)}kg${w30 ? `（30日前比 ${signed(lw.v - w30.v)}kg）` : ""}` : "体重 未入力"],
     ["physical", "フィジカル", total ? `Big3 ${fmt0(total)}kg${pos >= 0 ? `（${pos + 1}位）` : ""}` : "Big3 未測定"],
   ];
@@ -288,8 +290,10 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const from4 = recentWeeks(4)[0]; // 直近4週の最初の週（月曜日）
   const [ym, setYm] = useState(ymOf(today()));
   const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
-  // 1. 一番上のサマリー：この週（月曜〜日曜）の遂行率と、トータル平均（全期間）
-  const weekScore = m.training[thisWeek] ?? null;
+  // 1. 一番上のサマリー：直近で終わった週（前週の月曜〜日曜）の遂行率と、トータル平均（全期間）
+  //    ホームのボタンと同じ週（summaryWeek）を使う
+  const sumWeek = summaryWeek(m.training);
+  const weekScore = m.training[sumWeek] ?? null;
   const totalAvg = trainingRate(m);
   const menuOf = (w: string) => ctx.weeks[w]?.menu ?? DEFAULT_MENU;
   // 3. 比較表：選んだ月・直近4週を、自分とチーム平均（選手ごとの平均の平均）で
@@ -314,12 +318,12 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
     <div className="card">
       <div className="sum2 tr2">
         <div>
-          <div className="l">{weekShort(thisWeek)}</div>
+          <div className="l">{weekShort(sumWeek)}</div>
           <div className="v num">
             {weekScore == null ? "—" : fmt1(weekScore)}
             <small>/ 10</small>
           </div>
-          <div className="s">メニュー {menuLabel(menuOf(thisWeek))}</div>
+          <div className="s">メニュー {menuLabel(menuOf(sumWeek))}</div>
         </div>
         <div>
           <div className="l">トータル平均</div>
