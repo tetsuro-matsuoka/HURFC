@@ -181,7 +181,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pt-wrap{overflow:auto;max-height:70vh;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
 .pt{border-collapse:separate;border-spacing:0;font-size:13px;white-space:nowrap}
 .pt th,.pt td{padding:8px 10px;border-bottom:1px solid var(--line);background:#fff;text-align:right}
-.pt thead th{position:sticky;z-index:2;font-size:11px;font-weight:700;color:var(--ink)}
+.pt thead th{position:sticky;z-index:2;font-size:11px;font-weight:700;color:var(--ink);vertical-align:top;white-space:nowrap}
 .pt thead tr:first-child th{top:0;font-size:12px;text-align:center}
 .pt thead tr:nth-child(2) th{top:31px}
 .pt th small{font-weight:400;color:var(--sub);margin-left:2px}
@@ -216,6 +216,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pt .g-basic{background:#e8eaee}
 .pt .g-body{background:#e3edf8;color:#1d4f86}
 .pt .g-attend{background:#e0f3ea;color:#17694a}
+.pt .g-train{background:#fff1d6;color:#7a5200}
 .pt .g-phys{background:#fde7e3;color:#a8301c}
 
 /* 筋トレ遂行度（0〜10の11段階ボタン） */
@@ -433,3 +434,8 @@ svg.chart{touch-action:pan-y}
 .crit-toggle{margin-left:auto;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#fff;color:#7a5200;border:1.5px solid #a96a00}
 .crit-toggle.on{background:#a96a00;color:#fff}
 .crit-text{white-space:pre-wrap;line-height:1.8;font-size:13px;color:var(--ink);background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+
+/* 選手一覧：1段目のグループ見出しは左寄せ。文字は左に固定した名前の列のすぐ右に止まる（横スクロールで隠れない） */
+.pt thead tr:first-child th.gh{text-align:left}
+.pt th.gh span{position:sticky;left:106px;display:inline-block}
+@media(max-width:600px){.pt th.gh span{left:78px}}
