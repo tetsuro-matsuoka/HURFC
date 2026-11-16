@@ -27,7 +27,6 @@ import {
   latestWeight,
   maxes,
   md,
-  phys,
   today,
   weights,
   fmtMetric,
@@ -35,6 +34,9 @@ import {
 } from "@/lib/calc";
 import { saveDaily, saveErrorText, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
 import type { AbsenceReason, Attendance, LiftKey, PhysRec, WeightTiming } from "@/lib/types";
+
+// フィジカル入力の Big3 の並び：SQ → BP → DL
+const LIFT_ORDER: LiftKey[] = ["squat", "bench_press", "deadlift"];
 
 /* ---------- S03 データ入力 ---------- */
 export function InputScreen({ ctx }: { ctx: Ctx }) {
@@ -332,8 +334,7 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
 
 function PhysForm({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
-  const p = phys(m),
-    mx = maxes(m);
+  const mx = maxes(m);
   const initial = (d: string): Record<LiftKey, string> => {
     // その日に保存済みの値だけを入れる（無ければ空欄。前回の値は下に「自己ベスト」などで表示）
     const src = m.physical[d] ?? null;
@@ -368,13 +369,6 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
   const [xv, setXv] = useState<Record<number, string>>(initialX(today()));
   const [busy, setBusy] = useState(false);
 
-  // −／＋：空欄のときは前回の記録から始める
-  const lastLift = (k: LiftKey) => [...p].reverse().find((r) => r[k] != null)?.[k] ?? 0;
-  const step = (k: LiftKey, n: number) =>
-    setVals((cur) => {
-      const base = cur[k].trim() === "" ? Number(lastLift(k)) : parseFloat(cur[k]) || 0;
-      return { ...cur, [k]: String(Math.max(0, Math.round((base + n) * 10) / 10)) };
-    });
 
   const save = async () => {
     const rec: PhysRec = { bench_press: null, squat: null, deadlift: null };
@@ -441,93 +435,99 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
             setXv(initialX(e.target.value));
           }}
         />
-        {LIFTS.map(([k, l]) => (
-          <div key={k}>
-            <label className="f">{liftName(k, l)}</label>
-            <div className="stepper">
-              <button onClick={() => step(k, -2.5)}>−</button>
-              <input
-                className="t"
-                type="number"
-                inputMode="decimal"
-                step="2.5"
-                value={vals[k]}
-                onChange={(e) => setVals((cur) => ({ ...cur, [k]: e.target.value }))}
-              />
-              <span className="unit">kg</span>
-              <button onClick={() => step(k, 2.5)}>＋</button>
-            </div>
-            <div className="prev">自己ベスト {fmt0(mx[k])}kg</div>
-          </div>
-        ))}
-        {(["体組成", "フィジカル"] as const).map((c) => {
-          const list = defs.filter((x) => x.category === c);
-          if (!list.length) return null;
-          return (
-            <div key={c}>
-              <div className="muted" style={{ fontWeight: 700, marginTop: 22, borderTop: "1px dashed var(--line)", paddingTop: 12 }}>
-                {c}
+        {/* 1種目1行：左に種目名と自己ベスト、右に入力欄と単位。並びは SQ → BP → DL → その他のフィジカル → 体組成 */}
+        <div className="prows">
+          {LIFT_ORDER.map((k) => {
+            const l = LIFTS.find(([kk]) => kk === k)![1];
+            return (
+              <div className="prow" key={k}>
+                <div className="pn">
+                  <b>{liftName(k, l)}</b>
+                  <small>自己ベスト {fmt0(mx[k])}kg</small>
+                </div>
+                <div className="pi">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    value={vals[k]}
+                    onChange={(e) => setVals((cur) => ({ ...cur, [k]: e.target.value }))}
+                    aria-label={liftName(k, l)}
+                  />
+                  <span className="pu">kg</span>
+                </div>
               </div>
-              {list.map((x) => {
-                const last = metricLatest(m, x);
-                const best = c === "フィジカル" ? metricBest(m, x) : null;
-                return (
-                  <div key={x.id}>
-                    <label className="f">{x.name}</label>
-                    {isMinSec(x) ? (
-                      // タイム種目：「[ 4 ] 分 [ 50 ] 秒」
-                      <div className="stepper minsec">
-                        {[0, 1].map((i) => {
-                          const parts = (xv[x.id] ?? "").split(":");
-                          return (
-                            <Fragment key={i}>
-                              <input
-                                className="t"
-                                type="number"
-                                inputMode="numeric"
-                                min={0}
-                                max={i ? 59 : undefined}
-                                value={parts[i] ?? ""}
-                                onChange={(e) => {
-                                  const next = [parts[0] ?? "", parts[1] ?? ""];
-                                  next[i] = e.target.value;
-                                  setXv((cur) => ({ ...cur, [x.id]: next.join(":") }));
-                                }}
-                                aria-label={i ? "秒" : "分"}
-                                style={{ fontSize: 24 }}
-                              />
-                              <span className="unit">{i ? "秒" : "分"}</span>
-                            </Fragment>
-                          );
-                        })}
+            );
+          })}
+          {(["フィジカル", "体組成"] as const).map((c) => {
+            const list = defs.filter((x) => x.category === c);
+            if (!list.length) return null;
+            return (
+              <Fragment key={c}>
+                {c === "体組成" && <div className="prow-h">体組成</div>}
+                {list.map((x) => {
+                  const last = metricLatest(m, x);
+                  const best = c === "フィジカル" ? metricBest(m, x) : null;
+                  return (
+                    <div className="prow" key={x.id}>
+                      <div className="pn">
+                        <b>{x.name}</b>
+                        <small>
+                          {best != null
+                            ? `自己ベスト ${fmtMetric(x, best)}${unitOf(x)}`
+                            : last
+                              ? `前回 ${fmtMetric(x, last.v)}${unitOf(x)}`
+                              : "まだ記録がありません"}
+                        </small>
                       </div>
-                    ) : (
-                    <div className="stepper">
-                      <input
-                        className="t"
-                        type="number"
-                        inputMode="decimal"
-                        step="any"
-                        value={xv[x.id] ?? ""}
-                        onChange={(e) => setXv((cur) => ({ ...cur, [x.id]: e.target.value }))}
-                        style={{ fontSize: 24 }}
-                      />
-                      <span className="unit" style={{ width: "auto", minWidth: 24 }}>
-                        {unitOf(x)}
-                      </span>
+                      {isMinSec(x) ? (
+                        // タイム種目：[ 分 ] : [ 秒 ]
+                        <div className="pi">
+                          {[0, 1].map((i) => {
+                            const parts = (xv[x.id] ?? "").split(":");
+                            return (
+                              <Fragment key={i}>
+                                {i === 1 && <span className="pu">:</span>}
+                                <input
+                                  className="ms"
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={0}
+                                  max={i ? 59 : undefined}
+                                  placeholder={i ? "秒" : "分"}
+                                  value={parts[i] ?? ""}
+                                  onChange={(e) => {
+                                    const next = [parts[0] ?? "", parts[1] ?? ""];
+                                    next[i] = e.target.value;
+                                    setXv((cur) => ({ ...cur, [x.id]: next.join(":") }));
+                                  }}
+                                  aria-label={`${x.name}（${i ? "秒" : "分"}）`}
+                                />
+                              </Fragment>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="pi">
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="any"
+                            value={xv[x.id] ?? ""}
+                            onChange={(e) => setXv((cur) => ({ ...cur, [x.id]: e.target.value }))}
+                            aria-label={x.name}
+                          />
+                          <span className="pu">{unitOf(x)}</span>
+                        </div>
+                      )}
                     </div>
-                    )}
-                    <div className="prev">
-                      {last ? `前回 ${fmtMetric(x, last.v)}${unitOf(x)}（${md(last.d)}）` : "まだ記録がありません"}
-                      {best != null && ` ・ 自己ベスト ${fmtMetric(x, best)}${unitOf(x)}`}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-        <p className="muted" style={{ marginTop: 14 }}>測った項目だけ入力すればOKです（空欄の項目は記録されません）。</p>
+                  );
+                })}
+              </Fragment>
+            );
+          })}
+        </div>
+        <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>測った項目だけ入力すればOKです（空欄の項目は記録されません）。</p>
         <button className="btn" onClick={save} disabled={busy || ctx.readOnly}>
           {busy ? "保存中…" : "保存する"}
         </button>
