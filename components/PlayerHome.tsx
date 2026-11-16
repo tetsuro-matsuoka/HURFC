@@ -194,7 +194,7 @@ function AttendDetail({ ctx }: { ctx: Ctx }) {
             ["トータル", total],
           ] as const
         ).map(([l, x]) => (
-          <div key={l} className={l === "今月" ? "now" : "total"}>
+          <div key={l} className={l === "今月" ? "now" : "alltime"}>
             <div className="l">{l}</div>
             <div className="v num">{x.days ? pct(x.rate) : "—"}</div>
             <div className="s num">
