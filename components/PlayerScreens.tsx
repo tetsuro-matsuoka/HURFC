@@ -30,8 +30,6 @@ import {
   weights,
   fmtMetric,
   isMinSec,
-  metricSeries,
-  metricsOf,
 } from "@/lib/calc";
 import { saveDaily, saveErrorText, saveMetricValues, savePhysical, saveTraining } from "@/lib/data";
 import type { AbsenceReason, Attendance, LiftKey, PhysRec, WeightTiming } from "@/lib/types";
@@ -332,11 +330,6 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
   const [xv, setXv] = useState<Record<number, string>>(initialX(today()));
   const [busy, setBusy] = useState(false);
 
-  // 測定履歴用：フィジカルの項目ごとの { 日付: 値 }
-  const physDefs = metricsOf(ctx.metrics, "フィジカル");
-  const histOf = new Map(physDefs.map((x) => [x.id, new Map(metricSeries(m, x).map((pt) => [pt.d, pt.v]))]));
-  const histDates = [...new Set([...histOf.values()].flatMap((mp) => [...mp.keys()]))].sort().reverse();
-
   // −／＋：空欄のときは前回の記録から始める
   const lastLift = (k: LiftKey) => [...p].reverse().find((r) => r[k] != null)?.[k] ?? 0;
   const step = (k: LiftKey, n: number) =>
@@ -501,40 +494,6 @@ function PhysForm({ ctx }: { ctx: Ctx }) {
           {busy ? "保存中…" : "保存する"}
         </button>
       </div>
-      {/* 測定履歴：項目設定のフィジカルの項目すべて（Big3・Big3合計・ブロンコなど。並び順どおり）。新しい日が上 */}
-      {histDates.length > 0 && (
-        <div className="card">
-          <h3>測定履歴</h3>
-          <div className="scroll">
-            <table className="tbl">
-              <tbody>
-                <tr>
-                  <th>日付</th>
-                  {physDefs.map((x) => (
-                    <th className="r" key={x.id} style={{ whiteSpace: "nowrap" }}>
-                      {x.name}
-                      {unitOf(x) && <small className="muted">({unitOf(x)})</small>}
-                    </th>
-                  ))}
-                </tr>
-                {histDates.map((d) => (
-                  <tr key={d}>
-                    <td>{md(d)}</td>
-                    {physDefs.map((x) => {
-                      const v = histOf.get(x.id)?.get(d);
-                      return (
-                        <td className="r num" key={x.id}>
-                          {x.key === "big3_total" ? <b>{fmtMetric(x, v)}</b> : fmtMetric(x, v)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </>
   );
 }
