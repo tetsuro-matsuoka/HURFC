@@ -46,7 +46,7 @@ export function InputScreen({ ctx }: { ctx: Ctx }) {
         {(
           [
             ["daily", "m-daily", "毎日の記録", "出欠・体重"],
-            ["training", "m-training", "筋トレ遂行率", "今週の評価"],
+            ["training", "m-training", "筋トレ遂行率", "週ごとの評価"],
             ["phys", "m-physical", "フィジカル", "測定の記録"],
           ] as const
         ).map(([k, cls, l, sub]) => (
@@ -215,7 +215,7 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
   );
 }
 
-// 今週の筋トレ遂行度（0〜10をタップするだけで保存）
+// 週ごと（月曜〜日曜）の筋トレ遂行度（0〜10をタップするだけで保存）
 function TrainingForm({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
   const cur = weekStart(today());
@@ -248,18 +248,18 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
             ‹
           </button>
           <b style={{ flex: 1, textAlign: "center" }}>
-            {ws === cur ? "今週" : weekLabel(ws)}の筋トレ遂行度
+            {weekLabel(ws)}の筋トレ遂行度
           </b>
           <button onClick={() => ws < cur && setWs(addDays(ws, 7))} disabled={ws >= cur} style={ws >= cur ? { opacity: 0.3 } : undefined} aria-label="次の週">
             ›
           </button>
         </div>
         <p className="muted" style={{ textAlign: "center" }}>
-          {weekLabel(ws)} ・ {score == null ? "未入力" : `記録済み：${score}`}
+          月曜〜日曜の分 ・ {score == null ? "未入力" : `記録済み：${score}`}
         </p>
         {/* コーチが「日程調整」で設定したその週の筋トレメニュー（未設定は A〜C） */}
         <div className="menu-of-week">
-          今週は <b>{menuLabel(menu)}</b> です
+          この週は <b>{menuLabel(menu)}</b> です
         </div>
         <div className="score11">
           {Array.from({ length: 11 }, (_, n) => (

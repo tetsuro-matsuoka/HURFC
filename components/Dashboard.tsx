@@ -32,6 +32,8 @@ import {
   today,
   trainingAvg,
   trainingMonthAvg,
+  weekLabel,
+  weekShort,
   CRITERIA_KEY,
   DEFAULT_MENU,
   wd,
@@ -78,7 +80,7 @@ export function TeamScreen({ ctx }: { ctx: Ctx }) {
 
   const menus: [Panel, string, string][] = [
     ["attend", "出欠席率", todayOff ? "今日はオフ（練習日ではありません）" : `今日 出席 ${todayYes}/${ps.length}名`],
-    ["training", "筋トレ遂行率", `今週平均 ${weekAvg == null ? "—" : fmt1(weekAvg)} / 10`],
+    ["training", "筋トレ遂行率", `${weekShort(weekStart(t))} 平均 ${weekAvg == null ? "—" : fmt1(weekAvg)} / 10`],
     ["body", "体組成", `平均体重 ${wAvg == null ? "—" : fmt1(wAvg) + "kg"}`],
     ["physical", "フィジカル", `Big3合計 平均 ${bigAvg == null ? "—" : fmt0(bigAvg) + "kg"}`],
   ];
@@ -334,7 +336,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       <div className="grid two">
         <div className="card">
           <h3>
-            チーム平均 <small>今週（{md(cur)}〜）</small>
+            チーム平均 <small>{weekLabel(cur)}</small>
           </h3>
           <div className="kpi" style={{ padding: 0 }}>
             <div className="v num">
@@ -352,7 +354,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         </div>
         <div className="card">
           <h3>
-            評価基準 <small>今週は {menu}</small>
+            評価基準 <small>{weekLabel(weekStart(today()))}は {menu}</small>
           </h3>
           <p className="muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>
             {criteria || "まだ設定されていません（「項目設定」から入力できます）"}

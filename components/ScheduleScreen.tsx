@@ -99,7 +99,7 @@ function WeekCard({ ctx }: { ctx: Ctx }) {
           ‹
         </button>
         <b style={{ flex: 1, textAlign: "center" }}>
-          {ws === cur ? "今週" : ws === addDays(cur, 7) ? "来週" : ""} {weekLabel(ws)}
+          {weekLabel(ws)}
         </b>
         <button onClick={() => setWs(addDays(ws, 7))} aria-label="次の週">
           ›

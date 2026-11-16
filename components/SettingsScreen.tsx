@@ -10,7 +10,7 @@ import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
-import { CRITERIA_KEY, DEFAULT_MENU, MENUS, MENU_TIMES, isLinked, metricsOf, unitOf } from "@/lib/calc";
+import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, metricsOf, unitOf } from "@/lib/calc";
 import type { Menu, MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
@@ -60,8 +60,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<{ type: "edit" | "del"; def: MetricDef } | null>(null);
   const [edit, setEdit] = useState<MetricInput>(EMPTY);
-  // 筋トレ遂行率の評価基準：メニュー（A〜B / A〜C / A〜D）ごとに編集・保存
-  const [cMenu, setCMenu] = useState<Menu>(DEFAULT_MENU);
+  // 筋トレ遂行率の評価基準：メニュー（A〜B / A〜C / A〜D）ごとに編集・保存。普段は閉じておき、ボタンで開く
+  const [cMenu, setCMenu] = useState<Menu | null>(null);
   const [criteria, setCriteria] = useState<Record<Menu, string>>(
     () => Object.fromEntries(MENUS.map((x) => [x, ctx.settings[CRITERIA_KEY[x]] ?? ""])) as Record<Menu, string>,
   );
@@ -190,29 +190,34 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
         <p className="muted">
           日程調整で設定した週のメニューに合わせて、選手の「記録する → 筋トレ遂行率」に表示されます。メニューごとに書き分けられます。
         </p>
-        <div className="seg" style={{ margin: "10px 0 0" }}>
+        {/* 押したときだけ開く。開いているボタンをもう一度押すと閉じる */}
+        <div className="crit-btns">
           {MENUS.map((x) => (
-            <button key={x} className={cMenu === x ? "on" : ""} onClick={() => setCMenu(x)}>
-              {x}
-              <small style={{ display: "block", fontSize: 10, fontWeight: 400 }}>{MENU_TIMES[x]}</small>
+            <button key={x} className={cMenu === x ? "on" : ""} onClick={() => setCMenu(cMenu === x ? null : x)} aria-expanded={cMenu === x}>
+              {x}の評価基準
+              <small>{MENU_TIMES[x]}{criteria[x] ? "" : "・未入力"}</small>
             </button>
           ))}
         </div>
-        <textarea
-          className="t"
-          rows={8}
-          value={criteria[cMenu]}
-          onChange={(e) => setCriteria((cur) => ({ ...cur, [cMenu]: e.target.value }))}
-          placeholder={`${cMenu}（${MENU_TIMES[cMenu]}）の週の評価基準`}
-          style={{ marginTop: 10, lineHeight: 1.7 }}
-        />
-        <button
-          className="btn navy"
-          disabled={busy}
-          onClick={() => run(() => saveSetting(CRITERIA_KEY[cMenu], criteria[cMenu]), `${cMenu} の評価基準を保存しました`)}
-        >
-          {busy ? "処理中…" : `${cMenu} の評価基準を保存する`}
-        </button>
+        {cMenu && (
+          <>
+            <textarea
+              className="t"
+              rows={8}
+              value={criteria[cMenu]}
+              onChange={(e) => setCriteria((cur) => ({ ...cur, [cMenu]: e.target.value }))}
+              placeholder={`${cMenu}（${MENU_TIMES[cMenu]}）の週の評価基準`}
+              style={{ marginTop: 10, lineHeight: 1.7 }}
+            />
+            <button
+              className="btn navy"
+              disabled={busy}
+              onClick={() => run(() => saveSetting(CRITERIA_KEY[cMenu], criteria[cMenu]), `${cMenu} の評価基準を保存しました`)}
+            >
+              {busy ? "処理中…" : `${cMenu} の評価基準を保存する`}
+            </button>
+          </>
+        )}
       </div>
 
       {dialog?.type === "edit" && (

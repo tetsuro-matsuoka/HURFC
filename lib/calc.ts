@@ -279,7 +279,10 @@ export function weekStart(d: string) {
   const day = new Date(d + "T00:00:00").getDay(); // 0=日
   return addDays(d, -((day + 6) % 7));
 }
-export const weekLabel = (ws: string) => `${md(ws)}〜${md(addDays(ws, 6))}`;
+// 週の表記（月曜〜日曜）：「11月16日〜11月22日」/ 狭い場所用「11/16〜11/22」
+const mdJ = (s: string) => `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}日`;
+export const weekLabel = (ws: string) => `${mdJ(ws)}〜${mdJ(addDays(ws, 6))}`;
+export const weekShort = (ws: string) => `${md(ws)}〜${md(addDays(ws, 6))}`;
 // 直近 n 週の月曜日（古い順）
 export const recentWeeks = (n: number) => {
   const cur = weekStart(today());
