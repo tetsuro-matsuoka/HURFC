@@ -283,6 +283,15 @@ export function weekStart(d: string) {
 const mdJ = (s: string) => `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}日`;
 export const weekLabel = (ws: string) => `${mdJ(ws)}〜${mdJ(addDays(ws, 6))}`;
 export const weekShort = (ws: string) => `${md(ws)}〜${md(addDays(ws, 6))}`;
+// サマリーに出す週：直近で終わった週（前週の月曜〜日曜）。
+// 前週の記録がないときは、記録がある一番新しい週（今週も含む）。記録が1件もなければ前週（— を表示）
+export function summaryWeek(training: Record<string, number>, d = today()) {
+  const prev = addDays(weekStart(d), -7);
+  if (training[prev] != null) return prev;
+  const cur = weekStart(d);
+  const done = Object.keys(training).filter((w) => w <= cur && training[w] != null).sort();
+  return done.length ? done[done.length - 1] : prev;
+}
 // 直近 n 週の月曜日（古い順）
 export const recentWeeks = (n: number) => {
   const cur = weekStart(today());
