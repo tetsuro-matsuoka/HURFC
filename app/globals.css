@@ -460,3 +460,6 @@ svg.chart{touch-action:pan-y}
 .mine1 .v{font-size:32px;font-weight:700;line-height:1.15}
 .mine1 .v small{font-size:14px;color:var(--sub);margin-left:3px;font-weight:500}
 .mine1 .s{font-size:12px;color:var(--sub);min-height:16px}
+/* 測定履歴：その日時点のチーム内トップ記録 */
+.ph td.ph-top{background:#fff6dc;color:#7a5200;font-weight:700}
+.ph .crown{font-size:11px;margin-right:2px}
