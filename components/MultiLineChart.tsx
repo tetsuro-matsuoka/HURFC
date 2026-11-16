@@ -8,7 +8,8 @@ import { md, type Point } from "@/lib/calc";
 import { TipBox, useChartTip } from "./ChartTip";
 
 // dash：点線で描く（平均の基準線など）
-export type Series = { label: string; color: string; pts: Point[]; dash?: boolean };
+// dots：すべての記録の点に丸を付ける（自分の推移など）
+export type Series = { label: string; color: string; pts: Point[]; dash?: boolean; dots?: boolean };
 
 // minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
 // unit：吹き出しの単位 / note：吹き出しで1本目の線（自分）に添える文（例：「練習後」）
@@ -139,7 +140,9 @@ function Chart({
               strokeLinejoin="round"
               strokeLinecap="round"
             />
-            {!s.dash && <circle cx={X(end.d)} cy={Y(end.v)} r={3.5} fill={s.color} />}
+            {s.dots
+              ? s.pts.map((p) => <circle key={p.d} cx={X(p.d)} cy={Y(p.v)} r={3.5} fill={s.color} />)
+              : !s.dash && <circle cx={X(end.d)} cy={Y(end.v)} r={3.5} fill={s.color} />}
           </g>
         );
       })}
