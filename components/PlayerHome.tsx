@@ -71,7 +71,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 
   // ボタンに出す概要
   const monthRate = monthAttendance(m, ymOf(t), ctx.practice).rate;
-  const streak = attendStreak(m, ctx.practice);
+  const totalRate = attendStats(m, ctx.practice, "0000-01-01", t).rate; // トータル（全期間）
   const weekScore = m.training[weekStart(t)];
   const lw = latestWeight(m),
     w30 = weightAgo(m, 30);
@@ -80,7 +80,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
   const total = maxes(m).total;
 
   const menus: [Panel, string, string][] = [
-    ["attend", "出欠席率", `今月 ${monthRate == null ? "—" : Math.round(monthRate) + "%"}${streak ? `・連続${streak}回出席中` : ""}`],
+    ["attend", "出欠席率", `今月 ${monthRate == null ? "—" : Math.round(monthRate) + "%"}・トータル ${totalRate == null ? "—" : Math.round(totalRate) + "%"}`],
     ["training", "筋トレ遂行率", `${weekShort(weekStart(t))} ${weekScore == null ? "未入力" : `${fmt1(weekScore)} / 10`}`],
     ["body", "体組成", lw ? `${fmt1(lw.v)}kg${w30 ? `（30日前比 ${signed(lw.v - w30.v)}kg）` : ""}` : "体重 未入力"],
     ["physical", "フィジカル", total ? `Big3 ${fmt0(total)}kg${pos >= 0 ? `（${pos + 1}位）` : ""}` : "Big3 未測定"],
@@ -180,27 +180,33 @@ function AttendDetail({ ctx }: { ctx: Ctx }) {
   const days = attendTargets(m, ctx.practice, ym + "-01", ym + "-31").reverse();
   const streak = attendStreak(m, ctx.practice);
   const pct = (v: number | null) => (v == null ? "—" : Math.round(v) + "%");
+  // 一番上：今月とトータル（最初の練習日から今日まで）の2列
+  const now = monthAttendance(m, ymOf(today()), ctx.practice);
+  const total = attendStats(m, ctx.practice, "0000-01-01", today());
   return (
     <div className="card">
-      <MonthBar ym={ym} setYm={setYm} />
-      <div className="sumrow">
-        <div style={{ background: "var(--ok-soft)", color: "var(--ok)" }}>
-          <div className="v num">{pct(st.rate)}</div>
-          <div className="l">出席率</div>
-        </div>
-        <div style={{ background: "var(--bg)", color: "var(--ink)" }}>
-          <div className="v num">
-            {st.yes}/{st.days}
+      <div className="att2">
+        {(
+          [
+            ["今月", now],
+            ["トータル", total],
+          ] as const
+        ).map(([l, x]) => (
+          <div key={l}>
+            <div className="l">{l}</div>
+            <div className="v num">{x.days ? pct(x.rate) : "—"}</div>
+            <div className="s num">
+              {x.yes} / {x.days}回
+            </div>
           </div>
-          <div className="l">出席 / 練習日</div>
-        </div>
-        <div style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-          <div className="v num">{streak}</div>
-          <div className="l">連続出席</div>
-        </div>
+        ))}
       </div>
+      {streak > 0 && <p className="muted" style={{ margin: "-4px 0 10px", fontSize: 12 }}>連続 {streak}回出席中</p>}
+
+      {/* 月ごとの振り返り */}
+      <MonthBar ym={ym} setYm={setYm} />
       <p className="muted" style={{ marginBottom: 8 }}>
-        欠席 {st.no}回 ・ 未入力 {st.none}回
+        出席率 <b style={{ color: "var(--ok)" }}>{pct(st.rate)}</b> ・ 出席 {st.yes}/{st.days}回 ・ 欠席 {st.no}回 ・ 未入力 {st.none}回
       </p>
       <TeamCompare ctx={ctx} ym={ym} />
       {days.length ? (
