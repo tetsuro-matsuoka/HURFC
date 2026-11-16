@@ -463,3 +463,10 @@ svg.chart{touch-action:pan-y}
 /* 測定履歴：その日時点のチーム内トップ記録 */
 .ph td.ph-top{background:#fff6dc;color:#7a5200;font-weight:700}
 .ph .crown{font-size:11px;margin-right:2px}
+
+/* 選手ホーム『出欠席率』：今月とトータルの2列（緑） */
+.att2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.att2>div{background:var(--ok-soft);color:var(--ok);border-radius:12px;padding:10px 12px}
+.att2 .l{font-size:12px;font-weight:700}
+.att2 .v{font-size:30px;font-weight:700;line-height:1.15}
+.att2 .s{font-size:12px;color:var(--sub)}
