@@ -483,6 +483,26 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
       {chart.length >= 2 && (
         <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} fmt={!ratio && isMinSec(def) ? fmtMinSec : undefined} />
       )}
+      {/* 選んだ種目の測定履歴（新しい日が上。自己ベストに★） */}
+      {chart.length > 0 && (
+        <details className="hist">
+          <summary>測定履歴（{chart.length}回）</summary>
+          <table className="tbl">
+            <tbody>
+              {[...chart].reverse().map((pt) => (
+                <tr key={pt.d}>
+                  <td>{md(pt.d)}</td>
+                  <td className="r num">
+                    {pt.v === bestV && <span className="star">★</span>}
+                    {f(pt.v)}
+                    {u && <small className="muted"> {u}</small>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
       </div>
 
       {/* 下段：選んだ種目のチームランキング */}
