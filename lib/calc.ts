@@ -358,6 +358,14 @@ export function trainingAvg(m: Member, n = 4): number | null {
     .filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
+// 筋トレ遂行率のトータル（0〜10）：終わった週（前週まで）すべての平均。進行中の今週は入れない
+export function trainingTotal(m: Member): number | null {
+  const cur = weekStart(today());
+  const v = Object.entries(m.training)
+    .filter(([w]) => w < cur)
+    .map(([, s]) => s);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
 // 筋トレ遂行率（0〜10）：週の月曜日が from 以降の週の点数の平均（入力のある週だけ）。from 省略で全期間
 export function trainingRate(m: Member, from?: string): number | null {
   const v = Object.entries(m.training)
