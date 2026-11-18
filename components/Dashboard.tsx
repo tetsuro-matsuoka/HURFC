@@ -192,7 +192,8 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             この日は練習日ではありません（オフ）。出欠席率の計算には含めません。
           </p>
         )}
-        <div className="sumrow">
+        {/* 出席・欠席・未入力・出席率の4つを同じ大きさで横並び。出席率＝その日の出席人数 ÷ その日の対象選手数 */}
+        <div className="sumrow sumrow4">
           <div style={{ background: "var(--ok-soft)", color: "var(--ok)" }}>
             <div className="v num">{yes}</div>
             <div className="l">出席</div>
@@ -204,6 +205,13 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           <div style={{ background: "var(--bg)", color: "var(--sub)" }}>
             <div className="v num">{kind === "off" ? "—" : none}</div>
             <div className="l">未入力</div>
+          </div>
+          <div className="rate">
+            <div className="v num">
+              {kind === "off" || !rows.length ? "—" : Math.round((yes / rows.length) * 100)}
+              {kind !== "off" && rows.length > 0 && <small>%</small>}
+            </div>
+            <div className="l">出席率</div>
           </div>
         </div>
         {rows.length ? (
