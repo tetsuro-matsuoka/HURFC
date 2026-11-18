@@ -20,9 +20,10 @@ type Props = {
   unit?: string;
   note?: (d: string) => string;
   fmt?: (v: number) => string; // 目盛り・吹き出しの数値の表示（タイム種目は 4:50 の形など）
+  onPick?: (d: string) => void; // 点をタップ（クリック）したとき
 };
 
-export default function LineChart({ pts, h = 170, color = "var(--accent)", label = true, width, minRange = 2, digits = 1, unit = "", note, fmt }: Props) {
+export default function LineChart({ pts, h = 170, color = "var(--accent)", label = true, width, minRange = 2, digits = 1, unit = "", note, fmt, onPick }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const tip = useChartTip(ref); // タップ／マウスで吹き出し（小さなグラフ label=false では使わない）
   const [w, setW] = useState(width ?? 600);
@@ -108,7 +109,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
           </g>
         )}
         {/* 透明な判定エリア（グラフ全体。縦の列のどこを触っても、その日付が選ばれる） */}
-        {label && <rect x={L} y={0} width={Math.max(0, w - L - R)} height={h} fill="transparent" style={{ cursor: "pointer" }} {...tip.handlers(w, pts.map((p) => p.d), X)} />}
+        {label && <rect x={L} y={0} width={Math.max(0, w - L - R)} height={h} fill="transparent" style={{ cursor: "pointer" }} {...tip.handlers(w, pts.map((p) => p.d), X, onPick)} />}
       </svg>
       {act && (
         <TipBox x={X(act.d)} w={w}>

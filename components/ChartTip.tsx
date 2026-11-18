@@ -22,7 +22,7 @@ export function useChartTip(ref: RefObject<HTMLElement | null>) {
   // 触った位置から、いちばん近い日付を選ぶ
   const pick = (e: PointerEvent<SVGRectElement>, w: number, dates: string[], X: (d: string) => number) => {
     const svg = e.currentTarget.ownerSVGElement;
-    if (!svg || !dates.length) return;
+    if (!svg || !dates.length) return null;
     const rect = svg.getBoundingClientRect();
     const x = ((e.clientX - rect.left) * w) / rect.width;
     let best = dates[0];
@@ -30,11 +30,16 @@ export function useChartTip(ref: RefObject<HTMLElement | null>) {
       if (Math.abs(X(d) - x) < Math.abs(X(best) - x)) best = d;
     });
     setActive(best);
+    return best;
   };
 
   // グラフ全体に重ねる透明な判定エリアに付けるイベント
-  const handlers = (w: number, dates: string[], X: (d: string) => number) => ({
-    onPointerDown: (e: PointerEvent<SVGRectElement>) => pick(e, w, dates, X),
+  // onPick：タップ（クリック）で選んだ日付を知らせる（例：その週の評価基準を開く）
+  const handlers = (w: number, dates: string[], X: (d: string) => number, onPick?: (d: string) => void) => ({
+    onPointerDown: (e: PointerEvent<SVGRectElement>) => {
+      const d = pick(e, w, dates, X);
+      if (d && onPick) onPick(d);
+    },
     onPointerMove: (e: PointerEvent<SVGRectElement>) => e.pointerType === "mouse" && pick(e, w, dates, X),
     onPointerLeave: (e: PointerEvent<SVGRectElement>) => e.pointerType === "mouse" && setActive(null),
   });
