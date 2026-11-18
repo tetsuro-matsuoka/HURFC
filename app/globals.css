@@ -592,3 +592,7 @@ svg.chart{touch-action:pan-y}
 .trank li.click{cursor:pointer}
 .trank .tv small{font-size:.6em;font-weight:600;color:var(--sub)}
 .trank .tv .rk-ratio{font-size:11px}
+/* 項目設定：スプリントモメンタムの計算に使う距離 */
+.mom-dist{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;font-size:12px;font-weight:700;color:var(--sub)}
+.mom-dist .seg{margin:0;width:auto}
+.mom-dist .seg button{padding:4px 14px;font-size:13px}

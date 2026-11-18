@@ -2,7 +2,7 @@
 
 import { supabase } from "./supabase";
 import type { AbsenceReason, Attendance, Category, DayType, Menu, WeekSetting, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
-import { isMinSec, isMomentum, makePractice, pickSprint, ymd } from "./calc";
+import { isMinSec, isMomentum, makePractice, momentumDist, pickSprint, ymd } from "./calc";
 
 function sb() {
   if (!supabase) throw new Error("Supabase の設定がありません");
@@ -208,7 +208,8 @@ export async function loadMeta(): Promise<Meta> {
     if (isMinSec(x)) x.better = "low"; // タイム種目（分:秒）は小さいほど上位
   });
   // スプリントモメンタムは、体重とスプリントタイムから自動計算（大きいほど上位）
-  const sprint = pickSprint(metrics);
+  //   計算に使う距離（10m / 30m）は項目設定で選んだもの（未設定は 30m）
+  const sprint = pickSprint(metrics, momentumDist(Object.fromEntries(settings.map((x) => [x.key, x.value]))));
   metrics.forEach((x) => {
     if (isMomentum(x) && sprint) {
       x.derived = sprint;
