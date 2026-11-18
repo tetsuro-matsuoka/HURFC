@@ -9,7 +9,7 @@ import { useMemo, useState } from "react";
 import LineChart from "./LineChart";
 import MultiLineChart, { type Series } from "./MultiLineChart";
 import { MonthBar, avg, valueAsOf } from "./GroupStats";
-import type { Ctx } from "./Shared";
+import { TeamRanking, type Ctx } from "./Shared";
 import {
   LIFTS,
   addDays,
@@ -570,7 +570,7 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
         <TeamRanking
           ctx={ctx}
           rows={rows}
-          fmtV={(v) => (ratio ? `${fmtRatio(v)}倍` : `${fmtMetric(def, v)}${u}`)}
+          fmtV={(r) => (ratio ? `${fmtRatio(r.v)}倍` : `${fmtMetric(def, r.v)}${u}`)}
         />
       </div>
 
@@ -578,29 +578,6 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
       </>
       )}
     </>
-  );
-}
-
-// チームランキング一覧：1位・2位・3位は文字を段階的に大きく太く、4位以下は同じ大きさ。自分の行は色付き＋「あなた」
-function TeamRanking({ ctx, rows, fmtV }: { ctx: Ctx; rows: RankRow[]; fmtV: (v: number) => string }) {
-  if (!rows.length) return <div className="empty">まだ記録がありません</div>;
-  return (
-    <ol className="trank">
-      {rows.map((r, i) => {
-        const tier = i < 3 ? `t${i + 1}` : "tn";
-        const me = r.id === ctx.me.id;
-        return (
-          <li key={r.id} className={`${tier} ${me ? "me" : ""}`}>
-            <span className="tp num">{i === 0 ? "👑" : i + 1}</span>
-            <span className="tn-name">
-              {r.name}
-              {me && <em className="you">あなた</em>}
-            </span>
-            <span className="tv num">{fmtV(r.v)}</span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 

@@ -52,35 +52,6 @@ export type Ctx = {
   go: (v: View) => void;
 };
 
-// ランキングの行（『フィジカル』画面でも使用）
-export function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode; low?: boolean }) {
-  if (!rows.length) return <div className="empty">測定データがありません</div>;
-  const top = rows[0].v;
-  const coach = ctx.me.role === "coach";
-  return (
-    <>
-      {rows.map((r, i) => (
-        <div
-          key={r.id}
-          className={`rk ${r.id === ctx.me.id ? "me" : ""}`}
-          style={coach ? { cursor: "pointer" } : undefined}
-          onClick={coach ? () => ctx.openPlayer(r.id) : undefined}
-        >
-          <div className={`pos ${i < 3 ? "p" + (i + 1) : ""}`}>{i + 1}</div>
-          <div className="nm">
-            <b>{r.name}</b>
-            <div className="bar">
-              {/* 小さいほど良い項目は、1位を100%として逆比で表示 */}
-              <i style={{ width: `${(Math.min(1, low ? top / r.v : r.v / top) * 100).toFixed(1)}%` }} />
-            </div>
-          </div>
-          <div className="v num">{fmtV(r)}</div>
-        </div>
-      ))}
-    </>
-  );
-}
-
 // 選手の詳細（コーチが選手をタップしたときに表示）
 // 色は選手画面と同じ：出席率＝緑、体組成（体重）＝青、フィジカル＝赤、筋トレ遂行率＝黄土
 // フィジカルは選手画面と同じ部品（種目プルダウン・自己ベスト/最新値・推移）を、この選手の記録で表示
@@ -228,6 +199,32 @@ function RangePill({ all, setAll, recent }: { all: boolean; setAll: (v: boolean)
 
 // テーマカラー（出欠＝緑・筋トレ＝黄土・体組成＝青・フィジカル＝赤）
 const THEME = { attend: "#1f8a5b", training: "#a96a00", body: "#2563a8", physical: "#e8432b" };
+
+// チームランキング一覧（選手画面・コーチ画面で共通）
+//  1位は王冠（👑）・金の枠で一番大きく、2位（銀）→ 3位（銅）→ 4位以下と段階的に小さく
+//  選手が見るときは自分の行を色付き＋「あなた」。コーチが見るときは行をタップでその選手の詳細
+export function TeamRanking({ ctx, rows, fmtV }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode }) {
+  if (!rows.length) return <div className="empty">まだ記録がありません</div>;
+  const coach = ctx.me.role === "coach";
+  return (
+    <ol className="trank">
+      {rows.map((r, i) => {
+        const tier = i < 3 ? `t${i + 1}` : "tn";
+        const me = !coach && r.id === ctx.me.id;
+        return (
+          <li key={r.id} className={`${tier} ${me ? "me" : ""} ${coach ? "click" : ""}`} onClick={coach ? () => ctx.openPlayer(r.id) : undefined}>
+            <span className="tp num">{i === 0 ? "👑" : i + 1}</span>
+            <span className="tn-name">
+              {r.name}
+              {me && <em className="you">あなた</em>}
+            </span>
+            <span className="tv num">{fmtV(r)}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 // 確認ダイアログ・入力ダイアログ用の外枠
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
