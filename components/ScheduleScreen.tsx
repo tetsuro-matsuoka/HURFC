@@ -66,10 +66,11 @@ export function ScheduleScreen({ ctx }: { ctx: Ctx }) {
           {cells.map((d, i) => {
             if (!d) return <div key={"e" + i} />;
             const k = dayType(d, ctx.practice);
+            // 今日のマスは「cal-today」（ホーム画面の「today」の見た目＝余白・下の空きが付かないよう別の名前）
             return (
               <button
                 key={d}
-                className={`cal-d ${k ? "on " + DAY_CLS[k] : ""} ${d === t ? "today" : ""} ${i % 7 === 0 ? "sun" : i % 7 === 6 ? "sat" : ""}`}
+                className={`cal-d ${k ? "on " + DAY_CLS[k] : ""} ${d === t ? "cal-today" : ""} ${i % 7 === 0 ? "sun" : i % 7 === 6 ? "sat" : ""}`}
                 onClick={() => ctx.togglePractice(d)}
                 aria-label={`${Number(d.slice(8))}日 ${k ?? "オフ"}`}
               >
