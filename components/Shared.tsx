@@ -16,6 +16,11 @@ import {
   recentWeeks,
   summaryWeek,
   weekShort,
+  weekLabel,
+  menuLabel,
+  MENU_TIMES,
+  CRITERIA_KEY,
+  DEFAULT_MENU,
   type RankRow,
   fmt1,
   latestWeight,
@@ -25,7 +30,7 @@ import {
   fmtMinSec,
   isMinSec,
 } from "@/lib/calc";
-import type { Category, Member, MetricDef, Members, Practice, WeekSetting } from "@/lib/types";
+import type { Category, Menu, Member, MetricDef, Members, Practice, WeekSetting } from "@/lib/types";
 
 export type View = "home" | "input" | "team" | "settings" | "manage" | "schedule";
 
@@ -86,6 +91,9 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
   const [wAll, setWAll] = useState(false);
   const [tAll, setTAll] = useState(false);
   const tWeeks = tAll ? Object.keys(m.training).sort() : weeks;
+  // 筋トレ遂行率のグラフでタップした週（下に評価基準のパネルを開く。null なら閉じている）
+  const [critWeek, setCritWeek] = useState<string | null>(null);
+  const menuOf = (w: string): Menu => ctx.weeks[w]?.menu ?? DEFAULT_MENU;
   const lw = latestWeight(m),
     r = attendRate(m, ctx.practice),
     r30 = attendRate(m, ctx.practice, 30);
@@ -171,7 +179,32 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
               h={120}
               color={THEME.training}
               unit="/ 10"
+              note={(w) => `メニュー ${menuLabel(menuOf(w))}`}
+              onPick={setCritWeek}
             />
+            {/* タップした週の評価基準（普段は隠す。× で閉じる） */}
+            {critWeek && (
+              <div className="crit-panel">
+                <div className="crit-hd">
+                  <b>{weekLabel(critWeek)}</b>
+                  <button className="x" onClick={() => setCritWeek(null)} aria-label="閉じる">
+                    ×
+                  </button>
+                </div>
+                <div className="crit-row">
+                  <span>対象メニュー</span>
+                  <b>
+                    {menuLabel(menuOf(critWeek))}（{MENU_TIMES[menuOf(critWeek)]}）
+                  </b>
+                </div>
+                <div className="crit-row">
+                  <span>この週の遂行率</span>
+                  <b className="num">{m.training[critWeek] == null ? "未入力" : `${fmt1(m.training[critWeek])} / 10`}</b>
+                </div>
+                <div className="crit-l">評価基準（{menuOf(critWeek)}）</div>
+                <p className="crit-text">{ctx.settings[CRITERIA_KEY[menuOf(critWeek)]] || "まだ設定されていません（「項目設定」から入力できます）"}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
