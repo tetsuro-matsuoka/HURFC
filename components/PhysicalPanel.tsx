@@ -4,14 +4,14 @@
 //  1. 最上部のカード：種目のプルダウン（体重比が ON の項目は「〇〇体重比」も）＋「最新値 / 自己ベスト」→ 日付 →
 //     全体・FW・BK の平均カード（基準日時点の平均、7日・30日前比、人数）を1枚にまとめて表示
 //  3. 全体・FW・BK の推移グラフ（30日 / 90日 / 全期間）
-//  4. 選手別ランキング（選んだ種目・基準。体重比が ON なら併記）と、自己ベスト一覧
+//  4. 選手別ランキング（選手画面と同じ見た目：1位👑・2位銀・3位銅で段階的に大きく。体重比が ON なら併記）と、自己ベスト一覧
 //
 // 体重比＝値 ÷ その記録の日の体重（その日の体重がなければ、それより前の最新。それも無ければ最新）
 
 import { Fragment, useMemo, useState } from "react";
 import MultiLineChart from "./MultiLineChart";
 import { DateBar, GroupCards, PeriodSeg, avg, groupTrend, splitGroups, type GroupKey, type Period } from "./GroupStats";
-import { RankRows, type Ctx } from "./Shared";
+import { TeamRanking, type Ctx } from "./Shared";
 import { LIFTS, fmtRatio, md, metricBest, metricRatio, metricSeries, metricsOf, phys, today, unitOf, weights, type Point, type RankRow, fmtMetric, fmtMinSec, isMinSec } from "@/lib/calc";
 import type { LiftKey, Member, MetricDef } from "@/lib/types";
 
@@ -171,7 +171,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         <h3>
           選手別ランキング <small>{label}・{md(d)}時点</small>
         </h3>
-        <RankRows ctx={ctx} rows={rows} fmtV={rankV} low={!ratio && def.better === "low"} />
+        <TeamRanking ctx={ctx} rows={rows} fmtV={rankV} />
       </div>
 
       <BestTable ctx={ctx} ps={ps} defs={defs} />

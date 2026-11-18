@@ -588,3 +588,7 @@ svg.chart{touch-action:pan-y}
 .sumrow4 .rate{background:#ecfdf5;color:#059669;border-color:#6ee7b7}
 .sumrow4 .v small{font-size:14px;margin-left:1px}
 @media(max-width:480px){.sumrow4 .v{font-size:24px}.sumrow4 .v small{font-size:11px}.sumrow4 .l{font-size:11px}}
+/* ランキング（コーチ画面）：行をタップで選手の詳細。単位・体重比は小さく */
+.trank li.click{cursor:pointer}
+.trank .tv small{font-size:.6em;font-weight:600;color:var(--sub)}
+.trank .tv .rk-ratio{font-size:11px}
