@@ -76,6 +76,7 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
   const all = playersOf(ctx.members);
   const cols = buildCols(ctx);
   // 並び替え：列の見出しをタップするたびに 大きい順 → 小さい順 → 元の順。記録なし（—）は常に一番下
+  //   見出しに矢印は出さない（並び替え中の列は見出しの文字に下線）
   const [sort, setSort] = useState<{ key: string; dir: "desc" | "asc" } | null>(null);
   const sortCol = sort ? cols.find((c) => c.key === sort.key) : undefined;
   const filteredRows = applyFilter(all, filter);
@@ -192,7 +193,6 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 >
                   {c.label}
                   {c.unit && <small>({c.unit})</small>}
-                  <i className="sort-mark">{sort?.key === c.key ? (sort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
                 </th>
               ))}
             </tr>

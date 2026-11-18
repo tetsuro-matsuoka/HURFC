@@ -210,7 +210,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
   .pt thead tr:first-child th{font-size:11px}
   .pt thead tr:nth-child(2) th{top:27px}
   .pt .s1{min-width:70px;max-width:70px}
-  .pt th small{display:block;margin-left:0}
+  .pt th small{margin-left:1px}
 }
 /* カテゴリごとの色 */
 .pt .g-basic{background:#e8eaee}
@@ -611,5 +611,7 @@ svg.chart{touch-action:pan-y}
 .tbl tr.crit-tr td{padding:0 0 8px;border-bottom:none}
 /* 選手一覧：列の見出しをタップで並び替え */
 .pt th.sortable{cursor:pointer;user-select:none}
-.pt th .sort-mark{font-style:normal;font-size:9px;margin-left:2px;color:var(--sub);opacity:.6}
-.pt th.sorted .sort-mark{opacity:1;color:var(--accent)}
+/* 見出しは矢印なし・1行（単位も同じ行）。並び替え中の列だけ下線 */
+.pt thead tr:nth-child(2) th{white-space:nowrap;padding-top:8px;padding-bottom:8px;vertical-align:middle;line-height:1.3}
+.pt th.sorted{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
+@media(max-width:600px){.pt thead tr:nth-child(2) th{padding-top:6px;padding-bottom:6px}}
