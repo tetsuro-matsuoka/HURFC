@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { configOk, supabase } from "@/lib/supabase";
 import { adminCall, loadAll, loadMeta, saveWeekSetting, setPracticeDay, type Meta } from "@/lib/data";
-import { EMPTY_PRACTICE, makePractice } from "@/lib/calc";
-import type { Category, Members, WeekSetting } from "@/lib/types";
+import { DAY_TYPES, EMPTY_PRACTICE, dayType, makePractice } from "@/lib/calc";
+import type { Category, DayType, Members, WeekSetting } from "@/lib/types";
 import Login from "./Login";
 import { PlayerModal, type Ctx, type View } from "./Shared";
 import { InputScreen } from "./PlayerScreens";
@@ -184,18 +184,30 @@ export default function App() {
     window.scrollTo(0, 0);
   };
   // 練習日の ON / OFF（タップした瞬間に画面へ反映し、裏で保存。失敗したら元に戻す）
+  //   タップするたびに オフ → 練習 → 試合 → 合同練習 → オフ の順に切り替わる
   const togglePractice = async (d: string) => {
     const before = meta.practice;
-    const on = !before.days.has(d);
-    const next = new Set(before.days);
-    if (on) next.add(d);
-    else next.delete(d);
-    setMeta((cur) => ({ ...cur, practice: makePractice([...next], cur.practice.weekDays) }));
+    const cur = dayType(d, before);
+    const kind: DayType | null = cur == null ? DAY_TYPES[0] : DAY_TYPES[DAY_TYPES.indexOf(cur) + 1] ?? null;
+    const days = new Set(before.days);
+    const kinds = new Map(before.kinds);
+    if (kind) {
+      days.add(d);
+      kinds.set(d, kind);
+    } else {
+      days.delete(d);
+      kinds.delete(d);
+    }
+    setMeta((c) => ({ ...c, practice: makePractice([...days], c.practice.weekDays, kinds) }));
     try {
-      await setPracticeDay(d, on);
+      await setPracticeDay(d, kind);
     } catch {
-      setMeta((cur) => ({ ...cur, practice: before }));
-      toast("保存できませんでした。データベースの更新（追加SQL その4）が済んでいるか確認してください");
+      setMeta((c) => ({ ...c, practice: before }));
+      toast(
+        kind === "試合" || kind === "合同練習"
+          ? "保存できませんでした。データベースの更新（追加SQL その10：活動の種類）が済んでいるか確認してください"
+          : "保存できませんでした。データベースの更新（追加SQL その4）が済んでいるか確認してください",
+      );
     }
   };
   // 選手のカテゴリー変更（押した瞬間に画面へ反映し、裏で保存。失敗したら元に戻す）

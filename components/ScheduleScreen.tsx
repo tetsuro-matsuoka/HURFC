@@ -1,15 +1,17 @@
 "use client";
 
 // 日程調整（コーチ用）
-//  月間カレンダーの日付をタップするだけで「練習日 ON / OFF」が切り替わり、自動で保存される。
+//  月間カレンダーの日付をタップするたびに「オフ → 練習 → 試合 → 合同練習 → オフ」と切り替わり、自動で保存される。
 //  ここで設定した練習日をもとに、出欠席率（練習日の出席日数÷練習日数）を計算する。
 //  上の「週の設定」では、週ごとの筋トレメニュー（A〜B / A〜C / A〜D）をワンタップで設定する。
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { DEFAULT_MENU, MENUS, addDays, addMonths, practiceCount, today, weekLabel, weekStart, ymLabel, ymOf } from "@/lib/calc";
-import type { Menu } from "@/lib/types";
+import { DAY_TYPES, DEFAULT_MENU, MENUS, dayType, addDays, addMonths, practiceCount, today, weekLabel, weekStart, ymLabel, ymOf } from "@/lib/calc";
+import type { DayType, Menu } from "@/lib/types";
 
+// カレンダーの色：練習＝緑、試合＝赤、合同練習＝青
+const DAY_CLS: Record<DayType, string> = { 練習: "t-practice", 試合: "t-game", 合同練習: "t-joint" };
 const pad = (n: number) => String(n).padStart(2, "0");
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -26,6 +28,8 @@ export function ScheduleScreen({ ctx }: { ctx: Ctx }) {
   while (cells.length % 7) cells.push(null);
 
   const count = practiceCount(ctx.practice, ym);
+  // 種類ごとの日数（練習・試合・合同練習）
+  const byType = DAY_TYPES.map((k) => [k, [...ctx.practice.days].filter((d) => d.startsWith(ym) && dayType(d, ctx.practice) === k).length] as const);
 
   return (
     <>
@@ -43,7 +47,14 @@ export function ScheduleScreen({ ctx }: { ctx: Ctx }) {
         </div>
 
         <div className="pcount">
-          今月の設定練習日数：<b className="num">{count}</b>日
+          今月の活動日数：<b className="num">{count}</b>日
+          <div className="pcount-sub">
+            {byType.map(([k, n]) => (
+              <span key={k} className={DAY_CLS[k]}>
+                {k} {n}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="cal">
@@ -52,33 +63,32 @@ export function ScheduleScreen({ ctx }: { ctx: Ctx }) {
               {w}
             </div>
           ))}
-          {cells.map((d, i) =>
-            d ? (
+          {cells.map((d, i) => {
+            if (!d) return <div key={"e" + i} />;
+            const k = dayType(d, ctx.practice);
+            return (
               <button
                 key={d}
-                className={`cal-d ${ctx.practice.days.has(d) ? "on" : ""} ${d === t ? "today" : ""} ${i % 7 === 0 ? "sun" : i % 7 === 6 ? "sat" : ""}`}
+                className={`cal-d ${k ? "on " + DAY_CLS[k] : ""} ${d === t ? "today" : ""} ${i % 7 === 0 ? "sun" : i % 7 === 6 ? "sat" : ""}`}
                 onClick={() => ctx.togglePractice(d)}
-                aria-pressed={ctx.practice.days.has(d)}
-                aria-label={`${Number(d.slice(8))}日 ${ctx.practice.days.has(d) ? "練習日" : "練習日ではない"}`}
+                aria-label={`${Number(d.slice(8))}日 ${k ?? "オフ"}`}
               >
                 <span>{Number(d.slice(8))}</span>
-                {ctx.practice.days.has(d) && (
+                {k && (
                   <>
-                    <small>練習</small>
+                    <small>{k}</small>
                     <i className="dot" />
                   </>
                 )}
               </button>
-            ) : (
-              <div key={"e" + i} />
-            ),
-          )}
+            );
+          })}
         </div>
 
         <p className="muted" style={{ marginTop: 12, lineHeight: 1.7 }}>
-          日付をタップすると「練習日」の ON / OFF が切り替わり、自動で保存されます。
+          日付をタップするたびに「練習 → 試合 → 合同練習 → オフ」の順に切り替わり、自動で保存されます。練習・試合・合同練習の日はどれも出欠の対象日です。
           <br />
-          出欠席率は「練習日の出席日数 ÷ 練習日数」で計算します（今日より後の練習日はまだ数えません）。
+          出欠席率は「活動日の出席日数 ÷ 活動日数」で計算します（今日より後の練習日はまだ数えません）。
           練習日を1日も設定していない月は、今までどおり出欠を記録した日をもとに計算します。
         </p>
       </div>

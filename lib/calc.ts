@@ -1,6 +1,6 @@
 // 日付の扱い・集計（出席率、体重、Big3など）
 
-import type { AbsenceReason, Category, Menu, WeightTiming, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit } from "./types";
+import type { AbsenceReason, Category, Menu, WeightTiming, LiftKey, Member, MetricDef, Members, MetricKey, Position, Practice, Unit, DayType } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -113,8 +113,25 @@ export const playersOf = (members: Members) =>
 
 /* ---------- 練習日と出欠席率 ---------- */
 // weekDays：コーチが週ごとに設定した練習日数 { その週の月曜日: 日数 }
-export function makePractice(days: string[], weekDays: Map<string, number> = new Map()): Practice {
-  return { days: new Set(days), months: new Set(days.map((d) => d.slice(0, 7))), weekDays };
+// kinds：日付ごとの活動の種類（ない日は「練習」）
+export function makePractice(days: string[], weekDays: Map<string, number> = new Map(), kinds: Map<string, DayType> = new Map()): Practice {
+  return { days: new Set(days), months: new Set(days.map((d) => d.slice(0, 7))), weekDays, kinds };
+}
+// 活動の種類（日程調整でタップするたびに 練習 → 試合 → 合同練習 → オフ の順）
+export const DAY_TYPES: DayType[] = ["練習", "試合", "合同練習"];
+// その日の種類。設定していない日は null
+export const dayType = (d: string, p: Practice): DayType | null => (p.days.has(d) ? p.kinds.get(d) ?? "練習" : null);
+// 期間内の、種類ごとの欠席回数（全選手の合計）。from が null なら全期間
+export function absenceByType(players: Member[], p: Practice, from: string | null, to: string): Record<DayType, number> {
+  const c: Record<DayType, number> = { 練習: 0, 試合: 0, 合同練習: 0 };
+  players.forEach((m) =>
+    Object.entries(m.daily).forEach(([d, r]) => {
+      if ((from && d < from) || d > to || r.attendance !== "欠席") return;
+      const t = dayType(d, p);
+      if (t) c[t]++;
+    }),
+  );
+  return c;
 }
 export const EMPTY_PRACTICE: Practice = makePractice([]);
 

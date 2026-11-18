@@ -24,12 +24,15 @@ import {
   monthAttendance,
   absenceSummary,
   dayKind,
+  dayType,
   practiceCount,
   playersOf,
   recentWeeks,
   teamTrainingAvg,
   teamSummaryWeek,
   absenceCounts,
+  absenceByType,
+  DAY_TYPES,
   attendStats,
   today,
   trainingAvg,
@@ -42,7 +45,7 @@ import {
   ymLabel,
   ymOf,
 } from "@/lib/calc";
-import type { Member } from "@/lib/types";
+import type { DayType, Member, Practice } from "@/lib/types";
 
 type Panel = "attend" | "training" | "body" | "physical";
 
@@ -144,7 +147,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   if (held.length) {
     aYes = ps.reduce((a, m) => a + held.filter((x) => m.daily[x]?.attendance === "出席").length, 0);
     aDays = held.length * ps.length;
-    aNote = `出席 ${aYes} / 対象 ${aDays}回（練習${held.length}回 × ${ps.length}名）`;
+    aNote = `出席 ${aYes} / 対象 ${aDays}回（活動日${held.length}回 × ${ps.length}名）`;
   } else {
     const all = ps.map((m) => attendStats(m, ctx.practice, "0000-01-01", t));
     aYes = all.reduce((a, x) => a + x.yes, 0);
@@ -165,7 +168,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           </div>
           <div className="s">{aNote}</div>
         </div>
-        <AbsenceButton ps={ps} from={null} to={t} title="欠席理由統計（全期間）" empty="欠席記録はありません" />
+        <AbsenceButton ps={ps} practice={ctx.practice} from={null} to={t} title="欠席理由統計（全期間）" empty="欠席記録はありません" />
       </div>
     </div>
     {/* 2. 中段：当日の出欠状況 */}
@@ -182,7 +185,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           <span className="muted">
             {wd(d)}曜日{d === today() ? "（今日）" : ""}
           </span>
-          {kind !== "unset" && <span className={`daytag ${kind}`}>{kind === "practice" ? "練習日" : "オフ"}</span>}
+          {kind !== "unset" && <span className={`daytag ${kind}`}>{kind === "practice" ? `${dayType(d, ctx.practice)}日` : "オフ"}</span>}
         </div>
         {kind === "off" && (
           <p className="muted" style={{ marginBottom: 10 }}>
@@ -245,7 +248,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
               出席 {tYes} / 対象 {tDays}回
             </div>
           </div>
-          <AbsenceButton ps={ps} from={ym + "-01"} to={ym + "-31"} title={`欠席理由統計（${ymLabel(ym)}）`} empty="この月の欠席記録はありません" />
+          <AbsenceButton ps={ps} practice={ctx.practice} from={ym + "-01"} to={ym + "-31"} title={`欠席理由統計（${ymLabel(ym)}）`} empty="この月の欠席記録はありません" />
         </div>
         <p className="muted" style={{ marginBottom: 8 }}>
           {pCount
@@ -441,11 +444,15 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   );
 }
 
+// 活動の種類の色（練習＝緑、試合＝赤、合同練習＝青）
+const DAY_CLS: Record<DayType, string> = { 練習: "t-practice", 試合: "t-game", 合同練習: "t-joint" };
+
 /* ---------- 欠席理由統計ボタン：押すとモーダルで、理由ごとの回数と割合（多い順・棒グラフ付き） ----------
    トータル（全期間）と月別で同じボタン。from〜to の期間で集計（from が null なら全期間） */
-function AbsenceButton({ ps, from, to, title, empty }: { ps: Member[]; from: string | null; to: string; title: string; empty: string }) {
+function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[]; practice: Practice; from: string | null; to: string; title: string; empty: string }) {
   const [open, setOpen] = useState(false);
   const list = absenceCounts(ps, from, to);
+  const byType = absenceByType(ps, practice, from, to); // 練習・試合・合同練習ごとの欠席回数
   const total = list.reduce((a, x) => a + x.n, 0);
   const max = Math.max(1, ...list.map((x) => x.n));
   return (
@@ -463,6 +470,18 @@ function AbsenceButton({ ps, from, to, title, empty }: { ps: Member[]; from: str
               </button>
             </div>
             <div className="card">
+              {/* 上：活動の種類ごとの欠席合計（3列） */}
+              <div className="abs-types">
+                {DAY_TYPES.map((k) => (
+                  <div key={k} className={DAY_CLS[k]}>
+                    <div className="l">{k} 欠席</div>
+                    <div className="v num">
+                      {byType[k]}
+                      <small>回</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
               <div className="muted" style={{ marginBottom: 8 }}>
                 欠席 合計 <b className="num">{total}</b> 回
               </div>

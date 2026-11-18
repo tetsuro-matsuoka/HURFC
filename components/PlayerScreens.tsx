@@ -16,6 +16,7 @@ import {
   menuLabel,
   WEIGHT_TIMINGS,
   dayKind,
+  dayType,
   isLinked,
   metricBest,
   metricLatest,
@@ -201,7 +202,7 @@ function DailyForm({ ctx }: { ctx: Ctx }) {
       </div>
       {kind !== "unset" && (
         <div style={{ marginTop: 8 }}>
-          <span className={`daytag ${kind}`}>{kind === "practice" ? "この日は練習日です" : "この日はオフ（練習日ではありません）"}</span>
+          <span className={`daytag ${kind}`}>{kind === "practice" ? `${date === today() ? "今日" : "この日"}は${dayType(date, ctx.practice)}日です` : "この日はオフ（練習日ではありません）"}</span>
         </div>
       )}
     </div>

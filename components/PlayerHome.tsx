@@ -18,6 +18,7 @@ import {
   attendStreak,
   attendTargets,
   dayKind,
+  dayType,
   fmt0,
   fmt1,
   fmtRatio,
@@ -97,7 +98,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
         <div className="tx">
           {kind !== "unset" && (
             <span className={`daytag ${kind}`} style={{ marginBottom: 4, background: "#fff" }}>
-              {kind === "practice" ? "今日は練習日" : "今日はオフ"}
+              {kind === "practice" ? `今日は${dayType(t, ctx.practice)}日` : "今日はオフ"}
             </span>
           )}
           {rec ? (
