@@ -57,11 +57,12 @@ export const timingText = (r: { weight_timing?: WeightTiming | null } | undefine
 export const attendLabel = (r: { attendance: string | null; absence_reason?: string | null } | undefined) =>
   !r?.attendance ? null : r.attendance === "欠席" && r.absence_reason ? `欠席（${r.absence_reason}）` : r.attendance;
 // 期間内の欠席理由ごとの回数（全選手の合計）。多い順。from 省略で全期間
-export function absenceCounts(players: Member[], from: string | null, to: string): { reason: string; n: number }[] {
+// only：数える日を絞る（例：試合の日だけ）
+export function absenceCounts(players: Member[], from: string | null, to: string, only?: (d: string) => boolean): { reason: string; n: number }[] {
   const cnt = new Map<string, number>();
   players.forEach((m) =>
     Object.entries(m.daily).forEach(([d, r]) => {
-      if ((from && d < from) || d > to || r.attendance !== "欠席") return;
+      if ((from && d < from) || d > to || r.attendance !== "欠席" || (only && !only(d))) return;
       const k = r.absence_reason ?? "理由未入力";
       cnt.set(k, (cnt.get(k) ?? 0) + 1);
     }),
