@@ -597,3 +597,15 @@ svg.chart{touch-action:pan-y}
 /* ランキング：名前の横の小さな補足（OB の引退年度・ポジション） */
 .trank .tn-sub{font-size:11px;font-weight:500;color:var(--sub);margin-left:6px}
 .ob-btn{border-color:#7a5200 !important;color:#7a5200 !important}
+/* ランキング：スマホでも名前・「あなた」・数値が1行に収まるように
+   名前だけを省略（…）し、「あなた」と数値は縮めない。単位は数値より小さく */
+.trank .tn-name{display:flex;align-items:center;gap:0;flex:1;min-width:0;overflow:visible;text-overflow:clip}
+.trank .tn-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trank .you{flex-shrink:0;white-space:nowrap}
+.trank .tn-sub{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trank .tv{white-space:nowrap}
+.trank .tv small{font-size:11px;margin-left:2px}
+@media(max-width:400px){.trank li{gap:6px}.trank li.t1 .tv{font-size:22px}.trank li.t1 .tn-name{font-size:18px}}
+/* 筋トレ遂行率：選んだ週の行と、その下に開く詳細 */
+.tbl tr.sel td{background:#fffaf0}
+.tbl tr.crit-tr td{padding:0 0 8px;border-bottom:none}
