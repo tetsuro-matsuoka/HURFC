@@ -102,8 +102,6 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
     { key: "other", label: "その他平均", ms: ms.filter((m) => m.category !== "レギュラー") },
   ];
   const showCompare = filter.category == null && rows.some((m) => m.category != null);
-  // 各グループ（体組成・出欠席率・筋トレ遂行率・フィジカル）の最後の列：右に太めの縦線
-  const ge = (i: number) => (i === cols.length - 1 || cols[i + 1].group !== cols[i].group ? "ge" : "");
   const groups = (["body", "attend", "train", "phys"] as Group[]).map((g) => ({ g, n: cols.filter((c) => c.group === g).length }));
 
   // 全選手・全項目をCSVで保存（Excelで文字化けしないよう先頭にBOMを付ける）
@@ -170,11 +168,11 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
           <thead>
             <tr>
               <th className="g-basic s1">基本情報</th>
-              <th colSpan={4} className="g-basic ge" />
+              <th colSpan={4} className="g-basic" />
               {groups.map(
                 ({ g, n }) =>
                   n > 0 && (
-                    <th key={g} colSpan={n} className={`g-${g} gh ge`}>
+                    <th key={g} colSpan={n} className={`g-${g} gh`}>
                       {GROUP_LABEL[g]}
                     </th>
                   ),
@@ -185,11 +183,11 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               <th className="g-basic l">学年</th>
               <th className="g-basic l">ポジション</th>
               <th className="g-basic c">FW/BK</th>
-              <th className="g-basic c ge">カテゴリー</th>
-              {cols.map((c, i) => (
+              <th className="g-basic c">カテゴリー</th>
+              {cols.map((c) => (
                 <th
                   key={c.key}
-                  className={`g-${c.group} ${c.ratio ? "ratio" : ""} sortable ${sort?.key === c.key ? "sorted" : ""} ${ge(i)}`}
+                  className={`g-${c.group} ${c.ratio ? "ratio" : ""} sortable ${sort?.key === c.key ? "sorted" : ""}`}
                   onClick={() => tapSort(c.key)}
                   aria-sort={sort?.key === c.key ? (sort.dir === "desc" ? "descending" : "ascending") : "none"}
                 >
@@ -210,11 +208,11 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 <td className="c">
                   <UnitBadge m={m} />
                 </td>
-                <td className="c ge">
+                <td className="c">
                   <CategoryButton m={m} onChange={(c) => ctx.setCategory(m.id, c)} />
                 </td>
-                {cols.map((c, i) => (
-                  <td key={c.key} className={`num ${c.ratio ? "ratio" : ""} ${ge(i)}`}>
+                {cols.map((c) => (
+                  <td key={c.key} className={`num ${c.ratio ? "ratio" : ""}`}>
                     {c.fmt(c.get(m))}
                   </td>
                 ))}
@@ -230,11 +228,11 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                 <td className="l">—</td>
                 <td className="l">—</td>
                 <td className="c">—</td>
-                <td className="c ge">—</td>
-                {cols.map((c, i) => {
+                <td className="c">—</td>
+                {cols.map((c) => {
                   const v = average(rows, c);
                   return (
-                    <td key={c.key} className={`num ${ge(i)}`}>
+                    <td key={c.key} className={`num`}>
                       {v == null ? "—" : (c.avgFmt ?? fmt1)(v)}
                     </td>
                   );
@@ -246,13 +244,13 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
                     <td className="s1">
                       <b>{x.label}</b>
                     </td>
-                    <td className="l ge" colSpan={4}>
+                    <td className="l" colSpan={4}>
                       {x.ms.length}名{x.key === "other" ? "（ベンチ・ベンチ外・未設定）" : ""}
                     </td>
-                    {cols.map((c, i) => {
+                    {cols.map((c) => {
                       const v = average(x.ms, c);
                       return (
-                        <td key={c.key} className={`num ${ge(i)}`}>
+                        <td key={c.key} className={`num`}>
                           {v == null ? "—" : (c.avgFmt ?? fmt1)(v)}
                         </td>
                       );

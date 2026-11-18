@@ -341,10 +341,23 @@ export const recentWeeks = (n: number) => {
   return Array.from({ length: n }, (_, i) => addDays(cur, -7 * (n - 1 - i)));
 };
 // チーム全体のサマリー週：全選手の記録をまとめて summaryWeek と同じ決め方（コーチ画面用）
+//   チームの集計は「月曜〜日曜の週が終わって確定した週」だけ（進行中の今週は使わない。翌週の月曜日に反映）
 export function teamSummaryWeek(players: Member[], d = today()) {
+  const cur = weekStart(d);
   const all: Record<string, number> = {};
-  players.forEach((m) => Object.entries(m.training).forEach(([w, v]) => v != null && (all[w] = v)));
+  players.forEach((m) => Object.entries(m.training).forEach(([w, v]) => v != null && w < cur && (all[w] = v)));
   return summaryWeek(all, d);
+}
+// 確定した週（前週まで）のうち、チームの誰かが記録したいちばん古い週から前週までの月曜日（古い順）
+export function teamDoneWeeksAll(players: Member[]): string[] {
+  const prev = addDays(weekStart(today()), -7);
+  const first = players
+    .flatMap((m) => Object.keys(m.training))
+    .filter((w) => w <= prev)
+    .sort()[0];
+  const out: string[] = [];
+  if (first) for (let w = weekStart(first); w <= prev; w = addDays(w, 7)) out.push(w);
+  return out;
 }
 // 直近で終わった n 週（前週まで。進行中の今週は含めない）の月曜日（古い順）
 export const doneWeeks = (n: number) => {
@@ -374,9 +387,11 @@ export function trainingRate(m: Member, from?: string): number | null {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 // 月別の筋トレ遂行度：週の月曜日がその月に入る週の点数の平均（0〜10。入力のある週だけ）
-export function trainingMonthAvg(m: Member, ym: string): number | null {
+// doneOnly：確定した週（前週まで）だけで計算（コーチ画面のチーム集計用）
+export function trainingMonthAvg(m: Member, ym: string, doneOnly = false): number | null {
+  const cur = weekStart(today());
   const v = Object.entries(m.training)
-    .filter(([w]) => w.slice(0, 7) === ym)
+    .filter(([w]) => w.slice(0, 7) === ym && (!doneOnly || w < cur))
     .map(([, s]) => s);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
