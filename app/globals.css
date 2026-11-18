@@ -619,3 +619,10 @@ svg.chart{touch-action:pan-y}
 /* 選手一覧の縦線：グループは背景色で分かれているので、グループの境目も列の間もすべて同じ薄いグレーの線 */
 .pt th,.pt td{border-right:1px solid rgba(229,231,235,.7)}
 .pt th:last-child,.pt td:last-child{border-right:none}
+/* 横にスライドする表（自己ベスト一覧・OBの自己ベスト一覧・体組成・週次推移・月別の出欠・測定履歴）にも、
+   選手一覧と同じ薄いグレーの縦線（1px）を見出しから最後の行まで。最後の列は線なし。左右の余白も選手一覧とそろえる */
+.scroll .tbl th,.scroll .tbl td,.ph th,.ph td{border-right:1px solid rgba(229,231,235,.7)}
+.scroll .tbl th:last-child,.scroll .tbl td:last-child,.ph th:last-child,.ph td:last-child{border-right:none}
+.scroll .tbl th,.scroll .tbl td{padding-left:10px;padding-right:10px}
+.ph .ph-d{border-right:1px solid rgba(229,231,235,.7)}
+@media(max-width:600px){.scroll .tbl th,.scroll .tbl td{padding-left:5px;padding-right:5px}}
