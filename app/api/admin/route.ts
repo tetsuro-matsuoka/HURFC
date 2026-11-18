@@ -6,6 +6,7 @@
 // ・update  : 選手の名前・学年・ポジションの変更
 // ・reorder : 選手の並び順の変更
 // ・category: 選手のカテゴリー（レギュラー・ベンチ・ベンチ外・未設定）の変更
+// ・ob      : 選手を引退（OB）にする / 現役に戻す
 // ・delete  : メンバー削除（その人の記録も消えます）
 // 秘密鍵（SUPABASE_SECRET_KEY）はこのサーバー側でのみ使い、ブラウザには送りません。
 
@@ -26,6 +27,7 @@ type Body = {
   category?: string | null;
   position?: string | null;
   sample?: boolean;
+  ob?: boolean;
 };
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -173,6 +175,22 @@ export async function POST(req: Request) {
         throw new Error(
           error.message.includes("category")
             ? "カテゴリーを保存できません。データベースの更新（追加SQL その6）が済んでいるか確認してください"
+            : error.message,
+        );
+      }
+      return json({ ok: true });
+    }
+
+    if (body.action === "ob") {
+      if (!body.id) return fail("対象が指定されていません");
+      const ob = body.ob === true;
+      // 引退した日（日本時間の今日）。現役に戻すときは消す
+      const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+      const { error } = await admin.from("users").update({ is_ob: ob, retired_on: ob ? today : null }).eq("id", body.id).eq("role", "player");
+      if (error) {
+        throw new Error(
+          /is_ob|retired_on/.test(error.message)
+            ? "保存できません。データベースの更新（追加SQL その11：OB）が済んでいるか確認してください"
             : error.message,
         );
       }

@@ -32,7 +32,7 @@ import {
 } from "@/lib/calc";
 import type { Category, Menu, Member, MetricDef, Members, Practice, WeekSetting } from "@/lib/types";
 
-export type View = "home" | "input" | "team" | "settings" | "manage" | "schedule";
+export type View = "home" | "input" | "team" | "settings" | "manage" | "schedule" | "ob";
 
 // 画面どうしで受け渡す共通の情報
 export type Ctx = {
@@ -203,7 +203,8 @@ const THEME = { attend: "#1f8a5b", training: "#a96a00", body: "#2563a8", physica
 // チームランキング一覧（選手画面・コーチ画面で共通）
 //  1位は王冠（👑）・金の枠で一番大きく、2位（銀）→ 3位（銅）→ 4位以下と段階的に小さく
 //  選手が見るときは自分の行を色付き＋「あなた」。コーチが見るときは行をタップでその選手の詳細
-export function TeamRanking({ ctx, rows, fmtV }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode }) {
+// sub：名前の横に小さく添える情報（OB画面の引退年度・ポジションなど）
+export function TeamRanking({ ctx, rows, fmtV, sub }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode; sub?: (r: RankRow) => ReactNode }) {
   if (!rows.length) return <div className="empty">まだ記録がありません</div>;
   const coach = ctx.me.role === "coach";
   return (
@@ -217,6 +218,7 @@ export function TeamRanking({ ctx, rows, fmtV }: { ctx: Ctx; rows: RankRow[]; fm
             <span className="tn-name">
               {r.name}
               {me && <em className="you">あなた</em>}
+              {sub && <small className="tn-sub">{sub(r)}</small>}
             </span>
             <span className="tv num">{fmtV(r)}</span>
           </li>

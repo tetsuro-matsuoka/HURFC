@@ -11,7 +11,7 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
-import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf } from "@/lib/calc";
+import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf, obsOf, retiredYear } from "@/lib/calc";
 import { FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import { adminCall } from "@/lib/data";
 import type { Member, Position, Role } from "@/lib/types";
@@ -80,7 +80,8 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
   const [busy, setBusy] = useState(false);
 
   // 編集・削除の画面
-  const [dialog, setDialog] = useState<{ type: "edit" | "del"; id: string } | null>(null);
+  // ob：引退（OB）にする確認 / back：現役に戻す確認
+  const [dialog, setDialog] = useState<{ type: "edit" | "del" | "ob" | "back"; id: string } | null>(null);
   const [eName, setEName] = useState("");
   const [eGrade, setEGrade] = useState<number | null>(null);
   const [ePos, setEPos] = useState<Position | null>(null);
@@ -92,7 +93,8 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
   const coaches = Object.values(ctx.members)
     .filter((m) => m.role === "coach")
     .sort((a, b) => a.name.localeCompare(b.name, "ja"));
-  const basePlayers = playersOf(ctx.members);
+  const basePlayers = playersOf(ctx.members); // 現役だけ
+  const obs = obsOf(ctx.members);
   const players: Member[] = localIds
     ? [
         ...localIds.map((id) => ctx.members[id]).filter(Boolean),
@@ -257,6 +259,9 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
                   <button className="btn ghost small" onClick={() => openEdit(m)}>
                     編集
                   </button>
+                  <button className="btn ghost small ob-btn" onClick={() => setDialog({ type: "ob", id: m.id })}>
+                    引退
+                  </button>
                   <button
                     className="btn ghost small"
                     style={{ borderColor: "var(--ng)", color: "var(--ng)" }}
@@ -270,6 +275,40 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
           />
         ) : (
           <div className="empty">{players.length ? "該当する選手がいません" : "選手が登録されていません"}</div>
+        )}
+      </div>
+
+      {/* OB（引退した選手）：現役に戻す・削除ができる。記録は残り、「OB」タブで自己ベストを見られる */}
+      <div className="card">
+        <h3>
+          OB <small>{obs.length}名・引退した選手</small>
+        </h3>
+        {obs.length ? (
+          obs.map((m) => (
+            <div className="mrow" key={m.id}>
+              <div className="mn">
+                <b>{m.name}</b>
+                <div>
+                  <span className="chip none">{m.retired_on ? `${retiredYear(m.retired_on)}年度引退` : "引退"}</span>{" "}
+                  <span className="chip none">{m.position ?? "ポジション未設定"}</span>
+                </div>
+              </div>
+              <div className="ma">
+                <button className="btn ghost small" onClick={() => setDialog({ type: "back", id: m.id })}>
+                  現役に戻す
+                </button>
+                <button
+                  className="btn ghost small"
+                  style={{ borderColor: "var(--ng)", color: "var(--ng)" }}
+                  onClick={() => setDialog({ type: "del", id: m.id })}
+                >
+                  削除
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="empty">OBはいません（選手の「引退」を押すとここに移ります）</div>
         )}
       </div>
 
@@ -323,6 +362,30 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
               {busy ? "処理中…" : "保存する"}
             </button>
           </form>
+        </Sheet>
+      )}
+
+      {(dialog?.type === "ob" || dialog?.type === "back") && target && (
+        <Sheet title={dialog.type === "ob" ? "引退（OB）に移動" : "現役に戻す"} onClose={() => setDialog(null)}>
+          <p style={{ lineHeight: 1.8 }}>
+            {dialog.type === "ob"
+              ? `${target.name} 選手を引退（OB）に移動しますか？ 現役の選手一覧・出欠・ランキングから外れ、「OB」タブに表示されます。記録は消えません。`
+              : `${target.name} さんを現役に戻しますか？ 現役の選手一覧・出欠・ランキングに再び入ります。`}
+          </p>
+          <button
+            className="btn navy"
+            disabled={busy}
+            onClick={async () => {
+              const ob = dialog.type === "ob";
+              const ok = await run(() => adminCall("ob", { id: target.id, ob }), ob ? `${target.name} 選手をOBに移動しました` : `${target.name} さんを現役に戻しました`);
+              if (ok) setDialog(null);
+            }}
+          >
+            {busy ? "処理中…" : dialog.type === "ob" ? "引退（OB）にする" : "現役に戻す"}
+          </button>
+          <button className="btn ghost" onClick={() => setDialog(null)}>
+            やめる
+          </button>
         </Sheet>
       )}
 

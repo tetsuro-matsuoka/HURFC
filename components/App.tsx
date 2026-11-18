@@ -16,6 +16,7 @@ import { PlayerHome } from "./PlayerHome";
 import { TeamScreen } from "./Dashboard";
 import { ManageScreen } from "./ManageScreen";
 import { SettingsScreen } from "./SettingsScreen";
+import { OBScreen } from "./OBScreen";
 import { ScheduleScreen } from "./ScheduleScreen";
 
 const ICON = {
@@ -258,6 +259,7 @@ export default function App() {
         ["settings", "項目設定", ICON.gear],
         ["manage", "選手管理", ICON.users],
         ["schedule", "日程調整", ICON.calendar],
+        ["ob", "OB", ICON.trophy],
       ]
     : [
         ["home", "ホーム", ICON.home],
@@ -278,6 +280,8 @@ export default function App() {
         return <ScheduleScreen ctx={ctx} />;
       case "manage":
         return <ManageScreen ctx={ctx} />;
+      case "ob":
+        return <OBScreen ctx={ctx} />;
     }
   })();
 

@@ -33,6 +33,7 @@ import {
   monthAttendance,
   phys,
   playersOf,
+  allPlayersOf,
   ranking,
   trainingRate,
   teamTrainingAvg,
@@ -651,10 +652,11 @@ function PhysHistory({ ctx }: { ctx: Ctx }) {
 
   // 👑：その測定日までに記録されたチーム全員の全記録の中で1位（同率1位を含む）
   //  タイム系など「小さいほど良い」項目は最小、それ以外（重量・距離・モメンタムなど）は最大
+  //  OB も含めて判定する（引退した選手が抜けても、過去の👑が書き換わらないように）
   const team = new Map(
     defs.map((x) => [
       x.id,
-      playersOf(ctx.members)
+      allPlayersOf(ctx.members)
         .flatMap((p) => metricSeries(p, x))
         .sort((a, b) => (a.d < b.d ? -1 : 1)),
     ]),
