@@ -447,7 +447,8 @@ function BodyDetail({ ctx }: { ctx: Ctx }) {
 /* ---------- 詳細：フィジカル（プルダウンで種目を選ぶ・1画面に収める） ---------- */
 // 選択肢：項目設定のフィジカル項目。体重比が ON の項目は「〇〇体重比」も
 // 順位は自己ベスト（体重比は自己ベスト÷その日の体重）で、チーム内と自分の区分（FW/BK）内
-function PhysicalDetail({ ctx }: { ctx: Ctx }) {
+// topOnly：上のカード（種目選択・自己ベスト/最新値・自分の記録・順位・推移）だけ。コーチの選手詳細で使う
+export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: boolean }) {
   const m = ctx.me;
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
@@ -558,6 +559,8 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
       )}
       </div>
 
+      {!topOnly && (
+      <>
       {/* 下段：選んだ種目のチームランキング */}
       <div className="card">
         <h3>
@@ -571,6 +574,8 @@ function PhysicalDetail({ ctx }: { ctx: Ctx }) {
       </div>
 
       <PhysHistory ctx={ctx} />
+      </>
+      )}
     </>
   );
 }

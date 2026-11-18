@@ -3,14 +3,13 @@
 // 選手・コーチ共通で使う部品（ランキング、選手詳細、トースト通知）
 
 import LineChart from "./LineChart";
+import { PhysicalDetail } from "./PlayerHome";
 import type { ReactNode } from "react";
 import {
-  LIFTS,
   attendRate,
   isLinked,
+  metricsOf,
   unitOf,
-  fmtRatio,
-  weightAt,
   weightNote,
   timingText,
   metricSeries,
@@ -18,13 +17,9 @@ import {
   summaryWeek,
   weekShort,
   type RankRow,
-  fmt0,
   fmt1,
   latestWeight,
-  maxes,
   md,
-  phys,
-  rowTotal,
   weights,
   fmtMetric,
   fmtMinSec,
@@ -82,14 +77,18 @@ export function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; 
 }
 
 // 選手の詳細（コーチが選手をタップしたときに表示）
-export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metrics: MetricDef[]; practice: Practice; onClose: () => void }) {
+// 色は選手画面と同じ：出席率＝緑、体組成（体重）＝青、フィジカル＝赤、筋トレ遂行率＝黄土
+// フィジカルは選手画面と同じ部品（種目プルダウン・自己ベスト/最新値・推移）を、この選手の記録で表示
+export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose: () => void }) {
   const weeks = recentWeeks(8);
   const sw = summaryWeek(m.training);
-  const x = maxes(m),
-    p = phys(m),
-    lw = latestWeight(m),
-    r = attendRate(m, practice),
-    r30 = attendRate(m, practice, 30);
+  const lw = latestWeight(m),
+    r = attendRate(m, ctx.practice),
+    r30 = attendRate(m, ctx.practice, 30);
+  // この選手を「自分」として扱う ctx（フィジカルの部品をそのまま使うため）
+  const pctx: Ctx = { ...ctx, me: m };
+  // 体重以外の体組成の項目（体脂肪率など）
+  const bodyDefs = metricsOf(ctx.metrics, "体組成").filter((def) => !isLinked(def));
   return (
     <div className="modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet">
@@ -99,8 +98,8 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
             ×
           </button>
         </div>
-        <div className="kpis">
-          <div className="kpi">
+        <div className="kpis kpis3">
+          <div className="kpi c-attend">
             <div className="l">出席率</div>
             <div className="v num">
               {r == null ? "—" : Math.round(r)}
@@ -108,7 +107,7 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
             </div>
             <div className="s">直近30日 {r30 == null ? "—" : Math.round(r30) + "%"}</div>
           </div>
-          <div className="kpi">
+          <div className="kpi c-body">
             <div className="l">最新体重</div>
             <div className="v num">
               {lw ? fmt1(lw.v) : "—"}
@@ -117,7 +116,7 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
             <div className="s">{lw ? `${md(lw.d)}${weightNote(m.daily[lw.d])}` : ""}</div>
           </div>
           {/* 筋トレ遂行率：直近で終わった週（前週）。選手画面・ダッシュボードと同じ週 */}
-          <div className="kpi">
+          <div className="kpi c-training">
             <div className="l">筋トレ遂行率</div>
             <div className="v num">
               {m.training[sw] == null ? "—" : fmt1(m.training[sw])}
@@ -126,87 +125,53 @@ export function PlayerModal({ m, metrics, practice, onClose }: { m: Member; metr
             <div className="s">{weekShort(sw)}</div>
           </div>
         </div>
-        <div className="card">
-          <h3>
-            体重の推移 <small>直近60日</small>
-          </h3>
-          <LineChart pts={weights(m, 60)} color="var(--navy)" unit="kg" note={(d) => timingText(m.daily[d])} />
-        </div>
-        <div className="card">
-          <h3>Big3 自己ベスト</h3>
-          <div className="big3">
-            {LIFTS.map(([k, l]) => (
-              <div className="lift" key={k}>
-                <div className="l">{l}</div>
-                <div className="v num">{fmt0(x[k])}</div>
-              </div>
-            ))}
+        <div className="panel-body">
+          <div className="card">
+            <h3 className="c-h">
+              体重の推移 <small>直近60日</small>
+            </h3>
+            <LineChart pts={weights(m, 60)} color={THEME.body} unit="kg" note={(d) => timingText(m.daily[d])} />
           </div>
-          <div className="total">
-            <span className="muted">合計</span>
-            <span className="v num">{fmt0(x.total)}</span>
-          </div>
-          {p.length >= 2 && (
-            <>
-              <h3 style={{ marginTop: 14 }}>Big3合計の推移</h3>
-              <LineChart pts={p.map((r) => ({ d: r.d, v: rowTotal(r) }))} h={140} />
-            </>
-          )}
-        </div>
-        <div className="card">
-          <h3>
-            筋トレ遂行度 <small>直近8週（0〜10）</small>
-          </h3>
-          <LineChart
-            pts={weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }))}
-            h={120}
-            color="var(--ok)"
-          />
-        </div>
-        {/* 体重比（相対値）の推移：項目設定で「体重比」が ON の項目。記録ごとに、その日の体重（なければそれ以前の最新）で割る */}
-        {metrics
-          .filter((def) => def.show_ratio && def.key !== "weight")
-          .map((def) => {
-            const s = metricSeries(m, def)
-              .map((p) => {
-                const w = weightAt(m, p.d);
-                return w && p.v ? { d: p.d, v: p.v / w } : null;
-              })
-              .filter((p): p is { d: string; v: number } => p != null);
+          {bodyDefs.map((def) => {
+            const s = metricSeries(m, def);
             if (!s.length) return null;
             return (
-              <div className="card" key={"r" + def.id}>
-                <h3>
-                  {def.name}体重比の推移{" "}
+              <div className="card" key={def.id}>
+                <h3 className="c-h">
+                  {def.name}{" "}
                   <small>
-                    最新 {fmtRatio(s[s.length - 1].v)}倍（{md(s[s.length - 1].d)}）
+                    最新 {fmtMetric(def, s[s.length - 1].v)}
+                    {unitOf(def)}（{md(s[s.length - 1].d)}）
                   </small>
                 </h3>
-                <LineChart pts={s} h={120} color="var(--ok)" minRange={0.2} digits={2} />
+                <LineChart pts={s} h={120} color={THEME.body} unit={unitOf(def)} fmt={isMinSec(def) ? fmtMinSec : undefined} />
               </div>
             );
           })}
-        {/* 体重・Big3は上のグラフで表示しているので、ここではそれ以外の項目 */}
-        {metrics.filter((def) => !isLinked(def)).map((def) => {
-          const s = metricSeries(m, def);
-          if (!s.length) return null;
-          return (
-            <div className="card" key={def.id}>
-              <h3>
-                {def.name}{" "}
-                <small>
-                  最新 {fmtMetric(def, s[s.length - 1].v)}
-                  {unitOf(def)}（{md(s[s.length - 1].d)}）
-                </small>
-              </h3>
-              <LineChart pts={s} h={120} color="var(--navy)" fmt={isMinSec(def) ? fmtMinSec : undefined} />
-            </div>
-          );
-        })}
+        </div>
+        <div className="panel-physical">
+          <PhysicalDetail ctx={pctx} topOnly />
+        </div>
+        <div className="panel-training">
+          <div className="card">
+            <h3 className="c-h">
+              筋トレ遂行率 <small>直近8週（0〜10）</small>
+            </h3>
+            <LineChart
+              pts={weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }))}
+              h={120}
+              color={THEME.training}
+              unit="/ 10"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+// テーマカラー（出欠＝緑・筋トレ＝黄土・体組成＝青・フィジカル＝赤）
+const THEME = { attend: "#1f8a5b", training: "#a96a00", body: "#2563a8", physical: "#e8432b" };
 
 // 確認ダイアログ・入力ダイアログ用の外枠
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {

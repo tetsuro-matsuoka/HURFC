@@ -289,7 +289,7 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
     try {
       await saveTraining(m.id, ws, n);
       await ctx.reload();
-      ctx.toast(`筋トレ遂行度 ${n} を記録しました ✓`);
+      ctx.toast(`筋トレ遂行率 ${n} を記録しました ✓`);
     } catch (e) {
       ctx.toast(saveErrorText(e));
     } finally {
@@ -305,7 +305,7 @@ function TrainingForm({ ctx }: { ctx: Ctx }) {
             ‹
           </button>
           <b style={{ flex: 1, textAlign: "center" }}>
-            {weekLabel(ws)}の筋トレ遂行度
+            {weekLabel(ws)}の筋トレ遂行率
           </b>
           <button onClick={() => ws < cur && setWs(addDays(ws, 7))} disabled={ws >= cur} style={ws >= cur ? { opacity: 0.3 } : undefined} aria-label="次の週">
             ›

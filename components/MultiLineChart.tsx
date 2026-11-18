@@ -4,7 +4,7 @@
 // 表示幅に合わせて描き直すので、スマホでも横にはみ出しません。
 
 import { useEffect, useRef, useState } from "react";
-import { md, type Point } from "@/lib/calc";
+import { md, niceScale, type Point } from "@/lib/calc";
 import { TipBox, useChartTip } from "./ChartTip";
 
 // dash：点線で描く（平均の基準線など）
@@ -85,9 +85,11 @@ function Chart({
     lo = c - minRange / 2;
     hi = c + minRange / 2;
   }
-  const pad = (hi - lo) * 0.12;
-  lo -= pad;
-  hi += pad;
+  // 少しだけ余白をとってから、キリの良い目盛りに合わせて上下を広げる
+  const pad = (hi - lo) * 0.05;
+  const sc = niceScale(lo - pad, hi + pad);
+  lo = sc.lo;
+  hi = sc.hi;
   const L = 40,
     R = 10,
     T = 10,
@@ -96,7 +98,7 @@ function Chart({
     t1 = new Date(last).getTime();
   const X = (d: string) => L + ((new Date(d).getTime() - t0) / (t1 - t0 || 1)) * (w - L - R);
   const Y = (v: number) => T + ((hi - v) / (hi - lo)) * (h - T - B);
-  const ticks = [0, 1, 2, 3].map((i) => lo + ((hi - lo) * i) / 3);
+  const ticks = sc.ticks;
   const mid = new Date((t0 + t1) / 2);
   const midStr = `${mid.getFullYear()}-${String(mid.getMonth() + 1).padStart(2, "0")}-${String(mid.getDate()).padStart(2, "0")}`;
 
@@ -112,7 +114,7 @@ function Chart({
         <g key={i}>
           <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="#e7e8e4" strokeWidth={1} />
           <text x={L - 6} y={Y(v) + 4} textAnchor="end">
-            {fmt ? fmt(v) : v.toFixed(digits)}
+            {fmt ? fmt(v) : v.toFixed(sc.dec)}
           </text>
         </g>
       ))}
