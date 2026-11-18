@@ -596,3 +596,6 @@ svg.chart{touch-action:pan-y}
 .mom-dist{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;font-size:12px;font-weight:700;color:var(--sub)}
 .mom-dist .seg{margin:0;width:auto}
 .mom-dist .seg button{padding:4px 14px;font-size:13px}
+/* ランキング：名前の横の小さな補足（OB の引退年度・ポジション） */
+.trank .tn-sub{font-size:11px;font-weight:500;color:var(--sub);margin-left:6px}
+.ob-btn{border-color:#7a5200 !important;color:#7a5200 !important}

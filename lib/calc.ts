@@ -107,10 +107,23 @@ export function byOrder(a: Sortable, b: Sortable) {
 }
 
 // 選手一覧（選手管理で決めた並び順）
+// 現役の選手（OB は除く）。チームの集計・順位・人数はすべてこれを使う
 export const playersOf = (members: Members) =>
+  Object.values(members)
+    .filter((m) => m.role === "player" && !m.is_ob)
+    .sort(byOrder);
+// OB も含めた全選手（過去の測定履歴の👑など、当時の記録をそのまま判定するとき）
+export const allPlayersOf = (members: Members) =>
   Object.values(members)
     .filter((m) => m.role === "player")
     .sort(byOrder);
+// OB（引退した選手）。引退した日が新しい順
+export const obsOf = (members: Members) =>
+  Object.values(members)
+    .filter((m) => m.role === "player" && m.is_ob)
+    .sort((a, b) => (b.retired_on ?? "").localeCompare(a.retired_on ?? "") || byOrder(a, b));
+// 引退年度（4月はじまり）：2027年3月に引退 → 2026年度
+export const retiredYear = (d: string | null) => (d ? (Number(d.slice(5, 7)) >= 4 ? Number(d.slice(0, 4)) : Number(d.slice(0, 4)) - 1) : null);
 
 /* ---------- 練習日と出欠席率 ---------- */
 // weekDays：コーチが週ごとに設定した練習日数 { その週の月曜日: 日数 }

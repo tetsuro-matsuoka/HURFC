@@ -35,7 +35,18 @@ async function fetchAll<T>(table: string, columns: string, orderBy = "id"): Prom
   return out;
 }
 
-type UserRow = { id: string; name: string; role: Role; grade: number | null; position: Position | null; sort_order: number | null; created_at: string; category?: Category | null };
+type UserRow = {
+  id: string;
+  name: string;
+  role: Role;
+  grade: number | null;
+  position: Position | null;
+  sort_order: number | null;
+  created_at: string;
+  category?: Category | null;
+  is_ob?: boolean | null;
+  retired_on?: string | null;
+};
 type DailyRow = {
   user_id: string;
   date: string;
@@ -53,9 +64,10 @@ type TrainingRow = { user_id: string; week_start: string; score: number };
 export async function loadAll(): Promise<Members> {
   const [users, daily, physical, mrec, training] = await Promise.all([
     // カテゴリーの欄（追加SQL その6）がまだ無い場合は、カテゴリーなしで読み込む
-    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at,category").catch(() =>
-      fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at"),
-    ),
+    //   OB の欄（追加SQL その11）がまだ無い場合は、全員を現役として読み込む
+    fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at,category,is_ob,retired_on")
+      .catch(() => fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at,category"))
+      .catch(() => fetchAll<UserRow>("users", "id,name,role,grade,position,sort_order,created_at")),
     // 欠席理由の欄（追加SQL その5）がまだ無い場合は、欠席理由なしで読み込む
     // 新しく追加した欄（追加SQL その5・その8）がまだ無い場合は、無い欄を外して読み込む
     fetchAll<DailyRow>("daily_records", "id,user_id,date,attendance,absence_reason,weight,weight_timing,weight_time")
@@ -82,6 +94,8 @@ export async function loadAll(): Promise<Members> {
         physical: {},
         metrics: {},
         training: {},
+        is_ob: u.is_ob === true,
+        retired_on: u.retired_on ? u.retired_on.slice(0, 10) : null,
       }),
   );
   mrec.forEach((r) => {
