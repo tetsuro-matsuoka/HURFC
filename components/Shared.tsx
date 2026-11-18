@@ -16,6 +16,8 @@ import {
   recentWeeks,
   summaryWeek,
   weekShort,
+  playersOf,
+  teamTrainingAvg,
   weekLabel,
   menuLabel,
   MENU_TIMES,
@@ -154,31 +156,43 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
               onPick={setCritWeek}
             />
             {/* タップした週の評価基準（普段は隠す。× で閉じる） */}
-            {critWeek && (
-              <div className="crit-panel">
-                <div className="crit-hd">
-                  <b>{weekLabel(critWeek)}</b>
-                  <button className="x" onClick={() => setCritWeek(null)} aria-label="閉じる">
-                    ×
-                  </button>
-                </div>
-                <div className="crit-row">
-                  <span>対象メニュー</span>
-                  <b>
-                    {menuLabel(menuOf(critWeek))}（{MENU_TIMES[menuOf(critWeek)]}）
-                  </b>
-                </div>
-                <div className="crit-row">
-                  <span>この週の遂行率</span>
-                  <b className="num">{m.training[critWeek] == null ? "未入力" : `${fmt1(m.training[critWeek])} / 10`}</b>
-                </div>
-                <div className="crit-l">評価基準（{menuOf(critWeek)}）</div>
-                <p className="crit-text">{ctx.settings[CRITERIA_KEY[menuOf(critWeek)]] || "まだ設定されていません（「項目設定」から入力できます）"}</p>
-              </div>
-            )}
+            {critWeek && <WeekCritPanel ctx={ctx} m={m} w={critWeek} onClose={() => setCritWeek(null)} />}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// 筋トレ遂行率：タップした週の詳細パネル（選手画面・コーチの選手詳細で共通）
+//  その週の対象メニュー・自分の遂行率・チーム平均・評価基準（項目設定のそのメニュー用の文）。× で閉じる
+export function WeekCritPanel({ ctx, m, w, onClose }: { ctx: Ctx; m: Member; w: string; onClose: () => void }) {
+  const menu: Menu = ctx.weeks[w]?.menu ?? DEFAULT_MENU;
+  const team = teamTrainingAvg(playersOf(ctx.members), w);
+  return (
+    <div className="crit-panel">
+      <div className="crit-hd">
+        <b>{weekLabel(w)}</b>
+        <button className="x" onClick={onClose} aria-label="閉じる">
+          ×
+        </button>
+      </div>
+      <div className="crit-row">
+        <span>対象メニュー</span>
+        <b>
+          {menuLabel(menu)}（{MENU_TIMES[menu]}）
+        </b>
+      </div>
+      <div className="crit-row">
+        <span>{ctx.me.id === m.id ? "自分の遂行率" : "この週の遂行率"}</span>
+        <b className="num">{m.training[w] == null ? "未入力" : `${fmt1(m.training[w])} / 10`}</b>
+      </div>
+      <div className="crit-row">
+        <span>チーム平均</span>
+        <b className="num">{team == null ? "—" : `${fmt1(team)} / 10`}</b>
+      </div>
+      <div className="crit-l">評価基準（{menu}）</div>
+      <p className="crit-text">{ctx.settings[CRITERIA_KEY[menu]] || "まだ設定されていません（「項目設定」から入力できます）"}</p>
     </div>
   );
 }
@@ -215,8 +229,9 @@ export function TeamRanking({ ctx, rows, fmtV, sub }: { ctx: Ctx; rows: RankRow[
         return (
           <li key={r.id} className={`${tier} ${me ? "me" : ""} ${coach ? "click" : ""}`} onClick={coach ? () => ctx.openPlayer(r.id) : undefined}>
             <span className="tp num">{i === 0 ? "👑" : i + 1}</span>
+            {/* 名前だけを「…」で省略し、「あなた」は縮めない */}
             <span className="tn-name">
-              {r.name}
+              <span className="tn-txt">{r.name}</span>
               {me && <em className="you">あなた</em>}
               {sub && <small className="tn-sub">{sub(r)}</small>}
             </span>

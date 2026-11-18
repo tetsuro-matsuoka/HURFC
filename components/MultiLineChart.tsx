@@ -14,8 +14,20 @@ export type Series = { label: string; color: string; pts: Point[]; dash?: boolea
 // minRange：縦軸の最小の幅（体重比のように差が小さい値でも線がつぶれないように）
 // unit：吹き出しの単位 / note：吹き出しで1本目の線（自分）に添える文（例：「練習後」）
 // fmt：目盛り・吹き出しの数値の表示（タイム種目は 4:50 の形など）
-type Props = { series: Series[]; h?: number; digits?: number; minRange?: number; unit?: string; note?: (d: string) => string; fmt?: (v: number) => string };
-export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note, fmt }: Props) {
+// noteAny：吹き出しの文を、1本目の線に点が無い日にも出す（例：その週のメニュー）
+// onPick：グラフをタップ（クリック）したときに選んだ日付を知らせる
+type Props = {
+  series: Series[];
+  h?: number;
+  digits?: number;
+  minRange?: number;
+  unit?: string;
+  note?: (d: string) => string;
+  noteAny?: boolean;
+  fmt?: (v: number) => string;
+  onPick?: (d: string) => void;
+};
+export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note, noteAny, fmt, onPick }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const tip = useChartTip(ref);
   const [w, setW] = useState(600);
@@ -46,7 +58,7 @@ export default function MultiLineChart({ series, h = 200, digits = 1, minRange =
       {all.length < 2 || dates[0] === dates[dates.length - 1] ? (
         <div className="empty">データが2日分以上になるとグラフを表示します</div>
       ) : (
-        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} fmt={fmt} />
+        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} noteAny={noteAny} fmt={fmt} onPick={onPick} />
       )}
     </div>
   );
@@ -63,7 +75,9 @@ function Chart({
   tip,
   unit,
   note,
+  noteAny,
   fmt,
+  onPick,
 }: {
   series: Series[];
   w: number;
@@ -75,7 +89,9 @@ function Chart({
   tip: ReturnType<typeof useChartTip>;
   unit: string;
   note?: (d: string) => string;
+  noteAny?: boolean;
   fmt?: (v: number) => string;
+  onPick?: (d: string) => void;
 }) {
   const vs = series.flatMap((s) => s.pts.map((p) => p.v));
   let lo = Math.min(...vs),
@@ -159,7 +175,7 @@ function Chart({
         </g>
       )}
       {/* 透明な判定エリア（グラフ全体。縦の列のどこを触っても、その日付が選ばれる） */}
-      <rect x={L} y={0} width={Math.max(0, w - L - R)} height={h} fill="transparent" style={{ cursor: "pointer" }} {...tip.handlers(w, allDates, X)} />
+      <rect x={L} y={0} width={Math.max(0, w - L - R)} height={h} fill="transparent" style={{ cursor: "pointer" }} {...tip.handlers(w, allDates, X, onPick)} />
     </svg>
     {act && (
       <TipBox x={X(act)} w={w}>
@@ -178,7 +194,7 @@ function Chart({
           );
         })}
         {/* 測った時間など（1本目＝自分の点がある日だけ） */}
-        {series[0] && at(series[0]) && note?.(act) && <div className={`tip-n ${note(act) === "時間未記録" ? "none" : ""}`}>{note(act)}</div>}
+        {(noteAny || (series[0] && at(series[0]))) && note?.(act) && <div className={`tip-n ${note(act) === "時間未記録" ? "none" : ""}`}>{note(act)}</div>}
       </TipBox>
     )}
     </div>
