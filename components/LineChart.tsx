@@ -4,7 +4,7 @@
 // 表示幅に合わせて描き直すので、スマホでも文字がつぶれません。
 
 import { useEffect, useId, useRef, useState } from "react";
-import { md, type Point } from "@/lib/calc";
+import { md, niceScale, type Point } from "@/lib/calc";
 import { TipBox, useChartTip } from "./ChartTip";
 
 // minRange：縦軸の最小の幅（値の差が小さくても線がつぶれないように。体重比などは小さく）/ digits：縦軸の小数の桁
@@ -49,9 +49,11 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
     lo = c - minRange / 2;
     hi = c + minRange / 2;
   }
-  const padY = (hi - lo) * 0.15;
-  lo -= padY;
-  hi += padY;
+  // 少しだけ余白をとってから、キリの良い目盛りに合わせて上下を広げる
+  const padY = (hi - lo) * 0.05;
+  const sc = niceScale(lo - padY, hi + padY);
+  lo = sc.lo;
+  hi = sc.hi;
   const L = label ? 38 : 4,
     R = 8,
     T = 10,
@@ -63,7 +65,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
   const path = pts.map((p, i) => `${i ? "L" : "M"}${X(p.d).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");
   const last = pts[pts.length - 1];
   const area = `${path}L${X(last.d).toFixed(1)},${h - B}L${X(pts[0].d).toFixed(1)},${h - B}Z`;
-  const ticks = [0, 1, 2, 3].map((i) => lo + ((hi - lo) * i) / 3);
+  const ticks = sc.ticks;
   const act = label && tip.active ? pts.find((p) => p.d === tip.active) ?? null : null;
   const fmtV = (v: number) => (Math.round(v * 10 ** Math.max(digits, 1)) / 10 ** Math.max(digits, 1)).toFixed(Math.max(digits, 1));
 
@@ -81,7 +83,7 @@ export default function LineChart({ pts, h = 170, color = "var(--accent)", label
             <g key={i}>
               <line x1={L} x2={w - R} y1={Y(v)} y2={Y(v)} stroke="#e7e8e4" strokeWidth={1} />
               <text x={L - 6} y={Y(v) + 4} textAnchor="end">
-                {fmt ? fmt(v) : v.toFixed(digits)}
+                {fmt ? fmt(v) : v.toFixed(sc.dec)}
               </text>
             </g>
           ))}

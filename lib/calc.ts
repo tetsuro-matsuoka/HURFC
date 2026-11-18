@@ -476,3 +476,20 @@ export function metricRatio(m: Member, def: MetricDef): number | null {
   return w ? p.v / w : null;
 }
 export const fmtRatio = (v: number | null | undefined) => (v == null || isNaN(v) ? "—" : v.toFixed(2));
+
+/* ---------- グラフの縦軸：キリの良い目盛り ---------- */
+// lo〜hi を、1・2・2.5・5 × 10のべき乗 の間隔で区切る（例：350, 400, 450 / 70, 70.5, 71）
+// 返り値：目盛りに合わせて広げた lo・hi、目盛りの値、表示する小数の桁数
+export function niceScale(lo: number, hi: number, n = 3) {
+  const raw = (hi - lo) / n || 1;
+  const p = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / p;
+  const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  const a = Math.floor(lo / step + 1e-9) * step,
+    b = Math.ceil(hi / step - 1e-9) * step;
+  const ticks: number[] = [];
+  for (let v = a; v <= b + step / 2; v += step) ticks.push(Number(v.toFixed(10)));
+  const str = String(Number(step.toFixed(10)));
+  const dec = str.includes(".") ? str.split(".")[1].length : 0;
+  return { lo: a, hi: b, ticks, dec };
+}

@@ -296,7 +296,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      {modalMember && <PlayerModal m={modalMember} metrics={meta.metrics} practice={meta.practice} onClose={() => setPlayerId(null)} />}
+      {modalMember && <PlayerModal m={modalMember} ctx={ctx} onClose={() => setPlayerId(null)} />}
       {toastEl}
     </div>
   );
