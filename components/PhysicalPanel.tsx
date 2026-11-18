@@ -12,7 +12,7 @@ import { Fragment, useMemo, useState } from "react";
 import MultiLineChart from "./MultiLineChart";
 import { DateBar, GroupCards, PeriodSeg, avg, groupTrend, splitGroups, type GroupKey, type Period } from "./GroupStats";
 import { TeamRanking, type Ctx } from "./Shared";
-import { LIFTS, fmtRatio, md, metricBest, metricRatio, metricSeries, metricsOf, phys, today, unitOf, weights, type Point, type RankRow, fmtMetric, fmtMinSec, isMinSec } from "@/lib/calc";
+import { LIFTS, fmtRatio, md, metricBest, metricRatio, metricSeries, metricsOf, phys, today, unitOf, weights, type Point, type RankRow, fmtMetric, fmtMinSec, isMinSec, basisLabel } from "@/lib/calc";
 import type { LiftKey, Member, MetricDef } from "@/lib/types";
 
 type Mode = "latest" | "best";
@@ -107,7 +107,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
     }));
   const firstDay = [...caches.values()].map((c) => c.pts[0]?.d).filter(Boolean).sort()[0] ?? null;
   const chart = groupTrend(d, period, firstDay, at);
-  const label = `${def.name}${ratio ? "体重比" : ""}（${mode === "latest" ? "最新値" : "自己ベスト"}）`;
+  const label = `${def.name}${basisLabel(def)}${ratio ? "体重比" : ""}（${mode === "latest" ? "最新値" : "自己ベスト"}）`;
 
   // ランキング：体重比は大きい順、それ以外は良い向きの順。値が無い選手は除く
   const rows: RankRow[] = ps
@@ -131,7 +131,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   };
 
   const options: [string, string][] = defs.flatMap((x) => {
-    const c: [string, string][] = [["m" + x.id, x.name]];
+    const c: [string, string][] = [["m" + x.id, x.name + basisLabel(x)]];
     if (x.show_ratio) c.push(["r" + x.id, `${x.name}体重比`]);
     return c;
   });
@@ -195,6 +195,7 @@ function BestTable({ ctx, ps, defs }: { ctx: Ctx; ps: Member[]; defs: MetricDef[
                 <Fragment key={x.id}>
                   <th className="r">
                     {x.name}
+                    {basisLabel(x)}
                     {unitOf(x) && `(${unitOf(x)})`}
                   </th>
                   {x.show_ratio && <th className="r ratio">{x.name}体重比</th>}

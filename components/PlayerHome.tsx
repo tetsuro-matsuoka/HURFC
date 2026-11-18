@@ -59,6 +59,7 @@ import {
   fmtMetric,
   fmtMinSec,
   isMinSec,
+  basisLabel
 } from "@/lib/calc";
 import type { Member, Unit } from "@/lib/types";
 
@@ -462,7 +463,7 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
   const ratio = key === "r" + def.id;
 
   const options: [string, string][] = defs.flatMap((x) => {
-    const o: [string, string][] = [["m" + x.id, x.name]];
+    const o: [string, string][] = [["m" + x.id, x.name + basisLabel(x)]];
     if (x.show_ratio) o.push(["r" + x.id, `${x.name}体重比`]);
     return o;
   });

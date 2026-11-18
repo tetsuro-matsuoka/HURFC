@@ -10,7 +10,7 @@ import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
-import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, isMinSec, isMomentum, metricsOf, unitOf } from "@/lib/calc";
+import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, isMinSec, isMomentum, metricsOf, unitOf, MOMENTUM_KEY, momentumDist } from "@/lib/calc";
 import type { Menu, MetricCategory, MetricDef } from "@/lib/types";
 
 const CATEGORIES: MetricCategory[] = ["体組成", "フィジカル"];
@@ -135,6 +135,27 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                         {x.derived && ` ・ 同じ日の体重 × ${x.derived.dist}m ÷ 「${ctx.metrics.find((y) => y.id === x.derived?.sprintId)?.name}」のタイムで自動計算`}
                         {!x.derived && isMomentum(x) && " ・ 自動計算には、名前に「30m」か「10m」を含むスプリント項目（秒）が必要です"}
                       </div>
+                      {/* スプリントモメンタムの計算に使う距離（10m / 30m）。押すとすぐ保存 */}
+                      {isMomentum(x) && (
+                        <div className="mom-dist">
+                          <span>計算に使う距離</span>
+                          <div className="seg mini" role="group" aria-label="計算に使う距離">
+                            {([10, 30] as const).map((d) => (
+                              <button
+                                key={d}
+                                className={momentumDist(ctx.settings) === d ? "on" : ""}
+                                disabled={busy}
+                                onClick={() => momentumDist(ctx.settings) !== d && run(() => saveSetting(MOMENTUM_KEY, String(d)), `スプリントモメンタムを ${d}m 基準にしました`)}
+                              >
+                                {d}m
+                              </button>
+                            ))}
+                          </div>
+                          {x.derived && x.derived.dist !== momentumDist(ctx.settings) && (
+                            <small className="muted">{momentumDist(ctx.settings)}m の項目がないため {x.derived.dist}m で計算しています</small>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="ma">
                       {x.key !== "weight" && (

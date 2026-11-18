@@ -394,12 +394,18 @@ export const unitOf = (def: { name: string; unit: string }) => {
 
 // スプリントモメンタム（自動計算）：名前に「モメンタム」を含む項目
 export const isMomentum = (def: { name: string }) => def.name.includes("モメンタム");
-// 基準にするスプリント項目を選ぶ：項目名に「30m」「10m」を含むフィジカルの項目（両方あれば 30m を優先）
-export function pickSprint(metrics: MetricDef[]): { sprintId: number; dist: number } | undefined {
+// スプリントモメンタムの計算に使う距離の設定（項目設定で選ぶ。app_settings に保存。未設定は 30m）
+export const MOMENTUM_KEY = "momentum_distance";
+export const momentumDist = (settings: Record<string, string>): 10 | 30 => (settings[MOMENTUM_KEY] === "10" ? 10 : 30);
+// 「（30m基準）」のような補足（自動計算のスプリントモメンタムだけ。それ以外は空）
+export const basisLabel = (def: { derived?: { dist: number } }) => (def.derived ? `（${def.derived.dist}m基準）` : "");
+// 基準にするスプリント項目を選ぶ：項目名に「30m」「10m」を含むフィジカルの項目
+//   prefer の距離（項目設定で選んだ距離）を優先。その項目が無ければもう一方
+export function pickSprint(metrics: MetricDef[], prefer: 10 | 30 = 30): { sprintId: number; dist: number } | undefined {
   const c = metrics
     .filter((x) => !isMomentum(x) && x.category === "フィジカル")
     .map((x) => ({ x, dist: Number(x.name.match(/(\d+(?:\.\d+)?)\s*[mｍＭM](?![a-zA-Z])/)?.[1]) }));
-  const pick = c.find((y) => y.dist === 30) ?? c.find((y) => y.dist === 10);
+  const pick = c.find((y) => y.dist === prefer) ?? c.find((y) => y.dist === (prefer === 30 ? 10 : 30));
   return pick ? { sprintId: pick.x.id, dist: pick.dist } : undefined;
 }
 
