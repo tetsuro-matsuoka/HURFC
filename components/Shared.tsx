@@ -4,7 +4,7 @@
 
 import LineChart from "./LineChart";
 import { PhysicalDetail } from "./PlayerHome";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   attendRate,
   isLinked,
@@ -82,6 +82,10 @@ export function RankRows({ ctx, rows, fmtV, low }: { ctx: Ctx; rows: RankRow[]; 
 export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose: () => void }) {
   const weeks = recentWeeks(8);
   const sw = summaryWeek(m.training);
+  // グラフの期間（見出し右の2択ピル）：体重＝直近60日 / 全期間、筋トレ遂行率＝直近8週 / 全期間
+  const [wAll, setWAll] = useState(false);
+  const [tAll, setTAll] = useState(false);
+  const tWeeks = tAll ? Object.keys(m.training).sort() : weeks;
   const lw = latestWeight(m),
     r = attendRate(m, ctx.practice),
     r30 = attendRate(m, ctx.practice, 30);
@@ -100,12 +104,15 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
         </div>
         <div className="kpis kpis3">
           <div className="kpi c-attend">
-            <div className="l">出席率</div>
+            {/* 大きな数字＝トータル（全期間）。下の1行に直近30日とトータル */}
+            <div className="l">出席率 トータル</div>
             <div className="v num">
               {r == null ? "—" : Math.round(r)}
               <small>%</small>
             </div>
-            <div className="s">直近30日 {r30 == null ? "—" : Math.round(r30) + "%"}</div>
+            <div className="s">
+              直近30日 {r30 == null ? "—" : Math.round(r30) + "%"}・トータル {r == null ? "—" : Math.round(r) + "%"}
+            </div>
           </div>
           <div className="kpi c-body">
             <div className="l">最新体重</div>
@@ -128,9 +135,10 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
         <div className="panel-body">
           <div className="card">
             <h3 className="c-h">
-              体重の推移 <small>直近60日</small>
+              体重の推移
+              <RangePill all={wAll} setAll={setWAll} recent="直近60日" />
             </h3>
-            <LineChart pts={weights(m, 60)} color={THEME.body} unit="kg" note={(d) => timingText(m.daily[d])} />
+            <LineChart pts={weights(m, wAll ? undefined : 60)} color={THEME.body} unit="kg" note={(d) => timingText(m.daily[d])} />
           </div>
           {bodyDefs.map((def) => {
             const s = metricSeries(m, def);
@@ -155,10 +163,11 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
         <div className="panel-training">
           <div className="card">
             <h3 className="c-h">
-              筋トレ遂行率 <small>直近8週（0〜10）</small>
+              筋トレ遂行率 <small>0〜10</small>
+              <RangePill all={tAll} setAll={setTAll} recent="直近8週" />
             </h3>
             <LineChart
-              pts={weeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }))}
+              pts={tWeeks.filter((w) => m.training[w] != null).map((w) => ({ d: w, v: m.training[w] }))}
               h={120}
               color={THEME.training}
               unit="/ 10"
@@ -167,6 +176,20 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
         </div>
       </div>
     </div>
+  );
+}
+
+// グラフの期間の2択ピル（直近 / 全期間）。見出しの右側に置く
+function RangePill({ all, setAll, recent }: { all: boolean; setAll: (v: boolean) => void; recent: string }) {
+  return (
+    <span className="range-pill">
+      <button className={!all ? "on" : ""} onClick={() => setAll(false)}>
+        {recent}
+      </button>
+      <button className={all ? "on" : ""} onClick={() => setAll(true)}>
+        全期間
+      </button>
+    </span>
   );
 }
 
