@@ -551,3 +551,24 @@ svg.chart{touch-action:pan-y}
 .crit-row span{color:var(--sub)}
 .crit-l{font-size:12px;font-weight:700;color:#7a5200;margin-top:6px}
 .crit-panel .crit-text{margin:4px 0 0}
+/* 日程調整：マスの上下左右の隙間をそろえる（行の高さ＝マスの高さ。マスを引き伸ばさない） */
+.cal{align-items:start;grid-auto-rows:min-content;row-gap:4px;column-gap:4px}
+.cal-d{height:auto;align-self:start;display:flex}
+@media(max-width:480px){.cal{row-gap:3px;column-gap:3px}}
+/* 活動の種類の色：練習＝緑、試合＝赤、合同練習＝青 */
+.cal-d.on.t-practice{background:var(--ok)}
+.cal-d.on.t-game{background:#dc2626}
+.cal-d.on.t-joint{background:#2563a8}
+.cal-d small{font-size:9px;letter-spacing:-.02em}
+.pcount-sub{display:flex;justify-content:center;gap:8px;margin-top:4px;font-size:12px;font-weight:700}
+.pcount-sub span{padding:2px 8px;border-radius:999px;color:#fff}
+.pcount-sub .t-practice,.abs-types .t-practice{--tc:#1f8a5b;--ts:#e0f3ea}
+.pcount-sub .t-game,.abs-types .t-game{--tc:#dc2626;--ts:#fde8e8}
+.pcount-sub .t-joint,.abs-types .t-joint{--tc:#2563a8;--ts:#e3edf8}
+.pcount-sub span{background:var(--tc)}
+/* 欠席理由統計：活動の種類ごとの欠席合計（3列） */
+.abs-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.abs-types>div{border-radius:12px;padding:8px 10px;background:var(--ts);border:1.5px solid var(--tc);color:var(--tc);min-width:0}
+.abs-types .l{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abs-types .v{font-size:22px;font-weight:700;line-height:1.2}
+.abs-types .v small{font-size:12px;margin-left:2px}

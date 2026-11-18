@@ -1,7 +1,7 @@
 // データの読み書き（Supabase とのやりとりをここにまとめる）
 
 import { supabase } from "./supabase";
-import type { AbsenceReason, Attendance, Category, Menu, WeekSetting, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
+import type { AbsenceReason, Attendance, Category, DayType, Menu, WeekSetting, WeightTiming, MetricCategory, MetricDef, Members, PhysRec, Position, Practice, Role } from "./types";
 import { isMinSec, isMomentum, makePractice, pickSprint, ymd } from "./calc";
 
 function sb() {
@@ -193,7 +193,10 @@ export async function loadMeta(): Promise<Meta> {
       .catch(() => []),
     fetchAll<{ key: string; value: string }>("app_settings", "key,value", "key").catch(() => []),
     // 追加SQL（その4）が未実行なら「練習日の設定なし」として扱う
-    fetchAll<{ date: string }>("practice_days", "date", "date").catch(() => []),
+    //   活動の種類（追加SQL その10）が未実行なら、すべて「練習」として読む
+    fetchAll<{ date: string; kind?: DayType | null }>("practice_days", "date,kind", "date")
+      .catch(() => fetchAll<{ date: string; kind?: DayType | null }>("practice_days", "date", "date"))
+      .catch(() => []),
     // 週ごとの設定（追加SQL その9）が未実行なら「設定なし」
     fetchAll<{ week_start: string; practice_days: number | null; menu: Menu | null }>("week_settings", "week_start,practice_days,menu", "week_start").catch(
       () => [],
@@ -217,7 +220,11 @@ export async function loadMeta(): Promise<Meta> {
     metrics,
     settings: Object.fromEntries(settings.map((x) => [x.key, x.value])),
     // 週ごとの練習日数の設定は使わない（出席率はカレンダーの練習日で計算）
-    practice: makePractice(practice.map((x) => x.date.slice(0, 10))),
+    practice: makePractice(
+      practice.map((x) => x.date.slice(0, 10)),
+      new Map(),
+      new Map(practice.map((x) => [x.date.slice(0, 10), (x.kind ?? "練習") as DayType])),
+    ),
     weeks: weekMap,
   };
 }
@@ -232,13 +239,23 @@ export async function saveWeekSetting(weekStart: string, v: WeekSetting) {
   if (error) throw error;
 }
 
-// 練習日の ON / OFF（コーチのみ。データベース側の権限でも確認）
-export async function setPracticeDay(date: string, on: boolean) {
-  const q = on
-    ? sb().from("practice_days").upsert({ date }, { onConflict: "date" })
-    : sb().from("practice_days").delete().eq("date", date);
-  const { error } = await q;
-  if (error) throw error;
+// 日程の設定（コーチのみ。データベース側の権限でも確認）。kind が null ならオフ（行を消す）
+export async function setPracticeDay(date: string, kind: DayType | null) {
+  if (!kind) {
+    const { error } = await sb().from("practice_days").delete().eq("date", date);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await sb().from("practice_days").upsert({ date, kind }, { onConflict: "date" });
+  if (!error) return;
+  // 種類の列（追加SQL その10）がまだ無いときは、「練習」だけ今までどおり保存できる
+  const noCol = error.code === "PGRST204" || error.code === "42703" || /kind/.test(error.message ?? "");
+  if (noCol && kind === "練習") {
+    const r = await sb().from("practice_days").upsert({ date }, { onConflict: "date" });
+    if (r.error) throw r.error;
+    return;
+  }
+  throw error;
 }
 
 // 測定項目の記録を保存（value が null ならその日の記録を消す）

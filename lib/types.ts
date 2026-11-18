@@ -58,7 +58,9 @@ export type Members = Record<string, Member>;
 
 // 練習日（日程調整）。days＝練習日の一覧、months＝練習日が1日以上ある月 "YYYY-MM"
 // weekDays＝コーチが週ごとに設定した練習日数 { その週の月曜日: 日数 }（設定した週はこちらを優先）
-export type Practice = { days: Set<string>; months: Set<string>; weekDays: Map<string, number> };
+// kinds＝その日の活動の種類（練習 / 試合 / 合同練習）。どれも出欠の対象日
+export type DayType = "練習" | "試合" | "合同練習";
+export type Practice = { days: Set<string>; months: Set<string>; weekDays: Map<string, number>; kinds: Map<string, DayType> };
 
 // 週ごとの設定（日程調整）。null＝未設定（練習日数はカレンダーから自動、メニューは A〜C）
 export type Menu = "A〜B" | "A〜C" | "A〜D";
