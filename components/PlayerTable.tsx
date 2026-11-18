@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import type { Ctx } from "./Shared";
-import { fmtMinSec, isMinSec, fmtRatio, metricRatio, absenceSummary, monthAttendance, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, trainingAvg, teamSummaryWeek, weekShort, unitOf, unitOfPosition, basisLabel } from "@/lib/calc";
+import { fmtMinSec, isMinSec, fmtRatio, metricRatio, absenceSummary, attendRate, trainingTotal, ymOf, fmt1, fmt2, metricBest, metricLatest, metricsOf, playersOf, today, unitOf, unitOfPosition, basisLabel } from "@/lib/calc";
 import { CategoryButton, FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import type { Member, MetricDef } from "@/lib/types";
 
@@ -44,15 +44,14 @@ function buildCols(ctx: Ctx): Col[] {
     {
       key: "att",
       group: "attend",
-      label: "出席率(今月)",
+      label: "出席率(トータル)",
       unit: "%",
-      // 今月の練習日ベース（練習日の出席日数÷今月の練習日数。今日より後の練習日は数えない）
-      get: (m) => monthAttendance(m, ymOf(today()), ctx.practice).rate,
+      // 全期間（活動日ベース：活動日の出席日数 ÷ 今日までの活動日数。入部前の日は数えない）
+      get: (m) => attendRate(m, ctx.practice),
       fmt: (v) => (v == null ? "—" : String(Math.round(v))),
     },
-    // 前週（直近で終わった週。選手画面・ダッシュボードと同じ週）と、前週までの4週平均
-    { key: "trainw", group: "train", label: `筋トレ遂行率(${weekShort(teamSummaryWeek(playersOf(ctx.members)))})`, unit: "/10", get: (m) => m.training[teamSummaryWeek(playersOf(ctx.members))] ?? null, fmt: fmt1 },
-    { key: "train", group: "train", label: "筋トレ遂行率(4週平均)", unit: "/10", get: (m) => trainingAvg(m, 4), fmt: fmt1 },
+    // 全期間（終わった週すべての平均。進行中の今週は入れない）
+    { key: "train", group: "train", label: "筋トレ遂行率(トータル)", unit: "/10", get: (m) => trainingTotal(m), fmt: fmt1 },
     ...metricsOf(ctx.metrics, "フィジカル").flatMap((d) =>
       // スプリントモメンタム（自動計算）は、体重とスプリントを同じ日に記録した最新の日の値
       metricCols(d, "phys", (m) => (d.derived ? metricLatest(m, d)?.v ?? null : metricBest(m, d))),
@@ -75,8 +74,23 @@ const cell = (v: string | number | null) => {
 export default function PlayerTable({ ctx }: { ctx: Ctx }) {
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const all = playersOf(ctx.members);
-  const rows = applyFilter(all, filter);
   const cols = buildCols(ctx);
+  // 並び替え：列の見出しをタップするたびに 大きい順 → 小さい順 → 元の順。記録なし（—）は常に一番下
+  const [sort, setSort] = useState<{ key: string; dir: "desc" | "asc" } | null>(null);
+  const sortCol = sort ? cols.find((c) => c.key === sort.key) : undefined;
+  const filteredRows = applyFilter(all, filter);
+  const rows = sortCol
+    ? [...filteredRows].sort((a, b) => {
+        const x = sortCol.get(a),
+          y = sortCol.get(b);
+        const nx = x == null || isNaN(x),
+          ny = y == null || isNaN(y);
+        if (nx || ny) return nx === ny ? 0 : nx ? 1 : -1;
+        return sort!.dir === "desc" ? y! - x! : x! - y!;
+      })
+    : filteredRows;
+  const tapSort = (key: string) =>
+    setSort((s) => (!s || s.key !== key ? { key, dir: "desc" } : s.dir === "desc" ? { key, dir: "asc" } : null));
   const filtered = isFiltered(filter);
   // 表示中の選手（絞り込み後）だけで平均を計算
   const avgLabel = filtered ? "選択中平均" : "チーム平均";
@@ -170,9 +184,15 @@ export default function PlayerTable({ ctx }: { ctx: Ctx }) {
               <th className="g-basic c">FW/BK</th>
               <th className="g-basic c">カテゴリー</th>
               {cols.map((c) => (
-                <th key={c.key} className={`g-${c.group} ${c.ratio ? "ratio" : ""}`}>
+                <th
+                  key={c.key}
+                  className={`g-${c.group} ${c.ratio ? "ratio" : ""} sortable ${sort?.key === c.key ? "sorted" : ""}`}
+                  onClick={() => tapSort(c.key)}
+                  aria-sort={sort?.key === c.key ? (sort.dir === "desc" ? "descending" : "ascending") : "none"}
+                >
                   {c.label}
                   {c.unit && <small>({c.unit})</small>}
+                  <i className="sort-mark">{sort?.key === c.key ? (sort.dir === "desc" ? "▼" : "▲") : "↕"}</i>
                 </th>
               ))}
             </tr>

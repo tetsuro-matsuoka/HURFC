@@ -609,3 +609,7 @@ svg.chart{touch-action:pan-y}
 /* 筋トレ遂行率：選んだ週の行と、その下に開く詳細 */
 .tbl tr.sel td{background:#fffaf0}
 .tbl tr.crit-tr td{padding:0 0 8px;border-bottom:none}
+/* 選手一覧：列の見出しをタップで並び替え */
+.pt th.sortable{cursor:pointer;user-select:none}
+.pt th .sort-mark{font-style:normal;font-size:9px;margin-left:2px;color:var(--sub);opacity:.6}
+.pt th.sorted .sort-mark{opacity:1;color:var(--accent)}
