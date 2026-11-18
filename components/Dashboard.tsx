@@ -168,7 +168,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           </div>
           <div className="s">{aNote}</div>
         </div>
-        <AbsenceButton ps={ps} practice={ctx.practice} from={null} to={t} title="欠席理由統計（全期間）" empty="欠席記録はありません" />
+        <AbsenceButton ps={ps} practice={ctx.practice} from={null} to={t} title="欠席理由統計（全期間）" />
       </div>
     </div>
     {/* 2. 中段：当日の出欠状況 */}
@@ -256,7 +256,7 @@ function AttendPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
               出席 {tYes} / 対象 {tDays}回
             </div>
           </div>
-          <AbsenceButton ps={ps} practice={ctx.practice} from={ym + "-01"} to={ym + "-31"} title={`欠席理由統計（${ymLabel(ym)}）`} empty="この月の欠席記録はありません" />
+          <AbsenceButton ps={ps} practice={ctx.practice} from={ym + "-01"} to={ym + "-31"} title={`欠席理由統計（${ymLabel(ym)}）`} />
         </div>
         <p className="muted" style={{ marginBottom: 8 }}>
           {pCount
@@ -457,10 +457,10 @@ const DAY_CLS: Record<DayType, string> = { 練習: "t-practice", 試合: "t-game
 
 /* ---------- 欠席理由統計ボタン：押すとモーダルで、理由ごとの回数と割合（多い順・棒グラフ付き） ----------
    トータル（全期間）と月別で同じボタン。from〜to の期間で集計（from が null なら全期間） */
-function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[]; practice: Practice; from: string | null; to: string; title: string; empty: string }) {
+function AbsenceButton({ ps, practice, from, to, title }: { ps: Member[]; practice: Practice; from: string | null; to: string; title: string }) {
   const [open, setOpen] = useState(false);
-  // 上の3つのカードで選んだ種類（null＝すべて）。もう一度押すか「すべて表示」で解除
-  const [sel, setSel] = useState<DayType | null>(null);
+  // 上の3つのカードで選んだ種類（null＝すべて）。開いたときは「練習」。もう一度押すか「すべて表示」で全体
+  const [sel, setSel] = useState<DayType | null>("練習");
   const byType = absenceByType(ps, practice, from, to); // 練習・試合・合同練習ごとの欠席回数
   // 分母：期間内で今日までに開催した、その種類の日数 × 登録選手数
   const end = to < today() ? to : today();
@@ -471,7 +471,13 @@ function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[];
   const max = Math.max(1, ...list.map((x) => x.n));
   return (
     <>
-      <button className="abs-btn" onClick={() => setOpen(true)}>
+      <button
+        className="abs-btn"
+        onClick={() => {
+          setSel("練習");
+          setOpen(true);
+        }}
+      >
         欠席理由統計
       </button>
       {open && (
@@ -514,21 +520,18 @@ function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[];
                   </span>
                 )}
               </div>
-              {total ? (
-                list.map((x) => (
-                  <div key={x.reason} className={`abs-row ${x.n ? "" : "zero"}`}>
-                    <span className="abs-l">{x.reason}</span>
-                    <span className="abs-bar">
-                      <i style={{ width: `${(x.n / max) * 100}%` }} />
-                    </span>
-                    <span className="abs-v num">
-                      {x.n}回 <small>{Math.round((x.n / total) * 100)}%</small>
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="empty">{sel ? `この期間の${sel}の欠席記録はありません` : empty}</div>
-              )}
+              {/* 欠席が0回でも理由の行はすべて出す（0回 0% を薄く）。どの種類を選んでも枠の高さが変わらない */}
+              {list.map((x) => (
+                <div key={x.reason} className={`abs-row ${x.n ? "" : "zero"}`}>
+                  <span className="abs-l">{x.reason}</span>
+                  <span className="abs-bar">
+                    <i style={{ width: `${(x.n / max) * 100}%` }} />
+                  </span>
+                  <span className="abs-v num">
+                    {x.n}回 <small>{total ? Math.round((x.n / total) * 100) : 0}%</small>
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
