@@ -580,3 +580,11 @@ svg.chart{touch-action:pan-y}
 .abs-types .s{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abs-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:8px;font-size:13px}
 .abs-reset{margin-left:auto;font-size:12px;font-weight:700;color:var(--navy);text-decoration:underline;background:none;padding:2px 0}
+/* 当日の出欠状況：出席・欠席・未入力・出席率の4列（同じ大きさ） */
+.sumrow.sumrow4{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sumrow4>div{min-width:0;padding:14px 4px;border:1.5px solid transparent}
+.sumrow4>div>div{padding:0;border-radius:0;white-space:nowrap}
+.sumrow4 .l{margin-top:4px}
+.sumrow4 .rate{background:#ecfdf5;color:#059669;border-color:#6ee7b7}
+.sumrow4 .v small{font-size:14px;margin-left:1px}
+@media(max-width:480px){.sumrow4 .v{font-size:24px}.sumrow4 .v small{font-size:11px}.sumrow4 .l{font-size:11px}}
