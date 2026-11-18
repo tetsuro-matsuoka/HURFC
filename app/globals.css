@@ -243,7 +243,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pcount{text-align:center;background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:8px;font-size:14px;font-weight:700;margin-bottom:12px}
 .pcount b{font-size:22px;margin:0 2px}
 /* 7列を親（カード）の幅にぴったり均等に収める。minmax(0,1fr) と min-width:0 で、中身に押し広げられないようにする */
-.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;width:100%;max-width:560px;margin:0 auto;align-items:start}
 .cal>*{min-width:0}
 .cal-w{text-align:center;font-size:12px;font-weight:700;color:var(--sub);padding:4px 0}
 .cal-w.sun,.cal-d.sun span{color:var(--ng)}
@@ -252,7 +252,8 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .cal-d span{white-space:nowrap}
 .cal-d small{font-size:10px;font-weight:700;line-height:1;white-space:nowrap}
 .cal-d .dot{display:none;width:6px;height:6px;border-radius:50%;background:#fff}
-.cal-d.today{border-color:var(--navy)}
+/* 今日のマス：枠の色だけ変える（大きさ・余白は他のマスと同じ） */
+.cal-d.cal-today{border-color:var(--navy)}
 /* 練習日：緑の丸で強調 */
 .cal-d.on{background:var(--ok);color:#fff}
 .cal-d.on span{color:#fff !important}
@@ -260,7 +261,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 /* スマホ幅：余白・隙間・文字を小さく。「練習」の文字は白い点に置き換え */
 @media(max-width:480px){
   .cal-card{padding:12px 8px}
-  .cal{gap:3px}
+  .cal{gap:4px}
   .cal-w{font-size:11px}
   .cal-d{font-size:14px;border-radius:8px;border-width:1.5px}
   .cal-d small{display:none}
@@ -552,9 +553,6 @@ svg.chart{touch-action:pan-y}
 .crit-l{font-size:12px;font-weight:700;color:#7a5200;margin-top:6px}
 .crit-panel .crit-text{margin:4px 0 0}
 /* 日程調整：マスの上下左右の隙間をそろえる（行の高さ＝マスの高さ。マスを引き伸ばさない） */
-.cal{align-items:start;grid-auto-rows:min-content;row-gap:4px;column-gap:4px}
-.cal-d{height:auto;align-self:start;display:flex}
-@media(max-width:480px){.cal{row-gap:3px;column-gap:3px}}
 /* 活動の種類の色：練習＝緑、試合＝赤、合同練習＝青 */
 .cal-d.on.t-practice{background:var(--ok)}
 .cal-d.on.t-game{background:#dc2626}
