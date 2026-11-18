@@ -12,7 +12,7 @@ import PlayerTable from "./PlayerTable";
 import BodyPanel from "./BodyPanel";
 import PhysicalPanel from "./PhysicalPanel";
 import { GROUPS, MonthBar, avg as avgOf, splitGroups } from "./GroupStats";
-import type { Ctx } from "./Shared";
+import { RangePill, type Ctx } from "./Shared";
 import {
   addDays,
   addMonths,
@@ -27,7 +27,8 @@ import {
   dayType,
   practiceCount,
   playersOf,
-  recentWeeks,
+  doneWeeks,
+  teamDoneWeeksAll,
   teamTrainingAvg,
   teamSummaryWeek,
   absenceCounts,
@@ -329,7 +330,7 @@ function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       <MonthBar ym={ym} setYm={setYm} />
       <div className="bcards" style={{ marginBottom: 10 }}>
         {GROUPS.map((g) => {
-          const v = avgOf(groups[g.key].map((m) => trainingMonthAvg(m, ym)));
+          const v = avgOf(groups[g.key].map((m) => trainingMonthAvg(m, ym, true)));
           return (
             <div key={g.key} className="bcard" style={{ borderTopColor: g.color }}>
               <div className="bc-h">
@@ -353,7 +354,7 @@ function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
               <th className="r">入力週</th>
             </tr>
             {ps.map((m) => {
-              const v = trainingMonthAvg(m, ym);
+              const v = trainingMonthAvg(m, ym, true);
               return (
                 <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
                   <td style={{ whiteSpace: "nowrap" }}>{m.name}</td>
@@ -372,10 +373,14 @@ function TrainingMonth({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
 }
 
 function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
-  const weeks = recentWeeks(8);
-  // 上のチーム平均は、直近で終わった週（前週）。選手画面・ダッシュボードのボタンと同じ決め方
+  // コーチ画面のチーム集計は、月曜〜日曜が終わって確定した週（前週まで）だけ。進行中の今週は翌週の月曜日に反映
+  const weeks = doneWeeks(8);
+  // 推移グラフの期間：直近8週 / 全期間（確定した最初の週から前週まで）
+  const [all, setAll] = useState(false);
+  const chartWeeks = all ? teamDoneWeeksAll(ps) : weeks;
+  // 上のチーム平均は、直近で終わった週（前週）。ダッシュボードのボタンと同じ決め方
   const cur = teamSummaryWeek(ps);
-  const teamPts = weeks.map((w) => ({ d: w, v: teamTrainingAvg(ps, w) })).filter((p): p is { d: string; v: number } => p.v != null);
+  const teamPts = chartWeeks.map((w) => ({ d: w, v: teamTrainingAvg(ps, w) })).filter((p): p is { d: string; v: number } => p.v != null);
   const curAvg = teamTrainingAvg(ps, cur);
   const entered = ps.filter((m) => m.training[cur] != null).length;
   // その週のメニュー（日程調整）に合わせた評価基準（項目設定）
@@ -406,15 +411,16 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             </div>
           </div>
           <h3 style={{ marginTop: 14 }}>
-            チーム平均の推移 <small>直近8週</small>
+            チーム平均の推移 <small>確定した週</small>
+            <RangePill all={all} setAll={setAll} recent="直近8週" />
           </h3>
-          <LineChart pts={teamPts} h={130} color="var(--ok)" />
+          <LineChart pts={teamPts} h={130} color="#a96a00" unit="/ 10" />
       </div>
       <TrainingMonth ps={ps} ctx={ctx} />
 
       <div className="card">
         <h3>
-          選手ごとの週次推移 <small>0〜10</small>
+          選手ごとの週次推移 <small>0〜10・確定した直近8週</small>
         </h3>
         <div className="scroll">
           <table className="tbl">

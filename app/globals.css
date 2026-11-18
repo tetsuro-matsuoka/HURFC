@@ -189,7 +189,7 @@ svg.chart text{font-family:Oswald,sans-serif;font-size:11px;fill:var(--sub)}
 .pt tbody tr:hover td{background:#fafaf8}
 /* 左端の「名前」列だけ固定 */
 .pt .l{text-align:left}
-.pt .s1{position:sticky;left:0;z-index:1;text-align:left;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis;border-right:2px solid var(--line)}
+.pt .s1{position:sticky;left:0;z-index:1;text-align:left;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis;border-right:1px solid rgba(229,231,235,.7)}
 .pt thead .s1{z-index:3}
 /* 一番下の「平均」行（＋カテゴリー別の比較行）：淡い色・太い上枠・太字。縦にスクロールしても下にまとめて固定 */
 .pt tfoot{position:sticky;bottom:0;z-index:2}
@@ -616,8 +616,6 @@ svg.chart{touch-action:pan-y}
 .pt th.sorted{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
 @media(max-width:600px){.pt thead tr:nth-child(2) th{padding-top:6px;padding-bottom:6px}}
 .abs-row.zero .abs-l,.abs-row.zero .abs-v{color:var(--sub)}
-/* 選手一覧の縦線：列の間はうっすら、グループ（基本情報・体組成・出欠席率・筋トレ遂行率・フィジカル）の境目はハッキリ */
-.pt th,.pt td{border-right:1px solid rgba(229,231,235,.75)}
-.pt th.ge,.pt td.ge{border-right:2px solid #c3c8d0}
+/* 選手一覧の縦線：グループは背景色で分かれているので、グループの境目も列の間もすべて同じ薄いグレーの線 */
+.pt th,.pt td{border-right:1px solid rgba(229,231,235,.7)}
 .pt th:last-child,.pt td:last-child{border-right:none}
-.pt .s1{border-right:2px solid #c3c8d0}

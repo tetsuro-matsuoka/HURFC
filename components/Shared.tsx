@@ -198,7 +198,7 @@ export function WeekCritPanel({ ctx, m, w, onClose }: { ctx: Ctx; m: Member; w: 
 }
 
 // グラフの期間の2択ピル（直近 / 全期間）。見出しの右側に置く
-function RangePill({ all, setAll, recent }: { all: boolean; setAll: (v: boolean) => void; recent: string }) {
+export function RangePill({ all, setAll, recent }: { all: boolean; setAll: (v: boolean) => void; recent: string }) {
   return (
     <span className="range-pill">
       <button className={!all ? "on" : ""} onClick={() => setAll(false)}>
