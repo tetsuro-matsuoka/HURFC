@@ -572,3 +572,11 @@ svg.chart{touch-action:pan-y}
 .abs-types .l{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abs-types .v{font-size:22px;font-weight:700;line-height:1.2}
 .abs-types .v small{font-size:12px;margin-left:2px}
+/* 欠席理由統計：種類カードを押して絞り込み */
+.abs-types>button{text-align:left;font:inherit;cursor:pointer;transition:box-shadow .15s,opacity .15s}
+.abs-types>button.on{border-width:2.5px;box-shadow:0 0 0 3px var(--ts),0 0 0 4.5px var(--tc)}
+.abs-types>button.dim{opacity:.5}
+.abs-types .v small{font-size:12px;margin-left:0;font-weight:600}
+.abs-types .s{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abs-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:8px;font-size:13px}
+.abs-reset{margin-left:auto;font-size:12px;font-weight:700;color:var(--navy);text-decoration:underline;background:none;padding:2px 0}

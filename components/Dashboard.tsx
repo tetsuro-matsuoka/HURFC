@@ -451,8 +451,14 @@ const DAY_CLS: Record<DayType, string> = { 練習: "t-practice", 試合: "t-game
    トータル（全期間）と月別で同じボタン。from〜to の期間で集計（from が null なら全期間） */
 function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[]; practice: Practice; from: string | null; to: string; title: string; empty: string }) {
   const [open, setOpen] = useState(false);
-  const list = absenceCounts(ps, from, to);
+  // 上の3つのカードで選んだ種類（null＝すべて）。もう一度押すか「すべて表示」で解除
+  const [sel, setSel] = useState<DayType | null>(null);
   const byType = absenceByType(ps, practice, from, to); // 練習・試合・合同練習ごとの欠席回数
+  // 分母：期間内で今日までに開催した、その種類の日数 × 登録選手数
+  const end = to < today() ? to : today();
+  const heldOf = (k: DayType) => [...practice.days].filter((d) => (!from || d >= from) && d <= end && dayType(d, practice) === k).length;
+  const held = Object.fromEntries(DAY_TYPES.map((k) => [k, heldOf(k)])) as Record<DayType, number>;
+  const list = absenceCounts(ps, from, to, sel ? (d) => dayType(d, practice) === sel : undefined);
   const total = list.reduce((a, x) => a + x.n, 0);
   const max = Math.max(1, ...list.map((x) => x.n));
   return (
@@ -470,20 +476,35 @@ function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[];
               </button>
             </div>
             <div className="card">
-              {/* 上：活動の種類ごとの欠席合計（3列） */}
+              {/* 上：活動の種類ごとの欠席（欠席回数 / 対象回数）。押すと下の内訳をその種類だけに絞る */}
               <div className="abs-types">
                 {DAY_TYPES.map((k) => (
-                  <div key={k} className={DAY_CLS[k]}>
+                  <button key={k} className={`${DAY_CLS[k]} ${sel === k ? "on" : ""} ${sel && sel !== k ? "dim" : ""}`} onClick={() => setSel(sel === k ? null : k)} aria-pressed={sel === k}>
                     <div className="l">{k} 欠席</div>
                     <div className="v num">
                       {byType[k]}
-                      <small>回</small>
+                      <small> / {held[k] * ps.length}回</small>
                     </div>
-                  </div>
+                    <div className="s">開催 {held[k]}日</div>
+                  </button>
                 ))}
               </div>
-              <div className="muted" style={{ marginBottom: 8 }}>
-                欠席 合計 <b className="num">{total}</b> 回
+              <div className="abs-head">
+                {sel ? (
+                  <>
+                    <b>{sel}の欠席理由</b>
+                    <span className="muted">
+                      開催 {held[sel]}日 / 対象 {held[sel] * ps.length}回中・欠席 <b className="num">{total}</b>回
+                    </span>
+                    <button className="abs-reset" onClick={() => setSel(null)}>
+                      すべて表示
+                    </button>
+                  </>
+                ) : (
+                  <span className="muted">
+                    欠席 合計 <b className="num">{total}</b> 回
+                  </span>
+                )}
               </div>
               {total ? (
                 list.map((x) => (
@@ -498,7 +519,7 @@ function AbsenceButton({ ps, practice, from, to, title, empty }: { ps: Member[];
                   </div>
                 ))
               ) : (
-                <div className="empty">{empty}</div>
+                <div className="empty">{sel ? `この期間の${sel}の欠席記録はありません` : empty}</div>
               )}
             </div>
           </div>
