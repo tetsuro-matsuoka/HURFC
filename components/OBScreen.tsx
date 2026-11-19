@@ -58,6 +58,7 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
   // 記録の追加・編集の画面（id が null なら新しく追加）
   const [form, setForm] = useState<{ id: string | null } | null>(null);
   const allObs = obsOf(ctx.members);
+  const coach = ctx.me.role === "coach";
   const obs = allObs.filter((m) => show === "all" || m.ob_kind === show);
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
@@ -79,9 +80,12 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
         <h2 className="page" style={{ margin: 0 }}>
           OB
         </h2>
-        <button className="btn navy small" onClick={() => setForm({ id: null })}>
-          ＋ OB・コーチ記録を追加
-        </button>
+        {/* 追加・編集はコーチだけ（選手は見るだけ） */}
+        {coach && (
+          <button className="btn navy small" onClick={() => setForm({ id: null })}>
+            ＋ OB・コーチ記録を追加
+          </button>
+        )}
       </div>
       <div className="seg ob-seg" role="group" aria-label="表示する人">
         {(
@@ -97,7 +101,7 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
           </button>
         ))}
       </div>
-      {form && <RecordSheet ctx={ctx} id={form.id} onClose={() => setForm(null)} />}
+      {coach && form && <RecordSheet ctx={ctx} id={form.id} onClose={() => setForm(null)} />}
     </>
   );
   if (!obs.length)
@@ -105,7 +109,9 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
       <>
         {top}
         <div className="card empty">
-          {show === "coach"
+          {!coach
+            ? "まだ記録がありません"
+            : show === "coach"
             ? "コーチの記録はまだありません。「＋ OB・コーチ記録を追加」で区分「コーチ」を選んで登録できます。"
             : "OBはまだいません。「選手管理」で選手の「引退」を押すか、「＋ OB・コーチ記録を追加」で登録すると、ここにフィジカルの自己ベストが表示されます。"}
         </div>
@@ -154,19 +160,20 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
         <h3 className="ob-h">
           <span className="ob-ht">{show === "coach" ? "コーチ" : show === "ob" ? "OB" : "OB・コーチ"} 自己ベストランキング</span> <small>{options.find(([k]) => k === key)?.[1]}・{obs.length}名</small>
         </h3>
-        <TeamRanking ctx={ctx} rows={rows} fmtV={fmtV} sub={(r) => <ObBadge m={ctx.members[r.id]} />} />
+        <TeamRanking ctx={ctx} rows={rows} fmtV={fmtV} sub={(r) => <ObBadge m={ctx.members[r.id]} />} clickable />
       </div>
-      <OBBestTable ctx={ctx} obs={obs} defs={defs} onEdit={(id) => setForm({ id })} />
+      <OBBestTable ctx={ctx} obs={obs} defs={defs} onEdit={coach ? (id) => setForm({ id }) : undefined} />
     </>
   );
 }
 
 // OB 全員の自己ベスト一覧（全種目。体重比が ON の項目はすぐ右に体重比と記録時の体重）
-function OBBestTable({ ctx, obs, defs, onEdit }: { ctx: Ctx; obs: Member[]; defs: MetricDef[]; onEdit: (id: string) => void }) {
+// onEdit がないとき（選手が見るとき）は「編集」ボタンを出さない
+function OBBestTable({ ctx, obs, defs, onEdit }: { ctx: Ctx; obs: Member[]; defs: MetricDef[]; onEdit?: (id: string) => void }) {
   return (
     <div className="card">
       <h3 className="ob-h">
-        <span className="ob-ht">自己ベスト一覧</span> <small>名前をタップで詳細・「編集」で記録の追記・修正</small>
+        <span className="ob-ht">自己ベスト一覧</span> <small>名前をタップで詳細{onEdit ? "・「編集」で記録の追記・修正" : ""}</small>
       </h3>
       <div className="scroll">
         <table className="tbl">
@@ -190,15 +197,17 @@ function OBBestTable({ ctx, obs, defs, onEdit }: { ctx: Ctx; obs: Member[]; defs
               <tr key={m.id} className="click" onClick={() => ctx.openPlayer(m.id)}>
                 <td style={{ whiteSpace: "nowrap" }}>
                   {m.name}{" "}
+                  {onEdit && (
                   <button
                     className="ob-edit"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onEdit(m.id);
+                      onEdit?.(m.id);
                     }}
                   >
                     編集
                   </button>
+                  )}
                 </td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   <span className={`chip ${m.ob_kind === "coach" ? "ob-coach" : "ob-ob"} ob-badge`}>{obLabel(m)}</span>
