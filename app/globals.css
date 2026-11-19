@@ -639,3 +639,15 @@ svg.chart{touch-action:pan-y}
 .ob-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--sub);min-width:0}
 .ob-grid label span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ob-grid input.t{padding:10px;font-size:16px}
+/* OBのランキング：名前はフルネーム（必要なら改行）、ラベルは名前の下の段。右の数値は2段で右揃え */
+.trank .tn-name.two{flex-direction:column;align-items:flex-start;gap:2px}
+.trank .tn-name.two .tn-txt{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.25}
+.trank .tn-name.two .tn-sub{margin-left:0;display:flex;align-items:center;gap:4px;overflow:visible;white-space:nowrap}
+.trank .tn-name.two .ob-badge{margin-left:0;flex-shrink:0;white-space:nowrap}
+.trank .tn-name.two .ob-pos{margin-left:0;flex-shrink:0}
+.trank .tv2{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;flex-shrink:0}
+.trank .tv2 .tv-sub{font-size:11px;font-weight:500;color:var(--sub);margin-left:0}
+/* OBタブの見出し：題名は改行しない（説明は次の行に回る） */
+.ob-h{flex-wrap:wrap;row-gap:2px}
+.ob-ht{white-space:nowrap}
+@media(max-width:400px){.ob-h{font-size:14px}.ob-h small{font-size:11px}}
