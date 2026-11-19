@@ -12,7 +12,7 @@ import PlayerTable from "./PlayerTable";
 import BodyPanel from "./BodyPanel";
 import PhysicalPanel from "./PhysicalPanel";
 import { GROUPS, MonthBar, avg as avgOf, splitGroups } from "./GroupStats";
-import { RangePill, type Ctx } from "./Shared";
+import { CriteriaButton, RangePill, type Ctx } from "./Shared";
 import {
   addDays,
   addMonths,
@@ -40,8 +40,8 @@ import {
   trainingMonthAvg,
   weekLabel,
   weekShort,
-  CRITERIA_KEY,
   DEFAULT_MENU,
+  menuLabel,
   wd,
   ymLabel,
   ymOf,
@@ -385,8 +385,6 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
   const entered = ps.filter((m) => m.training[cur] != null).length;
   // その週のメニュー（日程調整）に合わせた評価基準（項目設定）
   const menu = ctx.weeks[cur]?.menu ?? DEFAULT_MENU;
-  const criteria = ctx.settings[CRITERIA_KEY[menu]];
-  const [showCrit, setShowCrit] = useState(false);
 
   return (
     <>
@@ -394,13 +392,8 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
       <div className="card">
           <h3 style={{ flexWrap: "wrap" }}>
             チーム平均 <small>{weekLabel(cur)}（{menu}）</small>
-            <button className={`crit-toggle ${showCrit ? "on" : ""}`} onClick={() => setShowCrit(!showCrit)} aria-expanded={showCrit}>
-              評価基準
-            </button>
+            <CriteriaButton ctx={ctx} />
           </h3>
-          {showCrit && (
-            <p className="crit-text">{criteria || "まだ設定されていません（「項目設定」から入力できます）"}</p>
-          )}
           <div className="kpi" style={{ padding: 0 }}>
             <div className="v num">
               {curAvg == null ? "—" : fmt1(curAvg)}
@@ -414,7 +407,7 @@ function TrainingPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
             チーム平均の推移 <small>確定した週</small>
             <RangePill all={all} setAll={setAll} recent="直近8週" />
           </h3>
-          <LineChart pts={teamPts} h={130} color="#a96a00" unit="/ 10" />
+          <LineChart pts={teamPts} h={130} color="#a96a00" unit="/ 10" note={(w) => `メニュー ${menuLabel(ctx.weeks[w]?.menu ?? DEFAULT_MENU)}`} />
       </div>
       <TrainingMonth ps={ps} ctx={ctx} />
 

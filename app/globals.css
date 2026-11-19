@@ -433,8 +433,6 @@ svg.chart{touch-action:pan-y}
 .crit-btns button.on{background:var(--warn-soft);border-color:#a96a00;color:#7a5200}
 
 /* コーチ『筋トレ遂行率』：見出し右端の「評価基準」ボタンと、開いたときの文 */
-.crit-toggle{margin-left:auto;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#fff;color:#7a5200;border:1.5px solid #a96a00}
-.crit-toggle.on{background:#a96a00;color:#fff}
 .crit-text{white-space:pre-wrap;line-height:1.8;font-size:13px;color:var(--ink);background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px}
 
 /* 選手一覧の見出し
@@ -544,14 +542,6 @@ svg.chart{touch-action:pan-y}
 .range-pill button.on{background:#fff;color:inherit;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 
 .kpis3 .kpi.c-attend .s{font-size:11px}
-/* 選手詳細：筋トレ遂行率のグラフでタップした週の評価基準パネル */
-.crit-panel{margin-top:10px;border:1.5px solid #a96a00;border-radius:12px;padding:10px 12px;background:#fffaf0}
-.crit-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;color:#7a5200}
-.crit-hd .x{font-size:20px;line-height:1;padding:2px 6px;color:var(--sub);background:transparent}
-.crit-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0}
-.crit-row span{color:var(--sub)}
-.crit-l{font-size:12px;font-weight:700;color:#7a5200;margin-top:6px}
-.crit-panel .crit-text{margin:4px 0 0}
 /* 日程調整：マスの上下左右の隙間をそろえる（行の高さ＝マスの高さ。マスを引き伸ばさない） */
 /* 活動の種類の色：練習＝緑、試合＝赤、合同練習＝青 */
 .cal-d.on.t-practice{background:var(--ok)}
@@ -607,8 +597,6 @@ svg.chart{touch-action:pan-y}
 .trank .tv small{font-size:11px;margin-left:2px}
 @media(max-width:400px){.trank li{gap:6px}.trank li.t1 .tv{font-size:22px}.trank li.t1 .tn-name{font-size:18px}}
 /* 筋トレ遂行率：選んだ週の行と、その下に開く詳細 */
-.tbl tr.sel td{background:#fffaf0}
-.tbl tr.crit-tr td{padding:0 0 8px;border-bottom:none}
 /* 選手一覧：列の見出しをタップで並び替え */
 .pt th.sortable{cursor:pointer;user-select:none}
 /* 見出しは矢印なし・1行（単位も同じ行）。並び替え中の列だけ下線 */
@@ -626,3 +614,14 @@ svg.chart{touch-action:pan-y}
 .scroll .tbl th,.scroll .tbl td{padding-left:10px;padding-right:10px}
 .ph .ph-d{border-right:1px solid rgba(229,231,235,.7)}
 @media(max-width:600px){.scroll .tbl th,.scroll .tbl td{padding-left:5px;padding-right:5px}}
+/* 筋トレ遂行率の「評価基準」ボタン（見出しの右）と一覧 */
+.crit-head{flex-wrap:wrap}
+.crit-btn{margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#fff;color:#7a5200;border:1.5px solid #a96a00;white-space:nowrap;flex:none}
+.crit-btn span{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#a96a00;color:#fff;font-size:10px}
+.crit-btn:active{background:#fff1d6}
+.crit-btn + .range-pill{margin-left:6px}
+.crit-item{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:#fff}
+.crit-item.cur{border-color:#a96a00;background:#fffaf0}
+.crit-item-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#7a5200}
+.crit-now{font-size:11px;font-weight:700;color:#fff;background:#a96a00;border-radius:999px;padding:1px 8px}
+.crit-item .crit-text{margin:0}

@@ -16,9 +16,9 @@ import {
   recentWeeks,
   summaryWeek,
   weekShort,
-  playersOf,
-  teamTrainingAvg,
-  weekLabel,
+  weekStart,
+  today,
+  MENUS,
   menuLabel,
   MENU_TIMES,
   CRITERIA_KEY,
@@ -64,8 +64,6 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
   const [wAll, setWAll] = useState(false);
   const [tAll, setTAll] = useState(false);
   const tWeeks = tAll ? Object.keys(m.training).sort() : weeks;
-  // 筋トレ遂行率のグラフでタップした週（下に評価基準のパネルを開く。null なら閉じている）
-  const [critWeek, setCritWeek] = useState<string | null>(null);
   const menuOf = (w: string): Menu => ctx.weeks[w]?.menu ?? DEFAULT_MENU;
   const lw = latestWeight(m),
     r = attendRate(m, ctx.practice),
@@ -145,6 +143,7 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
           <div className="card">
             <h3 className="c-h">
               筋トレ遂行率 <small>0〜10</small>
+              <CriteriaButton ctx={ctx} />
               <RangePill all={tAll} setAll={setTAll} recent="直近8週" />
             </h3>
             <LineChart
@@ -153,10 +152,7 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
               color={THEME.training}
               unit="/ 10"
               note={(w) => `メニュー ${menuLabel(menuOf(w))}`}
-              onPick={setCritWeek}
             />
-            {/* タップした週の評価基準（普段は隠す。× で閉じる） */}
-            {critWeek && <WeekCritPanel ctx={ctx} m={m} w={critWeek} onClose={() => setCritWeek(null)} />}
           </div>
         </div>
       </div>
@@ -164,36 +160,35 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
   );
 }
 
-// 筋トレ遂行率：タップした週の詳細パネル（選手画面・コーチの選手詳細で共通）
-//  その週の対象メニュー・自分の遂行率・チーム平均・評価基準（項目設定のそのメニュー用の文）。× で閉じる
-export function WeekCritPanel({ ctx, m, w, onClose }: { ctx: Ctx; m: Member; w: string; onClose: () => void }) {
-  const menu: Menu = ctx.weeks[w]?.menu ?? DEFAULT_MENU;
-  const team = teamTrainingAvg(playersOf(ctx.members), w);
+// 筋トレ遂行率の「評価基準」ボタン（選手画面・コーチ画面で共通）
+//  押すと、メニューごと（A〜B / A〜C / A〜D）の評価基準（項目設定で入力した文）を一覧で表示。今週のメニューに「今週」
+export function CriteriaButton({ ctx }: { ctx: Ctx }) {
+  const [open, setOpen] = useState(false);
+  const cur: Menu = ctx.weeks[weekStart(today())]?.menu ?? DEFAULT_MENU;
   return (
-    <div className="crit-panel">
-      <div className="crit-hd">
-        <b>{weekLabel(w)}</b>
-        <button className="x" onClick={onClose} aria-label="閉じる">
-          ×
-        </button>
-      </div>
-      <div className="crit-row">
-        <span>対象メニュー</span>
-        <b>
-          {menuLabel(menu)}（{MENU_TIMES[menu]}）
-        </b>
-      </div>
-      <div className="crit-row">
-        <span>{ctx.me.id === m.id ? "自分の遂行率" : "この週の遂行率"}</span>
-        <b className="num">{m.training[w] == null ? "未入力" : `${fmt1(m.training[w])} / 10`}</b>
-      </div>
-      <div className="crit-row">
-        <span>チーム平均</span>
-        <b className="num">{team == null ? "—" : `${fmt1(team)} / 10`}</b>
-      </div>
-      <div className="crit-l">評価基準（{menu}）</div>
-      <p className="crit-text">{ctx.settings[CRITERIA_KEY[menu]] || "まだ設定されていません（「項目設定」から入力できます）"}</p>
-    </div>
+    <>
+      <button className="crit-btn" onClick={() => setOpen(true)}>
+        <span aria-hidden>?</span> 評価基準
+      </button>
+      {open && (
+        <Sheet title="筋トレ遂行率の評価基準" onClose={() => setOpen(false)}>
+          <p className="muted" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+            1週間（月曜〜日曜）ごとに 0〜10 で評価します。その週のメニューは「日程調整」で決まります（未設定の週は A〜C）。
+          </p>
+          {MENUS.map((x) => (
+            <div key={x} className={`crit-item ${x === cur ? "cur" : ""}`}>
+              <div className="crit-item-h">
+                <b>
+                  {menuLabel(x)}（{MENU_TIMES[x]}）
+                </b>
+                {x === cur && <span className="crit-now">今週</span>}
+              </div>
+              <p className="crit-text">{ctx.settings[CRITERIA_KEY[x]] || "まだ設定されていません（コーチが「項目設定」から入力できます）"}</p>
+            </div>
+          ))}
+        </Sheet>
+      )}
+    </>
   );
 }
 
