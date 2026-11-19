@@ -11,7 +11,7 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
-import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf, obsOf, retiredYear } from "@/lib/calc";
+import { BK_POSITIONS, FW_POSITIONS, POSITIONS, normName, playersOf, obsOf, obLabel } from "@/lib/calc";
 import { FilterChips, NO_FILTER, UnitBadge, applyFilter, isFiltered, type Filter } from "./PlayerFilter";
 import { adminCall } from "@/lib/data";
 import type { Member, Position, Role } from "@/lib/types";
@@ -281,7 +281,7 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
       {/* OB（引退した選手）：現役に戻す・削除ができる。記録は残り、「OB」タブで自己ベストを見られる */}
       <div className="card">
         <h3>
-          OB <small>{obs.length}名・引退した選手</small>
+          OB・コーチ記録 <small>{obs.length}名・現役の集計には入りません（記録の追加・編集は「OB」タブ）</small>
         </h3>
         {obs.length ? (
           obs.map((m) => (
@@ -289,7 +289,7 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
               <div className="mn">
                 <b>{m.name}</b>
                 <div>
-                  <span className="chip none">{m.retired_on ? `${retiredYear(m.retired_on)}年度引退` : "引退"}</span>{" "}
+                  <span className={`chip ${m.ob_kind === "coach" ? "ob-coach" : "ob-ob"}`}>{obLabel(m)}</span>{" "}
                   <span className="chip none">{m.position ?? "ポジション未設定"}</span>
                 </div>
               </div>

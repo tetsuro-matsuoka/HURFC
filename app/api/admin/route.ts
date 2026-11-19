@@ -7,6 +7,7 @@
 // ・reorder : 選手の並び順の変更
 // ・category: 選手のカテゴリー（レギュラー・ベンチ・ベンチ外・未設定）の変更
 // ・ob      : 選手を引退（OB）にする / 現役に戻す
+// ・ob_record: OB・コーチの記録を追加（新しい記録用メンバーを作る）・編集（名前・区分・卒業年度・ポジションと、その日の体重・測定値）
 // ・delete  : メンバー削除（その人の記録も消えます）
 // 秘密鍵（SUPABASE_SECRET_KEY）はこのサーバー側でのみ使い、ブラウザには送りません。
 
@@ -28,6 +29,13 @@ type Body = {
   position?: string | null;
   sample?: boolean;
   ob?: boolean;
+  // ob_record（OB・コーチの記録の追加・編集）
+  ob_kind?: string;
+  grad_label?: string | null;
+  date?: string;
+  weight?: number | null;
+  lifts?: Record<string, number | null>;
+  metrics?: Record<string, number | null>;
 };
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -195,6 +203,61 @@ export async function POST(req: Request) {
         );
       }
       return json({ ok: true });
+    }
+
+    if (body.action === "ob_record") {
+      if (!name) return fail("名前を入力してください");
+      const ob_kind = body.ob_kind === "coach" ? "coach" : "ob";
+      const grad_label = ob_kind === "ob" ? String(body.grad_label ?? "").trim().slice(0, 30) || null : null;
+      const position = toPosition(body.position);
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date)) ? String(body.date) : todayJST();
+      const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v)) || Number(v) <= 0 ? null : Number(v));
+      const colErr = (msg: string) =>
+        /ob_kind|grad_label|is_ob/.test(msg) ? "保存できません。データベースの更新（追加SQL その11・その12）が済んでいるか確認してください" : msg;
+
+      let id = body.id ?? "";
+      if (!id) {
+        // 記録用のメンバー（ログインには使わない）を作る
+        id = await createMember(admin, name, randomPassword(), "player", { position });
+        const { error } = await admin.from("users").update({ is_ob: true, retired_on: null, ob_kind, grad_label }).eq("id", id);
+        if (error) {
+          await admin.from("users").delete().eq("id", id);
+          await admin.auth.admin.deleteUser(id);
+          throw new Error(colErr(error.message));
+        }
+      } else {
+        const { error } = await admin.from("users").update({ name, position, ob_kind, grad_label }).eq("id", id).eq("role", "player").eq("is_ob", true);
+        if (error) throw new Error(error.code === "23505" ? "同じ名前のメンバーがいます" : colErr(error.message));
+      }
+
+      // その日の体重（空なら消す）
+      const weight = num(body.weight);
+      if (weight != null) {
+        const { error } = await admin.from("daily_records").upsert({ user_id: id, date, weight }, { onConflict: "user_id,date" });
+        if (error) throw new Error(error.message);
+      } else {
+        await admin.from("daily_records").update({ weight: null }).eq("user_id", id).eq("date", date);
+      }
+      // Big3（空ばかりならその日の行を消す）
+      const lifts = { squat: num(body.lifts?.squat), bench_press: num(body.lifts?.bench_press), deadlift: num(body.lifts?.deadlift) };
+      if (Object.values(lifts).some((v) => v != null)) {
+        const { error } = await admin.from("physical_records").upsert({ user_id: id, date, ...lifts }, { onConflict: "user_id,date" });
+        if (error) throw new Error(error.message);
+      } else {
+        await admin.from("physical_records").delete().eq("user_id", id).eq("date", date);
+      }
+      // そのほかの測定項目（空なら消す）
+      for (const [mid, v] of Object.entries(body.metrics ?? {})) {
+        const metric_id = Number(mid);
+        if (!Number.isInteger(metric_id)) continue;
+        const value = num(v);
+        const { error } =
+          value != null
+            ? await admin.from("metric_records").upsert({ user_id: id, metric_id, date, value }, { onConflict: "user_id,metric_id,date" })
+            : await admin.from("metric_records").delete().eq("user_id", id).eq("metric_id", metric_id).eq("date", date);
+        if (error) throw new Error(error.message);
+      }
+      return json({ ok: true, id });
     }
 
     if (body.action === "reorder") {
