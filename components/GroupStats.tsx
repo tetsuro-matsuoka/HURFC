@@ -61,18 +61,21 @@ export function DateBar({ d, setD }: { d: string; setD: (d: string) => void }) {
 
 // 全体・FW・BK の平均カード。中身は「グループ名と人数」「大きな数値」「7日・30日前比」の3つだけ
 // at(グループ, 日付) でその日時点の平均を返す
+// diff=false：「7日・30日前比」の行を出さない（『体組成』は区分・人数・平均だけのコンパクトな形）
 export function GroupCards({
   groups,
   d,
   unit,
   at,
   fmt,
+  diff: showDiff = true,
 }: {
   groups: Record<GroupKey, Member[]>;
   d: string;
   unit: string;
   at: (g: GroupKey, day: string) => number | null;
   fmt: (v: number) => string;
+  diff?: boolean;
 }) {
   const diff = (a: number | null, b: number | null): ReactNode => {
     if (a == null || b == null) return <span className="muted">—</span>;
@@ -85,7 +88,7 @@ export function GroupCards({
     );
   };
   return (
-    <div className="bcards">
+    <div className={`bcards ${showDiff ? "" : "nodiff"}`}>
       {GROUPS.map((g) => {
         const now = at(g.key, d);
         return (
@@ -98,10 +101,12 @@ export function GroupCards({
               {now == null ? "—" : fmt(now)}
               {unit && <small>{unit}</small>}
             </div>
-            <div className="bc-d num">
-              <span>7日 {diff(now, at(g.key, addDays(d, -7)))}</span>
-              <span>30日 {diff(now, at(g.key, addDays(d, -30)))}</span>
-            </div>
+            {showDiff && (
+              <div className="bc-d num">
+                <span>7日 {diff(now, at(g.key, addDays(d, -7)))}</span>
+                <span>30日 {diff(now, at(g.key, addDays(d, -30)))}</span>
+              </div>
+            )}
           </div>
         );
       })}

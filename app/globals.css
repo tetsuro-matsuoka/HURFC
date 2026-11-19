@@ -721,3 +721,6 @@ svg.chart{touch-action:pan-y}
 .lv-me.none{color:var(--sub);background:#f1f2f4}
 .lv-tbl td:not(.lv-sticky),.lv-tbl th:not(.lv-sticky){white-space:nowrap}
 .lv-tbl td.lv-sticky b .lv-line{display:block;white-space:nowrap}
+/* 体組成の平均カード：7日・30日前比なしのコンパクトな形 */
+.bcards.nodiff .bcard{padding-bottom:8px}
+.bcards.nodiff .bc-v{margin-bottom:0}

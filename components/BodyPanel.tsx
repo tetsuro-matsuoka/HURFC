@@ -1,7 +1,7 @@
 "use client";
 
 // チームダッシュボード『体組成』
-//  1. 上部：全体・FW・BK の体重の平均カード（選んだ日時点の平均と、7日前比・30日前比）
+//  1. 上部：全体・FW・BK の体重の平均カード（区分・人数・選んだ日時点の平均だけ）
 //  2. その下：全体・FW・BK の体重の推移グラフ（期間を切り替え）
 //  3. 一番下：選手別の体組成（最新値）の表
 // 一番下の表の列は「項目設定」の体組成の項目（体重・体脂肪率など。並び順どおり）
@@ -34,7 +34,7 @@ export default function BodyPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
         {/* 見出しは『フィジカル』の種目プルダウンと同じ位置に、短く1つだけ */}
         <div className="ctl-title">{weightName}（kg）</div>
         <DateBar d={d} setD={setD} />
-        <GroupCards groups={groups} d={d} unit="kg" at={at} fmt={fmt1} />
+        <GroupCards groups={groups} d={d} unit="kg" at={at} fmt={fmt1} diff={false} />
       </div>
 
       <div className="card">
