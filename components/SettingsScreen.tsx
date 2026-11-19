@@ -74,8 +74,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
       await ctx.reload();
       ctx.toast(okMsg);
       return true;
-    } catch {
-      ctx.toast("保存に失敗しました。データベースの更新（追加SQL）が済んでいるか確認してください");
+    } catch (e) {
+      ctx.toast(e instanceof Error ? e.message : "保存に失敗しました。データベースの更新（追加SQL）が済んでいるか確認してください");
       return false;
     } finally {
       setBusy(false);
@@ -132,8 +132,8 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                         {x.key === "weight" && " ・ 「毎日の記録」の体重を使用"}
                         {(x.key === "bench_press" || x.key === "squat" || x.key === "deadlift") && " ・ 「測定」のBig3入力を使用"}
                         {x.key === "big3_total" && " ・ Big3の自己ベストから自動計算"}
-                        {x.derived && ` ・ 同じ日の体重 × ${x.derived.dist}m ÷ 「${ctx.metrics.find((y) => y.id === x.derived?.sprintId)?.name}」のタイムで自動計算`}
-                        {!x.derived && isMomentum(x) && " ・ 自動計算には、名前に「30m」か「10m」を含むスプリント項目（秒）が必要です"}
+                        {x.derived && x.derived.sprintId >= 0 && ` ・ 同じ日の体重 × ${x.derived.dist} ÷ 「${ctx.metrics.find((y) => y.id === x.derived?.sprintId)?.name}」のタイム（秒）で自動計算`}
+                        {x.derived && x.derived.sprintId < 0 && ` ・ 名前に「${x.derived.dist}m」を含むフィジカルの項目（秒）が見つからないため、すべて — になります`}
                       </div>
                       {/* スプリントモメンタムの計算に使う距離（10m / 30m）。押すとすぐ保存 */}
                       {isMomentum(x) && (
@@ -151,9 +151,6 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
                               </button>
                             ))}
                           </div>
-                          {x.derived && x.derived.dist !== momentumDist(ctx.settings) && (
-                            <small className="muted">{momentumDist(ctx.settings)}m の項目がないため {x.derived.dist}m で計算しています</small>
-                          )}
                         </div>
                       )}
                     </div>

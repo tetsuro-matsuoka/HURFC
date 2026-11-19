@@ -231,7 +231,7 @@ export async function loadMeta(): Promise<Meta> {
   //   計算に使う距離（10m / 30m）は項目設定で選んだもの（未設定は 30m）
   const sprint = pickSprint(metrics, momentumDist(Object.fromEntries(settings.map((x) => [x.key, x.value]))));
   metrics.forEach((x) => {
-    if (isMomentum(x) && sprint) {
+    if (isMomentum(x)) {
       x.derived = sprint;
       x.better = "high";
     }
@@ -329,9 +329,13 @@ export async function deleteMetric(id: number) {
   const { error } = await sb().from("metrics").delete().eq("id", id);
   if (error) throw error;
 }
+// 保存したあと読み直して、本当に保存されたか確かめる（権限などで保存されなかったときはエラーにする）
 export async function saveSetting(key: string, value: string) {
-  const { error } = await sb().from("app_settings").upsert({ key, value });
+  const { error } = await sb().from("app_settings").upsert({ key, value }, { onConflict: "key" });
   if (error) throw error;
+  const { data, error: e2 } = await sb().from("app_settings").select("value").eq("key", key).maybeSingle();
+  if (e2) throw e2;
+  if (!data || data.value !== value) throw new Error("設定を保存できませんでした（コーチでログインしているか確認してください）");
 }
 
 // コーチ専用の操作（メンバー追加・編集・並び替え・削除・初期設定）と選手のログインはサーバー側で実行
