@@ -461,13 +461,15 @@ function BodyDetail({ ctx }: { ctx: Ctx }) {
 // 選択肢：項目設定のフィジカル項目。体重比が ON の項目は「〇〇体重比」も
 // 順位は自己ベスト（体重比は自己ベスト÷その日の体重）で、チーム内と自分の区分（FW/BK）内
 // topOnly：上のカード（種目選択・自己ベスト/最新値・自分の記録・順位・推移）だけ。コーチの選手詳細で使う
-export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: boolean }) {
+// bestOnly：自己ベストだけ（自己ベスト/最新値の切り替え・順位・推移グラフを出さない）。OB・コーチの詳細で使う
+export function PhysicalDetail({ ctx, topOnly = false, bestOnly = false }: { ctx: Ctx; topOnly?: boolean; bestOnly?: boolean }) {
   const m = ctx.me;
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const first = defs.find((x) => x.key === "big3_total") ?? defs[0];
   const [sel, setSel] = useState<string | null>(null);
   // 表示の基準：自己ベスト／最新値（上の自分の記録・順位と、下のランキングが連動）
-  const [mode, setMode] = useState<"best" | "latest">("best");
+  const [modeSel, setMode] = useState<"best" | "latest">("best");
+  const mode = bestOnly ? "best" : modeSel;
   const key = sel ?? (first ? "m" + first.id : "");
   const def = defs.find((x) => "m" + x.id === key || "r" + x.id === key);
   if (!def) return <div className="card empty">フィジカルの項目がありません</div>;
@@ -536,6 +538,7 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
           </option>
         ))}
       </select>
+      {!bestOnly && (
       <div className="seg" style={{ marginBottom: 10 }}>
         <button className={mode === "best" ? "on" : ""} onClick={() => setMode("best")}>
           自己ベスト
@@ -544,6 +547,7 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
           最新値
         </button>
       </div>
+      )}
       {def.key === "big3_total" && !ratio ? (
         <Big3Block ctx={ctx} mode={mode} />
       ) : (
@@ -559,6 +563,7 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
         </div>
       </div>
       )}
+      {!bestOnly && (
       <div className="rankrow">
         <span className="rankpill">{pos >= 0 ? `チーム ${pos + 1}位 / ${rows.length}人` : "チーム —"}</span>
         {unit && (
@@ -567,7 +572,8 @@ export function PhysicalDetail({ ctx, topOnly = false }: { ctx: Ctx; topOnly?: b
           </span>
         )}
       </div>
-      {chart.length >= 2 && (
+      )}
+      {!bestOnly && chart.length >= 2 && (
         <LineChart pts={chart} h={110} color="var(--accent)" minRange={ratio ? 0.2 : 2} digits={ratio ? 2 : 1} fmt={!ratio && isMinSec(def) ? fmtMinSec : undefined} />
       )}
       </div>

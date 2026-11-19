@@ -651,3 +651,8 @@ svg.chart{touch-action:pan-y}
 .ob-h{flex-wrap:wrap;row-gap:2px}
 .ob-ht{white-space:nowrap}
 @media(max-width:400px){.ob-h{font-size:14px}.ob-h small{font-size:11px}}
+/* OB・コーチの詳細：体重のカード1枚 */
+.kpis.kpis1{grid-template-columns:1fr}
+.kpis1 .kpi{border-top:4px solid var(--c)}
+.kpis1 .kpi .l{color:var(--c)}
+.hd h2 .ob-badge{font-size:12px;vertical-align:middle}
