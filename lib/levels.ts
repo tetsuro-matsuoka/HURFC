@@ -27,8 +27,8 @@ export function readLevels(settings: Record<string, string>): LevelConfig {
 const SHORT: Record<string, string> = { squat: "SQ", bench_press: "BP", deadlift: "DL", big3_total: "Big3" };
 export function levelOptions(metrics: MetricDef[]): LevelOption[] {
   return metricsOf(metrics, "フィジカル").flatMap((x) => {
-    // チャートの頂点に出す短い名前（スプリントモメンタム → モメンタム）
-    const s = SHORT[x.key ?? ""] ?? (x.derived ? "モメンタム" : x.name);
+    // チャートの頂点に出す名前（Big3 は SQ・BP・DL と短く。そのほかは正式名称）
+    const s = SHORT[x.key ?? ""] ?? x.name;
     const o: LevelOption[] = [{ key: "m" + x.id, def: x, ratio: false, label: x.name + basisLabel(x), short: s, low: x.better === "low" }];
     if (x.show_ratio) o.push({ key: "r" + x.id, def: x, ratio: true, label: `${x.name}体重比`, short: `${s}体重比`, low: false });
     return o;
@@ -60,3 +60,17 @@ export const hasAnyThreshold = (it: LevelItem) => it.th.some((t) => t != null);
 // 値の表示（タイムは 分:秒、体重比は小数2桁）
 export const fmtOption = (o: LevelOption, v: number | null) => (v == null ? "—" : o.ratio ? fmtRatio(v) : fmtMetric(o.def, v));
 export const isTimeOption = (o: LevelOption) => !o.ratio && isMinSec(o.def);
+
+// 名前を見やすい区切りで行に分ける（「スプリントモメンタム」→「スプリント」「モメンタム」。「スプリント」の後ろで改行）
+//  ほかに長い名前は7文字ずつ。体重比は最後の行に付ける
+export function splitLabel(name: string): string[] {
+  return name
+    .replace(/スプリント(?=\S)/g, "スプリント\n")
+    .split("\n")
+    .flatMap((part) => (part.length > 7 && part.endsWith("体重比") ? [part.slice(0, -3), "体重比"] : [part]))
+    .flatMap((part) => {
+      const out: string[] = [];
+      for (let i = 0; i < part.length; i += 7) out.push(part.slice(i, i + 7));
+      return out;
+    });
+}
