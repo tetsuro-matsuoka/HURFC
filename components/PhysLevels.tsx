@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import { saveSetting } from "@/lib/data";
-import { fmtMinSec, unitOf } from "@/lib/calc";
+import { basisLabel, fmtMinSec, unitOf } from "@/lib/calc";
 import {
   LEVELS_KEY,
   fmtOption,
@@ -150,7 +150,7 @@ export function PhysRadar({ ctx }: { ctx: Ctx }) {
       <h3 className="radar-h">
         フィジカルバランス <small>5段階評価</small>
         {/* 評価基準（全種目の Lv.1〜Lv.5 の基準値の一覧）と、自己ベスト / 最新値の切り替え */}
-        <LevelsButton ctx={ctx} />
+        <LevelsButton ctx={ctx} mode={mode} />
         <span className="range-pill">
           <button className={mode === "best" ? "on" : ""} onClick={() => setMode("best")}>
             自己ベスト
@@ -223,8 +223,9 @@ function Radar({ items }: { items: { label: string; lv: number }[] }) {
 }
 
 /* ---------- 評価基準の一覧（選手が見る） ----------
-   チャートに出している種目の Lv.1〜Lv.5 の基準値を表で。自分の自己ベストで届いているレベルに色 */
-function LevelsButton({ ctx }: { ctx: Ctx }) {
+   チャートに出している種目の Lv.1〜Lv.5 の基準値を表で。左の種目列は横にスライドしても固定
+   種目の下に、いま選んでいる記録（自己ベスト / 最新値）の自分の値とレベル。届いているレベルのマスに色 */
+function LevelsButton({ ctx, mode }: { ctx: Ctx; mode: "best" | "latest" }) {
   const [open, setOpen] = useState(false);
   const cfg = readLevels(ctx.settings);
   const rows = levelOptions(ctx.metrics)
@@ -239,14 +240,18 @@ function LevelsButton({ ctx }: { ctx: Ctx }) {
         <Sheet title="フィジカル評価基準" onClose={() => setOpen(false)}>
           {rows.length ? (
             <>
-              <p className="muted" style={{ marginBottom: 10, lineHeight: 1.7 }}>
-                大きいほど良い種目は基準「以上」、タイムなど小さいほど良い種目は基準「以下」でそのレベル。Lv.1 に届かなければ Lv.0 です。色が付いているのは、あなたの自己ベストで届いているレベルです。
+              <div className="lv-mode">
+                <b>{mode === "best" ? "自己ベスト基準" : "最新値基準"}</b>で比べています
+                <small>（チャートの「自己ベスト / 最新値」と連動）</small>
+              </div>
+              <p className="muted" style={{ marginBottom: 10, lineHeight: 1.7, fontSize: 12 }}>
+                大きいほど良い種目は基準「以上」、タイムなど小さいほど良い種目は基準「以下」でそのレベル。Lv.1 に届かなければ Lv.0。色が付いているマスが、あなたが届いているレベルです。
               </p>
-              <div className="scroll">
+              <div className="scroll lv-wrap">
                 <table className="tbl lv-tbl">
                   <tbody>
                     <tr>
-                      <th>種目</th>
+                      <th className="lv-sticky">種目</th>
                       {[1, 2, 3, 4, 5].map((k) => (
                         <th key={k} className="r">
                           Lv.{k}
@@ -254,16 +259,20 @@ function LevelsButton({ ctx }: { ctx: Ctx }) {
                       ))}
                     </tr>
                     {rows.map(({ o, it }) => {
-                      const lv = levelOf(optionValue(ctx.me, o, "best"), it, o.low);
+                      const v = optionValue(ctx.me, o, mode);
+                      const lv = levelOf(v, it, o.low);
                       const u = o.ratio ? "倍" : isTimeOption(o) ? "" : unitOf(o.def);
+                      // 補足行：計算の基準（30m基準）・単位・以上/以下
+                      const note = [basisLabel(o.def).replace(/[（）]/g, "") || null, u || null, o.low ? "以下" : "以上"].filter(Boolean).join("・");
                       return (
                         <tr key={o.key}>
-                          <td>
-                            <b>{o.label}</b>
-                            <small className="lv-u">
-                              {u && `${u}・`}
-                              {o.low ? "以下" : "以上"}
-                            </small>
+                          <td className="lv-sticky">
+                            <b>{o.ratio ? `${o.def.name}体重比` : o.def.name}</b>
+                            <small className="lv-u">{note}</small>
+                            <span className={`lv-me ${v == null ? "none" : ""}`}>
+                              自分: {v == null ? "未記録" : `${fmtOption(o, v)}${u}`}
+                              {v != null && <em>Lv.{lv}</em>}
+                            </span>
                           </td>
                           {it.th.map((t, i) => (
                             <td key={i} className={`r num ${t != null && i < lv ? "got" : ""}`}>
