@@ -1,14 +1,11 @@
 "use client";
 
 // OB・コーチの詳細（OBタブで名前をタップしたとき）
-//  種目を選ぶのではなく、その人のフィジカルの自己ベストを全種目まとめて1画面に並べる
-//   ・基本：記録時体重・ポジション（FW/BK）・区分
-//   ・ウエイト（Big3）：Big3合計（体重比）を大きく、その下に SQ・BP・DL（体重比）を3列
-//   ・スプリント・持久力：スプリントモメンタム（計算の距離・記録時体重）・10m・30m・ブロンコなど
-//   ・ジャンプ・瞬発力・その他：CMJ・RSI など、上に入らない項目すべて
+//  種目を選ぶのではなく、その人のフィジカルの自己ベストを全種目まとめて1つの一覧に並べる
+//  並び順は「選手一覧」「自己ベスト一覧」の列と同じ（体重 → 項目設定のフィジカルの順）
+//  1行に1種目：左に種目名と補足（計算の基準・体重比・記録時体重）、右に数値・単位・測った日
 //  記録がない項目は「—」を薄く表示
 
-import type { ReactNode } from "react";
 import type { Ctx } from "./Shared";
 import {
   basisLabel,
@@ -16,7 +13,6 @@ import {
   fmt1,
   fmtMetric,
   fmtRatio,
-  isMinSec,
   latestWeight,
   md,
   metricBest,
@@ -30,52 +26,39 @@ import {
 } from "@/lib/calc";
 import type { Member, MetricDef } from "@/lib/types";
 
-const BIG3_KEYS = ["squat", "bench_press", "deadlift"];
-const LIFT_SHORT: Record<string, string> = { squat: "SQ", bench_press: "BP", deadlift: "DL" };
-// スプリント・持久力の項目か（自動計算のモメンタム・タイム系・距離の付いた名前・ブロンコなど）
-const isSprint = (x: MetricDef) =>
-  !!x.derived || isMinSec(x) || x.better === "low" || /\d+(\.\d+)?\s*[mｍＭM](?![a-zA-Z])|ブロンコ|スプリント|走|シャトル|ヨーヨー|yo-?yo/i.test(x.name);
+const BIG3_KEYS = ["big3_total", "squat", "bench_press", "deadlift"];
 
 export function OBDetail({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose: () => void }) {
   const defs = metricsOf(ctx.metrics, "フィジカル");
   const lw = latestWeight(m);
-  const total = defs.find((x) => x.key === "big3_total");
-  const lifts = BIG3_KEYS.map((k) => defs.find((x) => x.key === k)).filter((x): x is MetricDef => !!x);
-  const rest = defs.filter((x) => x.key !== "big3_total" && !BIG3_KEYS.includes(x.key ?? ""));
-  const sprint = rest.filter(isSprint);
-  const other = rest.filter((x) => !isSprint(x));
 
-  // 1つの項目のカード：自己ベスト・単位・体重比（設定が ON のとき）・記録時体重（モメンタム）
-  const card = (x: MetricDef, label?: string, big = false): ReactNode => {
+  // 1種目の行
+  const row = (x: MetricDef) => {
     const v = metricBest(m, x);
     const p = v != null ? metricShownPoint(m, x) : null;
-    const ratio = v != null && (x.show_ratio || x.key === "big3_total" || BIG3_KEYS.includes(x.key ?? "")) ? metricRatio(m, x) : null;
+    const big3 = BIG3_KEYS.includes(x.key ?? "");
+    const ratio = v != null && (x.show_ratio || big3) ? metricRatio(m, x) : null;
     const w = v != null && x.derived && p ? weightAt(m, p.d) : null;
     return (
-      <div key={x.id} className={`obd-card ${v == null ? "none" : ""} ${big ? "big" : ""}`}>
-        <div className="obd-l">
-          {label ?? x.name}
-          {basisLabel(x) && <small>{basisLabel(x)}</small>}
+      <li key={x.id} className={`obd-row ${v == null ? "none" : ""} ${x.key === "big3_total" ? "total" : ""}`}>
+        <div className="obd-name">
+          <b>{x.name}</b>
+          <span className="obd-sub">
+            {basisLabel(x) && <span>{basisLabel(x).replace(/[（）]/g, "")}</span>}
+            {ratio != null && <span className="obd-ratio">体重比 ×{fmtRatio(ratio)}</span>}
+            {w != null && <span>（{fmt1(w)}kg時）</span>}
+          </span>
         </div>
-        <div className="obd-v num">
-          {v == null ? "—" : x.key === "big3_total" || BIG3_KEYS.includes(x.key ?? "") ? fmt0(v) : fmtMetric(x, v)}
-          {v != null && unitOf(x) && <small>{unitOf(x)}</small>}
-        </div>
-        <div className="obd-s">
-          {ratio != null && <span className="obd-ratio">×{fmtRatio(ratio)}</span>}
-          {w != null && <span>（{fmt1(w)}kg時）</span>}
+        <div className="obd-val">
+          <span className="num">
+            {v == null ? "—" : big3 ? fmt0(v) : fmtMetric(x, v)}
+            {v != null && unitOf(x) && <small>{unitOf(x)}</small>}
+          </span>
           {p && <span className="obd-d">{md(p.d)}</span>}
         </div>
-      </div>
+      </li>
     );
   };
-  const section = (title: string, list: MetricDef[]) =>
-    list.length > 0 && (
-      <div className="card obd-sec">
-        <h3>{title}</h3>
-        <div className="obd-grid">{list.map((x) => card(x))}</div>
-      </div>
-    );
 
   return (
     <div className="modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -86,39 +69,38 @@ export function OBDetail({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose: ()
             ×
           </button>
         </div>
-
-        {/* 基本・体組成 */}
-        <div className="card obd-basic">
-          <div>
-            <div className="obd-l">記録時体重</div>
-            <div className="obd-v num">
-              {lw ? fmt1(lw.v) : "—"}
-              <small>kg</small>
-            </div>
-            <div className="obd-s">{lw ? `${md(lw.d)}の記録` : "記録なし"}</div>
-          </div>
-          <div className="obd-tags">
-            <span className={`chip ${m.ob_kind === "coach" ? "ob-coach" : "ob-ob"}`}>{obLabel(m)}</span>
-            {m.position && (
-              <span className="chip none">
-                {m.position}
-                {unitOfPosition(m.position) && `・${unitOfPosition(m.position)}`}
-              </span>
-            )}
-          </div>
+        <div className="obd-tags">
+          <span className={`chip ${m.ob_kind === "coach" ? "ob-coach" : "ob-ob"}`}>{obLabel(m)}</span>
+          {m.position && (
+            <span className="chip none">
+              {m.position}
+              {unitOfPosition(m.position) && `・${unitOfPosition(m.position)}`}
+            </span>
+          )}
         </div>
 
-        {/* ウエイト（Big3）：合計を大きく、その下に3種目 */}
-        {(total || lifts.length > 0) && (
-          <div className="card obd-sec">
-            <h3>ウエイト（Big3）</h3>
-            {total && card(total, "Big3合計", true)}
-            {lifts.length > 0 && <div className="obd-grid three">{lifts.map((x) => card(x, LIFT_SHORT[x.key ?? ""] ?? x.name))}</div>}
-          </div>
-        )}
-        {section("スプリント・持久力", sprint)}
-        {section("ジャンプ・瞬発力・その他", other)}
-        {!defs.length && <div className="card empty">フィジカルの項目がありません</div>}
+        <div className="card obd-sec">
+          <h3>フィジカル自己ベスト</h3>
+          <ul className="obd-list">
+            {/* 1. 体重（いちばん新しい記録） */}
+            <li className={`obd-row ${lw ? "" : "none"}`}>
+              <div className="obd-name">
+                <b>体重</b>
+                <span className="obd-sub">記録時体重</span>
+              </div>
+              <div className="obd-val">
+                <span className="num">
+                  {lw ? fmt1(lw.v) : "—"}
+                  {lw && <small>kg</small>}
+                </span>
+                {lw && <span className="obd-d">{md(lw.d)}</span>}
+              </div>
+            </li>
+            {/* 2. 以降：選手一覧のフィジカルの列と同じ順 */}
+            {defs.map(row)}
+          </ul>
+          {!defs.length && <div className="empty">フィジカルの項目がありません</div>}
+        </div>
       </div>
     </div>
   );

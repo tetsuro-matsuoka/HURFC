@@ -656,23 +656,21 @@ svg.chart{touch-action:pan-y}
 .kpis1 .kpi{border-top:4px solid var(--c)}
 .kpis1 .kpi .l{color:var(--c)}
 .hd h2 .ob-badge{font-size:12px;vertical-align:middle}
-/* OB・コーチの詳細：全種目の自己ベストを並べるカード */
-.obd-basic{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:4px solid #2563a8}
-.obd-basic .obd-l{color:#2563a8}
-.obd-tags{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+/* OB・コーチの詳細：全種目の自己ベストを1行に1種目で並べる（選手一覧の列と同じ順） */
+.obd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .obd-sec{border-top:4px solid #e8432b}
 .obd-sec h3{color:#a8301c}
-.obd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-@media(min-width:560px){.obd-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.obd-grid.three{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:8px}
-.obd-card{border:1.5px solid var(--line);border-radius:12px;padding:10px;min-width:0;background:#fff}
-.obd-card.big{border-color:#e8432b;background:#fff6f4}
-.obd-card.big .obd-v{font-size:32px;color:#e8432b}
-.obd-card.none{opacity:.45}
-.obd-l{font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.obd-l small{font-weight:500;margin-left:2px}
-.obd-v{font-size:22px;font-weight:700;line-height:1.2;white-space:nowrap}
-.obd-v small{font-size:12px;font-weight:600;color:var(--sub);margin-left:2px}
-.obd-s{font-size:11px;color:var(--sub);display:flex;flex-wrap:wrap;gap:2px 6px;min-height:15px}
+.obd-list{list-style:none;margin:0;padding:0}
+.obd-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.obd-row:last-child{border-bottom:none}
+.obd-row.none{opacity:.45}
+.obd-row.total{background:#fff6f4;border-radius:10px;padding:10px 8px}
+.obd-row.total .obd-val .num{color:#e8432b;font-size:24px}
+.obd-name{min-width:0;display:flex;flex-direction:column;gap:2px}
+.obd-name b{font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.obd-sub{font-size:11px;color:var(--sub);display:flex;flex-wrap:wrap;gap:2px 8px}
 .obd-ratio{color:#a8301c;font-weight:700}
-.obd-d{margin-left:auto}
+.obd-val{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;line-height:1.2}
+.obd-val .num{font-size:20px;font-weight:700;white-space:nowrap}
+.obd-val .num small{font-size:12px;font-weight:600;color:var(--sub);margin-left:2px}
+.obd-d{font-size:11px;color:var(--sub)}
