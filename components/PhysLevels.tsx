@@ -5,7 +5,7 @@
 //  ・PhysRadar         … 選手のホーム：フィジカルバランス（5段階評価）のレーダーチャート（自己ベスト / 最新値）
 
 import { useState } from "react";
-import type { Ctx } from "./Shared";
+import { Sheet, type Ctx } from "./Shared";
 import { saveSetting } from "@/lib/data";
 import { fmtMinSec, unitOf } from "@/lib/calc";
 import {
@@ -142,13 +142,15 @@ export function PhysRadar({ ctx }: { ctx: Ctx }) {
     .filter(({ it }) => it.on && hasAnyThreshold(it))
     .map(({ o, it }) => {
       const v = optionValue(m, o, mode);
-      return { o, v, lv: levelOf(v, it, o.low) };
+      return { o, lv: levelOf(v, it, o.low) };
     });
 
   return (
     <div className="card radar-card">
-      <h3 style={{ flexWrap: "wrap" }}>
+      <h3 className="radar-h">
         フィジカルバランス <small>5段階評価</small>
+        {/* 評価基準（全種目の Lv.1〜Lv.5 の基準値の一覧）と、自己ベスト / 最新値の切り替え */}
+        <LevelsButton ctx={ctx} />
         <span className="range-pill">
           <button className={mode === "best" ? "on" : ""} onClick={() => setMode("best")}>
             自己ベスト
@@ -163,18 +165,7 @@ export function PhysRadar({ ctx }: { ctx: Ctx }) {
           {items.length === 0 ? "コーチが評価基準を設定すると表示されます" : "評価基準が3種目以上になるとチャートを表示します"}
         </div>
       ) : (
-        <>
-          <Radar items={items.map(({ o, lv }) => ({ label: o.short, lv }))} />
-          <div className="radar-list">
-            {items.map(({ o, v, lv }) => (
-              <div key={o.key} className={lv ? "" : "zero"}>
-                <span>{o.short}</span>
-                <b>Lv.{lv}</b>
-                <small>{fmtOption(o, v)}</small>
-              </div>
-            ))}
-          </div>
-        </>
+        <Radar items={items.map(({ o, lv }) => ({ label: o.short, lv }))} />
       )}
     </div>
   );
@@ -183,10 +174,10 @@ export function PhysRadar({ ctx }: { ctx: Ctx }) {
 // レーダーチャート本体（5段階の多角形の目盛り。各頂点に種目名とレベル）
 function Radar({ items }: { items: { label: string; lv: number }[] }) {
   const W = 360,
-    H = 300,
+    H = 270,
     cx = W / 2,
     cy = H / 2 + 4,
-    R = 96;
+    R = 88;
   // 長い種目名は8文字で切る（下の一覧には全部出る）
   const cut = (s: string) => (s.length > 8 ? s.slice(0, 7) + "…" : s);
   const n = items.length;
@@ -228,5 +219,69 @@ function Radar({ items }: { items: { label: string; lv: number }[] }) {
         );
       })}
     </svg>
+  );
+}
+
+/* ---------- 評価基準の一覧（選手が見る） ----------
+   チャートに出している種目の Lv.1〜Lv.5 の基準値を表で。自分の自己ベストで届いているレベルに色 */
+function LevelsButton({ ctx }: { ctx: Ctx }) {
+  const [open, setOpen] = useState(false);
+  const cfg = readLevels(ctx.settings);
+  const rows = levelOptions(ctx.metrics)
+    .map((o, i) => ({ o, it: itemOf(cfg, o, i) }))
+    .filter(({ it }) => it.on && hasAnyThreshold(it));
+  return (
+    <>
+      <button className="crit-btn" onClick={() => setOpen(true)}>
+        <span aria-hidden>?</span> 評価基準
+      </button>
+      {open && (
+        <Sheet title="フィジカル評価基準" onClose={() => setOpen(false)}>
+          {rows.length ? (
+            <>
+              <p className="muted" style={{ marginBottom: 10, lineHeight: 1.7 }}>
+                大きいほど良い種目は基準「以上」、タイムなど小さいほど良い種目は基準「以下」でそのレベル。Lv.1 に届かなければ Lv.0 です。色が付いているのは、あなたの自己ベストで届いているレベルです。
+              </p>
+              <div className="scroll">
+                <table className="tbl lv-tbl">
+                  <tbody>
+                    <tr>
+                      <th>種目</th>
+                      {[1, 2, 3, 4, 5].map((k) => (
+                        <th key={k} className="r">
+                          Lv.{k}
+                        </th>
+                      ))}
+                    </tr>
+                    {rows.map(({ o, it }) => {
+                      const lv = levelOf(optionValue(ctx.me, o, "best"), it, o.low);
+                      const u = o.ratio ? "倍" : isTimeOption(o) ? "" : unitOf(o.def);
+                      return (
+                        <tr key={o.key}>
+                          <td>
+                            <b>{o.label}</b>
+                            <small className="lv-u">
+                              {u && `${u}・`}
+                              {o.low ? "以下" : "以上"}
+                            </small>
+                          </td>
+                          {it.th.map((t, i) => (
+                            <td key={i} className={`r num ${t != null && i < lv ? "got" : ""}`}>
+                              {t == null ? <span className="muted">—</span> : fmtOption(o, t)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="empty">コーチが評価基準を設定すると表示されます</div>
+          )}
+        </Sheet>
+      )}
+    </>
   );
 }

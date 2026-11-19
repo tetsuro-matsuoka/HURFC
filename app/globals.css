@@ -696,10 +696,14 @@ svg.chart{touch-action:pan-y}
 .radar-label{font-size:11px;font-weight:700;fill:var(--ink)}
 .radar-lv{font-size:11px;fill:#e8432b}
 .radar-tick{font-size:9px;fill:#b0b5bd}
-.radar-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
-.radar-list>div{border-radius:10px;background:#fff6f4;padding:6px 8px;display:flex;flex-direction:column;min-width:0}
-.radar-list>div.zero{background:#f4f5f7;opacity:.7}
-.radar-list span{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.radar-list b{font-size:16px;color:#e8432b;line-height:1.2}
-.radar-list small{font-size:11px;color:var(--sub)}
 .radar{overflow:visible}
+/* フィジカルバランス：見出し（題名・評価基準・切り替え）。狭い画面ではボタンが次の行に回る */
+.radar-h{flex-wrap:wrap;row-gap:6px;margin-bottom:4px}
+.radar-h .crit-btn{margin-left:auto}
+.radar-h .crit-btn + .range-pill{margin-left:6px}
+.radar-card{padding-bottom:8px}
+.radar{max-width:380px}
+/* 評価基準の表：届いているレベルに色 */
+.lv-tbl td b{display:block;font-size:13px;white-space:nowrap}
+.lv-u{font-size:10px;color:var(--sub)}
+.lv-tbl td.got{background:#fde7e3;color:#a8301c;font-weight:700}
