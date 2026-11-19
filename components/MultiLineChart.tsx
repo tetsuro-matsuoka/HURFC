@@ -26,8 +26,10 @@ type Props = {
   noteAny?: boolean;
   fmt?: (v: number) => string;
   onPick?: (d: string) => void;
+  // weekly：横軸には記録がある日（週の月曜日）だけを表示（間の日付は出さない。多いときは間引く）
+  weekly?: boolean;
 };
-export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note, noteAny, fmt, onPick }: Props) {
+export default function MultiLineChart({ series, h = 200, digits = 1, minRange = 1, unit = "", note, noteAny, fmt, onPick, weekly }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const tip = useChartTip(ref);
   const [w, setW] = useState(600);
@@ -58,7 +60,7 @@ export default function MultiLineChart({ series, h = 200, digits = 1, minRange =
       {all.length < 2 || dates[0] === dates[dates.length - 1] ? (
         <div className="empty">データが2日分以上になるとグラフを表示します</div>
       ) : (
-        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} noteAny={noteAny} fmt={fmt} onPick={onPick} />
+        <Chart series={series} w={w} h={h} digits={digits} minRange={minRange} first={dates[0]} last={dates[dates.length - 1]} tip={tip} unit={unit} note={note} noteAny={noteAny} fmt={fmt} onPick={onPick} weekly={weekly} />
       )}
     </div>
   );
@@ -78,6 +80,7 @@ function Chart({
   noteAny,
   fmt,
   onPick,
+  weekly,
 }: {
   series: Series[];
   w: number;
@@ -92,6 +95,7 @@ function Chart({
   noteAny?: boolean;
   fmt?: (v: number) => string;
   onPick?: (d: string) => void;
+  weekly?: boolean;
 }) {
   const vs = series.flatMap((s) => s.pts.map((p) => p.v));
   let lo = Math.min(...vs),
@@ -134,15 +138,32 @@ function Chart({
           </text>
         </g>
       ))}
-      <text x={L} y={h - 4}>
-        {md(first)}
-      </text>
-      <text x={(L + w - R) / 2} y={h - 4} textAnchor="middle">
-        {md(midStr)}
-      </text>
-      <text x={w - R} y={h - 4} textAnchor="end">
-        {md(last)}
-      </text>
+      {weekly ? (
+        // 週ごとのデータ：記録がある週の月曜日だけ（幅に入りきらないときは等間隔に間引く。最初と最後は必ず出す）
+        (() => {
+          const max = Math.max(2, Math.floor((w - L - R) / 46));
+          const step = Math.ceil(allDates.length / max);
+          const show = allDates.filter((_, i) => i % step === 0 || i === allDates.length - 1);
+          if (show.length > 2 && allDates.indexOf(show[show.length - 1]) - allDates.indexOf(show[show.length - 2]) < step) show.splice(show.length - 2, 1);
+          return show.map((d, i) => (
+            <text key={d} x={X(d)} y={h - 4} textAnchor={i === 0 && show.length > 1 ? "start" : i === show.length - 1 && show.length > 1 ? "end" : "middle"}>
+              {md(d)}
+            </text>
+          ));
+        })()
+      ) : (
+        <>
+          <text x={L} y={h - 4}>
+            {md(first)}
+          </text>
+          <text x={(L + w - R) / 2} y={h - 4} textAnchor="middle">
+            {md(midStr)}
+          </text>
+          <text x={w - R} y={h - 4} textAnchor="end">
+            {md(last)}
+          </text>
+        </>
+      )}
       {series.map((s) => {
         if (!s.pts.length) return null;
         const path = s.pts.map((p, i) => `${i ? "L" : "M"}${X(p.d).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");

@@ -9,7 +9,7 @@ import { Fragment, useMemo, useState } from "react";
 import LineChart from "./LineChart";
 import MultiLineChart, { type Series } from "./MultiLineChart";
 import { MonthBar, avg, valueAsOf } from "./GroupStats";
-import { TeamRanking, WeekCritPanel, type Ctx } from "./Shared";
+import { CriteriaButton, TeamRanking, type Ctx } from "./Shared";
 import {
   LIFTS,
   addDays,
@@ -292,10 +292,6 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const thisWeek = weekStart(today());
   const from4 = recentWeeks(4)[0]; // 直近4週の最初の週（月曜日）
   const [ym, setYm] = useState(ymOf(today()));
-  // グラフの点・下の週の行をタップした週（その週の詳細パネルを開く。null なら閉じている）
-  //   from：どこから開いたか（グラフ＝グラフの下に、一覧＝その行のすぐ下に表示）
-  const [crit, setCrit] = useState<{ w: string; from: "chart" | "list" } | null>(null);
-  const critWeek = crit?.w ?? null;
   const fmtScore = (v: number | null) => (v == null ? "—" : `${fmt1(v)} / 10`);
   // 1. 一番上のサマリー：直近で終わった週（前週の月曜〜日曜）の遂行率と、トータル平均（全期間）
   //    ホームのボタンと同じ週（summaryWeek）を使う
@@ -323,6 +319,11 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
 
   return (
     <div className="card">
+      {/* 見出しの右に「評価基準」ボタン（押すとメニューごとの評価基準の一覧） */}
+      <h3 className="crit-head">
+        筋トレ遂行率 <small>0〜10</small>
+        <CriteriaButton ctx={ctx} />
+      </h3>
       <div className="sum2 tr2">
         <div>
           <div className="l">{weekShort(sumWeek)}</div>
@@ -389,9 +390,8 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
             ]}
             note={(w) => `メニュー ${menuLabel(menuOf(w))}`}
             noteAny
-            onPick={(w) => setCrit({ w, from: "chart" })}
+            weekly
           />
-          {crit?.from === "chart" && <WeekCritPanel ctx={ctx} m={m} w={crit.w} onClose={() => setCrit(null)} />}
         </div>
       )}
 
@@ -401,7 +401,7 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
             const v = m.training[w];
             return (
               <Fragment key={w}>
-              <tr className={`click ${critWeek === w ? "sel" : ""}`} onClick={() => setCrit(critWeek === w ? null : { w, from: "list" })}>
+              <tr>
                 <td>
                   {weekShort(w)} <span className="muted">{menuOf(w)}</span>
                 </td>
@@ -409,13 +409,6 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
                   <span className={`chip ${v == null ? "none" : "tr"}`}>{v == null ? "未入力" : `${fmt1(v)} / 10`}</span>
                 </td>
               </tr>
-              {crit?.from === "list" && crit.w === w && (
-                <tr className="crit-tr">
-                  <td colSpan={2}>
-                    <WeekCritPanel ctx={ctx} m={m} w={w} onClose={() => setCrit(null)} />
-                  </td>
-                </tr>
-              )}
               </Fragment>
             );
           })}
