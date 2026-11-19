@@ -625,3 +625,17 @@ svg.chart{touch-action:pan-y}
 .crit-item-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#7a5200}
 .crit-now{font-size:11px;font-weight:700;color:#fff;background:#a96a00;border-radius:999px;padding:1px 8px}
 .crit-item .crit-text{margin:0}
+/* OBタブ：見出しと追加ボタン・表示の切り替え・区分のラベル・追加/編集の入力欄 */
+.ob-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.ob-head .btn{width:auto;margin:0;padding:9px 14px;font-size:14px}
+.ob-seg button small{font-size:11px;opacity:.7}
+.chip.ob-ob{background:#eef0f3;color:#3b4250}
+.chip.ob-coach{background:#e3edf8;color:#1d4f86}
+.ob-badge{font-size:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.ob-pos{font-size:11px;color:var(--sub);margin-left:4px}
+.ob-edit{font-size:11px;font-weight:700;color:var(--navy);border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-left:4px;background:#fff}
+.ob-rec{margin-top:6px}
+.ob-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:8px}
+.ob-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--sub);min-width:0}
+.ob-grid label span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob-grid input.t{padding:10px;font-size:16px}

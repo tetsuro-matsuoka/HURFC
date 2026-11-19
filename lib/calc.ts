@@ -122,6 +122,9 @@ export const obsOf = (members: Members) =>
   Object.values(members)
     .filter((m) => m.role === "player" && m.is_ob)
     .sort((a, b) => (b.retired_on ?? "").localeCompare(a.retired_on ?? "") || byOrder(a, b));
+// OBタブのラベル：コーチ / 卒業年度（例：2025年度卒）/ 引退年度（例：2026年度引退）/ OB
+export const obLabel = (m: Member) =>
+  m.ob_kind === "coach" ? "コーチ" : m.grad_label || (m.retired_on ? `${retiredYear(m.retired_on)}年度引退` : "OB");
 // 引退年度（4月はじまり）：2027年3月に引退 → 2026年度
 export const retiredYear = (d: string | null) => (d ? (Number(d.slice(5, 7)) >= 4 ? Number(d.slice(0, 4)) : Number(d.slice(0, 4)) - 1) : null);
 

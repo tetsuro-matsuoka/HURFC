@@ -39,6 +39,8 @@ export type Member = {
   training: Record<string, number>; // 筋トレ遂行度 { 週の月曜日: 0〜10 }
   is_ob: boolean; // OB（引退した選手）なら true。現役の集計・順位には入れない
   retired_on: string | null; // 引退した日 "YYYY-MM-DD"
+  ob_kind: "ob" | "coach"; // OBタブでの区分（OB / コーチ）。is_ob のときだけ意味がある
+  grad_label: string | null; // 卒業年度の文字（例：2025年度卒）。OB のときだけ
 };
 
 // 測定項目（コーチが「項目設定」で追加・変更・削除できる）
