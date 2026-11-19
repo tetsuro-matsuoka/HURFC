@@ -264,6 +264,7 @@ export default function App() {
     : [
         ["home", "ホーム", ICON.home],
         ["input", "記録する", ICON.edit],
+        ["ob", "OB", ICON.trophy],
       ];
 
   const screen = (() => {
@@ -285,7 +286,8 @@ export default function App() {
     }
   })();
 
-  const modalMember = playerId ? members[playerId] : undefined;
+  // 詳細の画面：コーチは誰でも、選手は OB・コーチ（OBタブ）の人だけ開ける
+  const modalMember = playerId && (coach || members[playerId]?.is_ob) ? members[playerId] : undefined;
 
   return (
     <div className="app">

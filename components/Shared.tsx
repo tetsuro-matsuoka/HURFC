@@ -216,9 +216,22 @@ const THEME = { attend: "#1f8a5b", training: "#a96a00", body: "#2563a8", physica
 //  1位は王冠（👑）・金の枠で一番大きく、2位（銀）→ 3位（銅）→ 4位以下と段階的に小さく
 //  選手が見るときは自分の行を色付き＋「あなた」。コーチが見るときは行をタップでその選手の詳細
 // sub：名前の横に小さく添える情報（OB画面の引退年度・ポジションなど）
-export function TeamRanking({ ctx, rows, fmtV, sub }: { ctx: Ctx; rows: RankRow[]; fmtV: (r: RankRow) => ReactNode; sub?: (r: RankRow) => ReactNode }) {
+// clickable：選手が見るときも行をタップで詳細を開く（OBタブ）
+export function TeamRanking({
+  ctx,
+  rows,
+  fmtV,
+  sub,
+  clickable = false,
+}: {
+  ctx: Ctx;
+  rows: RankRow[];
+  fmtV: (r: RankRow) => ReactNode;
+  sub?: (r: RankRow) => ReactNode;
+  clickable?: boolean;
+}) {
   if (!rows.length) return <div className="empty">まだ記録がありません</div>;
-  const coach = ctx.me.role === "coach";
+  const coach = ctx.me.role === "coach" || clickable;
   return (
     <ol className="trank">
       {rows.map((r, i) => {
