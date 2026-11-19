@@ -9,6 +9,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Sheet, type Ctx } from "./Shared";
 import SortableList from "./SortableList";
+import { PhysLevelsSettings } from "./PhysLevels";
 import { addMetric, deleteMetric, saveMetricOrder, saveSetting, updateMetric, type MetricInput } from "@/lib/data";
 import { CRITERIA_KEY, MENUS, MENU_TIMES, isLinked, isMinSec, isMomentum, metricsOf, unitOf, MOMENTUM_KEY, momentumDist } from "@/lib/calc";
 import type { Menu, MetricCategory, MetricDef } from "@/lib/types";
@@ -206,6 +207,9 @@ export function SettingsScreen({ ctx }: { ctx: Ctx }) {
           </button>
         </form>
       </div>
+
+      {/* フィジカル評価基準（Lv.1〜Lv.5）：選手のホームのレーダーチャートに使う */}
+      <PhysLevelsSettings ctx={ctx} />
 
       <div className="card">
         <h3>筋トレ遂行率の評価基準</h3>

@@ -674,3 +674,32 @@ svg.chart{touch-action:pan-y}
 .obd-val .num{font-size:20px;font-weight:700;white-space:nowrap}
 .obd-val .num small{font-size:12px;font-weight:600;color:var(--sub);margin-left:2px}
 .obd-d{font-size:11px;color:var(--sub)}
+/* 項目設定：フィジカル評価基準（Lv.1〜Lv.5） */
+.crit-toggle-btn{margin-left:auto;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;background:#fff;color:#a8301c;border:1.5px solid #e8432b}
+.crit-toggle-btn.on{background:#e8432b;color:#fff}
+.lv-list{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.lv-row{border:1.5px solid var(--line);border-radius:12px;padding:10px}
+.lv-row.off{background:#fafafa}
+.lv-row.off .lv-th{opacity:.6}
+.lv-hd{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-bottom:8px}
+.lv-hd b{font-size:14px}
+.lv-hd b small{font-weight:500;color:var(--sub)}
+.lv-dir{font-size:11px;color:var(--sub)}
+.lv-hd .ratiobtn{margin-left:auto}
+.lv-th{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.lv-th label{display:flex;flex-direction:column;gap:3px;font-size:10px;font-weight:700;color:var(--sub);min-width:0}
+.lv-th label span{white-space:nowrap}
+.lv-th input.t{padding:8px 4px;font-size:14px;text-align:center}
+/* 選手ホーム：フィジカルバランス（レーダーチャート） */
+.radar-card{border-top:4px solid #e8432b}
+.radar{display:block;max-width:420px;margin:0 auto}
+.radar-label{font-size:11px;font-weight:700;fill:var(--ink)}
+.radar-lv{font-size:11px;fill:#e8432b}
+.radar-tick{font-size:9px;fill:#b0b5bd}
+.radar-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+.radar-list>div{border-radius:10px;background:#fff6f4;padding:6px 8px;display:flex;flex-direction:column;min-width:0}
+.radar-list>div.zero{background:#f4f5f7;opacity:.7}
+.radar-list span{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.radar-list b{font-size:16px;color:#e8432b;line-height:1.2}
+.radar-list small{font-size:11px;color:var(--sub)}
+.radar{overflow:visible}
