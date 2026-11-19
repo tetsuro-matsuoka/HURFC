@@ -95,6 +95,8 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
     .sort((a, b) => a.name.localeCompare(b.name, "ja"));
   const basePlayers = playersOf(ctx.members); // 現役だけ
   const obs = obsOf(ctx.members);
+  // OB・コーチ記録の一覧（最初は閉じておく）
+  const [obOpen, setObOpen] = useState(false);
   const players: Member[] = localIds
     ? [
         ...localIds.map((id) => ctx.members[id]).filter(Boolean),
@@ -278,12 +280,20 @@ export function ManageScreen({ ctx }: { ctx: Ctx }) {
         )}
       </div>
 
-      {/* OB（引退した選手）：現役に戻す・削除ができる。記録は残り、「OB」タブで自己ベストを見られる */}
-      <div className="card">
-        <h3>
-          OB・コーチ記録 <small>{obs.length}名・現役の集計には入りません（記録の追加・編集は「OB」タブ）</small>
-        </h3>
-        {obs.length ? (
+      {/* OB（引退した選手）・コーチ記録：普段は閉じて見出しの1行だけ。「表示する」で一覧を開き、現役に戻す・削除ができる */}
+      <div className={`card ob-fold ${obOpen ? "open" : ""}`}>
+        <button className="ob-fold-bar" onClick={() => setObOpen(!obOpen)} aria-expanded={obOpen}>
+          <b>
+            OB・コーチ記録 <small>（{obs.length}名）</small>
+          </b>
+          <span className="ob-fold-btn">{obOpen ? "閉じる ▲" : "表示する ▼"}</span>
+        </button>
+        {obOpen && (
+          <p className="muted" style={{ fontSize: 12, margin: "8px 0 4px" }}>
+            現役の集計には入りません（記録の追加・編集は「OB」タブ）
+          </p>
+        )}
+        {!obOpen ? null : obs.length ? (
           obs.map((m) => (
             <div className="mrow" key={m.id}>
               <div className="mn">
