@@ -131,34 +131,8 @@ export function PhysLevelsSettings({ ctx }: { ctx: Ctx }) {
   );
 }
 
-/* ---------- 選手：フィジカルバランスのボタン（押すとレーダーチャートの画面が開く） ---------- */
-export function PhysRadarButton({ ctx }: { ctx: Ctx }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button className="radar-btn" onClick={() => setOpen(true)}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <polygon points="12,2 21,9 18,20 6,20 3,9" />
-          <polygon points="12,7 16,10 14.5,16 9.5,16 8,10" fill="currentColor" fillOpacity=".25" />
-        </svg>
-        <span>
-          <b>フィジカルバランス</b>
-          <small>5段階評価のレーダーチャート</small>
-        </span>
-        <i aria-hidden>›</i>
-      </button>
-      {open && (
-        <Sheet title="フィジカルバランス" onClose={() => setOpen(false)}>
-          <PhysRadar ctx={ctx} inSheet />
-        </Sheet>
-      )}
-    </>
-  );
-}
-
 /* ---------- 選手：レーダーチャート ---------- */
-// inSheet：画面（モーダル）の中で開くときは、題名を画面の見出しに任せて出さない
-export function PhysRadar({ ctx, inSheet = false }: { ctx: Ctx; inSheet?: boolean }) {
+export function PhysRadar({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
   const [mode, setMode] = useState<"best" | "latest">("best");
   const cfg = readLevels(ctx.settings);
@@ -175,7 +149,7 @@ export function PhysRadar({ ctx, inSheet = false }: { ctx: Ctx; inSheet?: boolea
   return (
     <div className="card radar-card">
       <h3 className="radar-h">
-        {inSheet ? <small>5段階評価</small> : <>フィジカルバランス <small>5段階評価</small></>}
+        フィジカルバランス <small>5段階評価</small>
         {/* 評価基準（全種目の Lv.1〜Lv.5 の基準値の一覧）と、自己ベスト / 最新値の切り替え */}
         <LevelsButton ctx={ctx} mode={mode} />
         <span className="range-pill">
