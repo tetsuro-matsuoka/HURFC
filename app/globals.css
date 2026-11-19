@@ -656,3 +656,23 @@ svg.chart{touch-action:pan-y}
 .kpis1 .kpi{border-top:4px solid var(--c)}
 .kpis1 .kpi .l{color:var(--c)}
 .hd h2 .ob-badge{font-size:12px;vertical-align:middle}
+/* OB・コーチの詳細：全種目の自己ベストを並べるカード */
+.obd-basic{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:4px solid #2563a8}
+.obd-basic .obd-l{color:#2563a8}
+.obd-tags{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.obd-sec{border-top:4px solid #e8432b}
+.obd-sec h3{color:#a8301c}
+.obd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(min-width:560px){.obd-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.obd-grid.three{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:8px}
+.obd-card{border:1.5px solid var(--line);border-radius:12px;padding:10px;min-width:0;background:#fff}
+.obd-card.big{border-color:#e8432b;background:#fff6f4}
+.obd-card.big .obd-v{font-size:32px;color:#e8432b}
+.obd-card.none{opacity:.45}
+.obd-l{font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obd-l small{font-weight:500;margin-left:2px}
+.obd-v{font-size:22px;font-weight:700;line-height:1.2;white-space:nowrap}
+.obd-v small{font-size:12px;font-weight:600;color:var(--sub);margin-left:2px}
+.obd-s{font-size:11px;color:var(--sub);display:flex;flex-wrap:wrap;gap:2px 6px;min-height:15px}
+.obd-ratio{color:#a8301c;font-weight:700}
+.obd-d{margin-left:auto}
