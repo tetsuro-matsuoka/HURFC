@@ -158,7 +158,7 @@ export default function PhysicalPanel({ ctx, ps }: { ctx: Ctx; ps: Member[] }) {
           </div>
         </div>
         <DateBar d={d} setD={setD} />
-        <GroupCards groups={groups} d={d} unit={unit} at={at} fmt={fmtV} />
+        <GroupCards groups={groups} d={d} unit={unit} at={at} fmt={fmtV} diff={false} />
       </div>
 
       <div className="card">
