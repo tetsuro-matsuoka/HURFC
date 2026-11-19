@@ -9,7 +9,7 @@ import { Fragment, useMemo, useState } from "react";
 import LineChart from "./LineChart";
 import MultiLineChart, { type Series } from "./MultiLineChart";
 import { MonthBar, avg, valueAsOf } from "./GroupStats";
-import { CriteriaButton, TeamRanking, type Ctx } from "./Shared";
+import { CriteriaButton, RangePill, TeamRanking, type Ctx } from "./Shared";
 import { PhysRadar } from "./PhysLevels";
 import {
   LIFTS,
@@ -160,12 +160,13 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
 }
 
 /* ---------- 体重の推移（自分＋自分の区分 FW/BK の平均を点線で） ---------- */
-function WeightChart({ ctx, days }: { ctx: Ctx; days: number }) {
+// days：直近の日数（null なら全期間＝自分の最初の体重の記録から）
+function WeightChart({ ctx, days }: { ctx: Ctx; days: number | null }) {
   const m = ctx.me;
   const unit = unitOfPosition(m.position);
   const series = useMemo(() => {
-    const from = addDays(today(), -days + 1);
-    const mine = weights(m, days);
+    const mine = weights(m, days ?? undefined);
+    const from = days ? addDays(today(), -days + 1) : mine[0]?.d ?? today();
     const out: Series[] = [{ label: "自分", color: "var(--accent)", pts: mine }];
     if (unit) {
       // 同じ区分（FW / BK）の選手全員の、その日時点の最新体重の平均
@@ -428,6 +429,8 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
 /* ---------- 詳細：体組成（体重のみ） ---------- */
 function BodyDetail({ ctx }: { ctx: Ctx }) {
   const m = ctx.me;
+  // 体重の推移の期間（直近30日 / 全期間）
+  const [wAll, setWAll] = useState(false);
   const lw = latestWeight(m),
     w7 = weightAgo(m, 7),
     w30 = weightAgo(m, 30);
@@ -456,10 +459,11 @@ function BodyDetail({ ctx }: { ctx: Ctx }) {
           <div className="l">30日前比</div>
         </div>
       </div>
-      <h3>
-        体重の推移 <small>直近30日</small>
+      <h3 className="c-h">
+        体重の推移
+        <RangePill all={wAll} setAll={setWAll} recent="直近30日" />
       </h3>
-      <WeightChart ctx={ctx} days={30} />
+      <WeightChart ctx={ctx} days={wAll ? null : 30} />
     </div>
   );
 }
