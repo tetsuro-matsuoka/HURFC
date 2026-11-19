@@ -8,6 +8,7 @@ import { useState, type ReactNode } from "react";
 import {
   attendRate,
   isLinked,
+  obLabel,
   metricsOf,
   unitOf,
   weightNote,
@@ -72,6 +73,35 @@ export function PlayerModal({ m, ctx, onClose }: { m: Member; ctx: Ctx; onClose:
   const pctx: Ctx = { ...ctx, me: m };
   // 体重以外の体組成の項目（体脂肪率など）
   const bodyDefs = metricsOf(ctx.metrics, "体組成").filter((def) => !isLinked(def));
+  // OB・コーチ：出欠・筋トレ・推移・順位は出さず、記録時体重とフィジカルの自己ベストだけ
+  if (m.is_ob)
+    return (
+      <div className="modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="sheet">
+          <div className="hd">
+            <h2>
+              {m.name} <span className={`chip ${m.ob_kind === "coach" ? "ob-coach" : "ob-ob"} ob-badge`}>{obLabel(m)}</span>
+            </h2>
+            <button className="x" onClick={onClose} aria-label="閉じる">
+              ×
+            </button>
+          </div>
+          <div className="kpis kpis1">
+            <div className="kpi c-body">
+              <div className="l">記録時体重</div>
+              <div className="v num">
+                {lw ? fmt1(lw.v) : "—"}
+                <small>kg</small>
+              </div>
+              <div className="s">{lw ? `${md(lw.d)}の記録` : "記録なし"}</div>
+            </div>
+          </div>
+          <div className="panel-physical">
+            <PhysicalDetail ctx={pctx} topOnly bestOnly />
+          </div>
+        </div>
+      </div>
+    );
   return (
     <div className="modal" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet">
