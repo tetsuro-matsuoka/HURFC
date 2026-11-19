@@ -128,12 +128,15 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
     .sort((a, b) => (!ratio && def.better === "low" ? a.v - b.v : b.v - a.v));
   const fmtV = (r: RankRow): ReactNode => {
     const w = withWeight ? weightWhen(ctx.members[r.id], def) : null;
+    // 右側は2段（右揃え）：上＝数値と単位（単位は小さく）、下＝記録したときの体重
     return (
-      <>
-        {ratio ? fmtRatio(r.v) : fmtMetric(def, r.v)}
-        {u && <small> {u}</small>}
-        {w != null && <small className="rk-ratio">（{fmt1(w)}kg時）</small>}
-      </>
+      <span className="tv2">
+        <span>
+          {ratio ? fmtRatio(r.v) : fmtMetric(def, r.v)}
+          {u && <small>{u}</small>}
+        </span>
+        {w != null && <small className="tv-sub">（{fmt1(w)}kg時）</small>}
+      </span>
     );
   };
 
@@ -148,8 +151,8 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
             </option>
           ))}
         </select>
-        <h3>
-          {show === "coach" ? "コーチ" : show === "ob" ? "OB" : "OB・コーチ"} 自己ベストランキング <small>{options.find(([k]) => k === key)?.[1]}・{obs.length}名</small>
+        <h3 className="ob-h">
+          <span className="ob-ht">{show === "coach" ? "コーチ" : show === "ob" ? "OB" : "OB・コーチ"} 自己ベストランキング</span> <small>{options.find(([k]) => k === key)?.[1]}・{obs.length}名</small>
         </h3>
         <TeamRanking ctx={ctx} rows={rows} fmtV={fmtV} sub={(r) => <ObBadge m={ctx.members[r.id]} />} />
       </div>
@@ -162,8 +165,8 @@ export function OBScreen({ ctx }: { ctx: Ctx }) {
 function OBBestTable({ ctx, obs, defs, onEdit }: { ctx: Ctx; obs: Member[]; defs: MetricDef[]; onEdit: (id: string) => void }) {
   return (
     <div className="card">
-      <h3>
-        自己ベスト一覧 <small>名前をタップで詳細・「編集」で記録の追記・修正</small>
+      <h3 className="ob-h">
+        <span className="ob-ht">自己ベスト一覧</span> <small>名前をタップで詳細・「編集」で記録の追記・修正</small>
       </h3>
       <div className="scroll">
         <table className="tbl">

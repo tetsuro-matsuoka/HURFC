@@ -224,8 +224,9 @@ export function TeamRanking({ ctx, rows, fmtV, sub }: { ctx: Ctx; rows: RankRow[
         return (
           <li key={r.id} className={`${tier} ${me ? "me" : ""} ${coach ? "click" : ""}`} onClick={coach ? () => ctx.openPlayer(r.id) : undefined}>
             <span className="tp num">{i === 0 ? "👑" : i + 1}</span>
-            {/* 名前だけを「…」で省略し、「あなた」は縮めない */}
-            <span className="tn-name">
+            {/* 名前だけを「…」で省略し、「あなた」は縮めない。
+                sub（OBの「2025年度卒」など）があるときは、名前をフルネームで出し、ラベルはその下の段に */}
+            <span className={`tn-name ${sub ? "two" : ""}`}>
               <span className="tn-txt">{r.name}</span>
               {me && <em className="you">あなた</em>}
               {sub && <small className="tn-sub">{sub(r)}</small>}
