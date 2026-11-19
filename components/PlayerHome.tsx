@@ -10,7 +10,7 @@ import LineChart from "./LineChart";
 import MultiLineChart, { type Series } from "./MultiLineChart";
 import { MonthBar, avg, valueAsOf } from "./GroupStats";
 import { CriteriaButton, TeamRanking, type Ctx } from "./Shared";
-import { PhysRadar } from "./PhysLevels";
+import { PhysRadarButton } from "./PhysLevels";
 import {
   LIFTS,
   addDays,
@@ -149,8 +149,8 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
-      {/* 4つのボタンをどれも選んでいないときは、下にフィジカルバランス（5段階評価）のレーダーチャート */}
-      {!panel && <PhysRadar ctx={ctx} />}
+      {/* 4つのボタンをどれも選んでいないときは、下に「フィジカルバランス」のボタン（押すとレーダーチャートの画面） */}
+      {!panel && <PhysRadarButton ctx={ctx} />}
 
     </>
   );

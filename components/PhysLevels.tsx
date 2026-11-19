@@ -18,6 +18,7 @@ import {
   levelOptions,
   optionValue,
   readLevels,
+  splitLabel,
   type LevelConfig,
   type LevelOption,
 } from "@/lib/levels";
@@ -130,8 +131,34 @@ export function PhysLevelsSettings({ ctx }: { ctx: Ctx }) {
   );
 }
 
+/* ---------- 選手：フィジカルバランスのボタン（押すとレーダーチャートの画面が開く） ---------- */
+export function PhysRadarButton({ ctx }: { ctx: Ctx }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="radar-btn" onClick={() => setOpen(true)}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <polygon points="12,2 21,9 18,20 6,20 3,9" />
+          <polygon points="12,7 16,10 14.5,16 9.5,16 8,10" fill="currentColor" fillOpacity=".25" />
+        </svg>
+        <span>
+          <b>フィジカルバランス</b>
+          <small>5段階評価のレーダーチャート</small>
+        </span>
+        <i aria-hidden>›</i>
+      </button>
+      {open && (
+        <Sheet title="フィジカルバランス" onClose={() => setOpen(false)}>
+          <PhysRadar ctx={ctx} inSheet />
+        </Sheet>
+      )}
+    </>
+  );
+}
+
 /* ---------- 選手：レーダーチャート ---------- */
-export function PhysRadar({ ctx }: { ctx: Ctx }) {
+// inSheet：画面（モーダル）の中で開くときは、題名を画面の見出しに任せて出さない
+export function PhysRadar({ ctx, inSheet = false }: { ctx: Ctx; inSheet?: boolean }) {
   const m = ctx.me;
   const [mode, setMode] = useState<"best" | "latest">("best");
   const cfg = readLevels(ctx.settings);
@@ -148,7 +175,7 @@ export function PhysRadar({ ctx }: { ctx: Ctx }) {
   return (
     <div className="card radar-card">
       <h3 className="radar-h">
-        フィジカルバランス <small>5段階評価</small>
+        {inSheet ? <small>5段階評価</small> : <>フィジカルバランス <small>5段階評価</small></>}
         {/* 評価基準（全種目の Lv.1〜Lv.5 の基準値の一覧）と、自己ベスト / 最新値の切り替え */}
         <LevelsButton ctx={ctx} mode={mode} />
         <span className="range-pill">
@@ -173,13 +200,12 @@ export function PhysRadar({ ctx }: { ctx: Ctx }) {
 
 // レーダーチャート本体（5段階の多角形の目盛り。各頂点に種目名とレベル）
 function Radar({ items }: { items: { label: string; lv: number }[] }) {
-  const W = 360,
-    H = 270,
+  // 外側に名前（最大2〜3行）とレベルを置く余白を広めにとる
+  const W = 380,
+    H = 310,
     cx = W / 2,
-    cy = H / 2 + 4,
-    R = 88;
-  // 長い種目名は8文字で切る（下の一覧には全部出る）
-  const cut = (s: string) => (s.length > 8 ? s.slice(0, 7) + "…" : s);
+    cy = H / 2 + 2,
+    R = 82;
   const n = items.length;
   const ang = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
   const pt = (i: number, r: number) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))] as const;
@@ -204,14 +230,21 @@ function Radar({ items }: { items: { label: string; lv: number }[] }) {
         return <circle key={i} cx={x} cy={y} r={3.5} fill="#e8432b" />;
       })}
       {items.map((it, i) => {
-        const [x, y] = pt(i, R + 22);
-        const c = Math.cos(ang(i));
+        const [x, y] = pt(i, R + 16);
+        const c = Math.cos(ang(i)),
+          sn = Math.sin(ang(i));
         const anchor = Math.abs(c) < 0.2 ? "middle" : c > 0 ? "start" : "end";
+        // 名前（「スプリント」「モメンタム」のように行に分ける）＋「Lv.〇」。上の頂点は上へ、下の頂点は下へ、横は真ん中そろえ
+        const lines = splitLabel(it.label);
+        const total = lines.length + 1;
+        const first = sn < -0.5 ? -(total - 1) * 1.15 - 0.1 : sn > 0.5 ? 0.75 : -((total - 1) * 1.15) / 2 + 0.35;
         return (
           <text key={i} x={x} y={y} textAnchor={anchor} className="radar-label">
-            <tspan x={x} dy="-0.2em">
-              {cut(it.label)}
-            </tspan>
+            {lines.map((l, j) => (
+              <tspan key={j} x={x} dy={`${j === 0 ? first : 1.15}em`}>
+                {l}
+              </tspan>
+            ))}
             <tspan x={x} dy="1.15em" className="radar-lv">
               Lv.{it.lv}
             </tspan>
@@ -267,7 +300,14 @@ function LevelsButton({ ctx, mode }: { ctx: Ctx; mode: "best" | "latest" }) {
                       return (
                         <tr key={o.key}>
                           <td className="lv-sticky">
-                            <b>{o.ratio ? `${o.def.name}体重比` : o.def.name}</b>
+                            <b>
+                              {/* 「スプリント / モメンタム」のように区切りで改行（1文字だけ次の行に落ちない） */}
+                              {splitLabel(o.ratio ? `${o.def.name}体重比` : o.def.name).map((l, j) => (
+                                <span key={j} className="lv-line">
+                                  {l}
+                                </span>
+                              ))}
+                            </b>
                             <small className="lv-u">{note}</small>
                             <span className={`lv-me ${v == null ? "none" : ""}`}>
                               自分: {v == null ? "未記録" : `${fmtOption(o, v)}${u}`}

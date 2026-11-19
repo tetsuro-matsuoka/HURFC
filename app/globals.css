@@ -720,3 +720,14 @@ svg.chart{touch-action:pan-y}
 .lv-me em{font-style:normal;color:#fff;background:#e8432b;border-radius:999px;padding:0 6px;font-size:10px}
 .lv-me.none{color:var(--sub);background:#f1f2f4}
 .lv-tbl td:not(.lv-sticky),.lv-tbl th:not(.lv-sticky){white-space:nowrap}
+.lv-tbl td.lv-sticky b .lv-line{display:block;white-space:nowrap}
+/* 選手ホーム：フィジカルバランスのボタン（フィジカルの赤） */
+.radar-btn{width:100%;display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:14px 16px;border:2px solid transparent;border-left:6px solid #e8432b;text-align:left;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.radar-btn svg{width:30px;height:30px;color:#e8432b;flex:none}
+.radar-btn span{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.radar-btn b{font-size:16px;font-weight:900;color:var(--ink)}
+.radar-btn small{font-size:12px;color:var(--sub)}
+.radar-btn i{font-style:normal;font-size:24px;color:#e8432b}
+.radar-btn:active{background:#fde7e3}
+/* 画面の中で開くレーダーチャート：カードの枠を外してすっきり */
+.sheet .radar-card{box-shadow:none;padding:0;border-top:none;margin:0}
