@@ -34,6 +34,7 @@ import {
   monthAttendance,
   phys,
   playersOf,
+  rankOfId,
   allPlayersOf,
   ranking,
   trainingRate,
@@ -85,7 +86,7 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
   const lw = latestWeight(m),
     w30 = weightAgo(m, 30);
   const rk = ranking(ctx.members, "total"),
-    pos = rk.findIndex((r) => r.id === m.id);
+    pos = rankOfId(rk, m.id) - 1; // 同じ記録は同じ順位
   const total = maxes(m).total;
 
   const menus: [Panel, string, string][] = [
@@ -532,10 +533,11 @@ export function PhysicalDetail({ ctx, topOnly = false, bestOnly = false }: { ctx
     .map((x) => ({ id: x.id, name: x.name, v: valueOf(x).v }))
     .filter((r): r is RankRow => r.v != null)
     .sort((a, b) => (!ratio && def.better === "low" ? a.v - b.v : b.v - a.v));
-  const pos = rows.findIndex((r) => r.id === m.id);
+  // 同じ記録は同じ順位（1, 2, 2, 2, 5…）
+  const pos = rankOfId(rows, m.id) - 1;
   const unit = unitOfPosition(m.position);
   const urows = unit ? rows.filter((r) => unitOfPosition(ctx.members[r.id]?.position) === unit) : [];
-  const upos = urows.findIndex((r) => r.id === m.id);
+  const upos = rankOfId(urows, m.id) - 1;
 
   const chart = ratio ? series.map((p) => ({ d: p.d, v: toRatio(p) })).filter((p): p is Point => p.v != null) : series;
 

@@ -25,6 +25,7 @@ import {
   CRITERIA_KEY,
   DEFAULT_MENU,
   type RankRow,
+  competitionRanks,
   fmt1,
   latestWeight,
   md,
@@ -232,14 +233,17 @@ export function TeamRanking({
 }) {
   if (!rows.length) return <div className="empty">まだ記録がありません</div>;
   const coach = ctx.me.role === "coach" || clickable;
+  // 同じ記録は同じ順位（1, 2, 2, 2, 5…）。王冠・金銀銅の見た目も、並び順ではなくこの順位で決める
+  const ranks = competitionRanks(rows);
   return (
     <ol className="trank">
       {rows.map((r, i) => {
-        const tier = i < 3 ? `t${i + 1}` : "tn";
+        const rank = ranks[i];
+        const tier = rank <= 3 ? `t${rank}` : "tn";
         const me = !coach && r.id === ctx.me.id;
         return (
           <li key={r.id} className={`${tier} ${me ? "me" : ""} ${coach ? "click" : ""}`} onClick={coach ? () => ctx.openPlayer(r.id) : undefined}>
-            <span className="tp num">{i === 0 ? "👑" : i + 1}</span>
+            <span className="tp num">{rank === 1 ? "👑" : rank}</span>
             {/* 名前だけを「…」で省略し、「あなた」は縮めない。
                 sub（OBの「2025年度卒」など）があるときは、名前をフルネームで出し、ラベルはその下の段に */}
             <span className={`tn-name ${sub ? "two" : ""}`}>
