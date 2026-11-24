@@ -342,13 +342,14 @@ const mdJ = (s: string) => `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}
 export const weekLabel = (ws: string) => `${mdJ(ws)}〜${mdJ(addDays(ws, 6))}`;
 export const weekShort = (ws: string) => `${md(ws)}〜${md(addDays(ws, 6))}`;
 // サマリーに出す週：直近で終わった週（前週の月曜〜日曜）。
-// 前週の記録がないときは、記録がある一番新しい週（今週も含む）。記録が1件もなければ前週（— を表示）
+// 前週の記録がないときは、記録がある一番新しい週（今週も含む）。
+// 記録が1件もないとき（使い始めの最初の週など）は今週（前週の日付が出て変に見えないように）
 export function summaryWeek(training: Record<string, number>, d = today()) {
   const prev = addDays(weekStart(d), -7);
   if (training[prev] != null) return prev;
   const cur = weekStart(d);
   const done = Object.keys(training).filter((w) => w <= cur && training[w] != null).sort();
-  return done.length ? done[done.length - 1] : prev;
+  return done.length ? done[done.length - 1] : cur;
 }
 // 直近 n 週の月曜日（古い順）
 export const recentWeeks = (n: number) => {
@@ -357,11 +358,12 @@ export const recentWeeks = (n: number) => {
 };
 // チーム全体のサマリー週：全選手の記録をまとめて summaryWeek と同じ決め方（コーチ画面用）
 //   チームの集計は「月曜〜日曜の週が終わって確定した週」だけ（進行中の今週は使わない。翌週の月曜日に反映）
+//   まだ確定した週が1つもないとき（使い始めの最初の週）は今週の日付を出す（チーム平均は次の週の月曜日まで —）
 export function teamSummaryWeek(players: Member[], d = today()) {
   const cur = weekStart(d);
   const all: Record<string, number> = {};
   players.forEach((m) => Object.entries(m.training).forEach(([w, v]) => v != null && w < cur && (all[w] = v)));
-  return summaryWeek(all, d);
+  return Object.keys(all).length ? summaryWeek(all, d) : cur;
 }
 // 確定した週（前週まで）のうち、チームの誰かが記録したいちばん古い週から前週までの月曜日（古い順）
 export function teamDoneWeeksAll(players: Member[]): string[] {
@@ -395,9 +397,11 @@ export function trainingTotal(m: Member): number | null {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 // 筋トレ遂行率（0〜10）：週の月曜日が from 以降の週の点数の平均（入力のある週だけ）。from 省略で全期間
-export function trainingRate(m: Member, from?: string): number | null {
+// doneOnly：確定した週（前週まで）だけで計算（チーム平均用）
+export function trainingRate(m: Member, from?: string, doneOnly = false): number | null {
+  const cur = weekStart(today());
   const v = Object.entries(m.training)
-    .filter(([w]) => !from || w >= from)
+    .filter(([w]) => (!from || w >= from) && (!doneOnly || w < cur))
     .map(([, s]) => s);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
@@ -411,7 +415,9 @@ export function trainingMonthAvg(m: Member, ym: string, doneOnly = false): numbe
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 // その週のチーム平均
+//   チーム平均は、週が終わって確定した週（前週まで）だけ。進行中の今週は次の週の月曜日から出す（それまでは null）
 export function teamTrainingAvg(players: Member[], ws: string): number | null {
+  if (ws >= weekStart(today())) return null;
   const v = players.map((m) => m.training[ws]).filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
