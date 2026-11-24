@@ -309,9 +309,10 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
   const totalAvg = trainingRate(m);
   const menuOf = (w: string) => ctx.weeks[w]?.menu ?? DEFAULT_MENU;
   // 3. 比較表：選んだ月・直近4週を、自分とチーム平均（選手ごとの平均の平均）で
-  const rows: [string, (x: Member) => number | null][] = [
-    [ymLabel(ym), (x) => trainingMonthAvg(x, ym)],
-    ["直近4週", (x) => trainingRate(x, from4)],
+  //    自分は今週の入力もすぐ反映。チーム平均は確定した週（前週まで）だけ（今週の分は次の週の月曜日から）
+  const rows: [string, (x: Member) => number | null, (x: Member) => number | null][] = [
+    [ymLabel(ym), (x) => trainingMonthAvg(x, ym), (x) => trainingMonthAvg(x, ym, true)],
+    ["直近4週", (x) => trainingRate(x, from4), (x) => trainingRate(x, from4, true)],
   ];
   // 4. 推移グラフ（直近8週）：自分と、各週のチーム平均（入力した選手の平均）
   const pts = recentWeeks(8)
@@ -362,9 +363,9 @@ function TrainingDetail({ ctx }: { ctx: Ctx }) {
             <th className="r">チーム平均</th>
             <th className="r">差</th>
           </tr>
-          {rows.map(([l, pick]) => {
+          {rows.map(([l, pick, pickTeam]) => {
             const mine = pick(m);
-            const team = avg(ps.map(pick));
+            const team = avg(ps.map(pickTeam));
             return (
               <tr key={l}>
                 <td>{l}</td>
