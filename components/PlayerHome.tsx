@@ -116,7 +116,8 @@ export function PlayerHome({ ctx }: { ctx: Ctx }) {
           ) : kind === "off" ? (
             <>
               <div>今日は練習日ではありません</div>
-              <small>出欠の入力は不要です（体重だけ記録できます）</small>
+              {/* スマホでも1行に収まるよう短く（末尾だけ次の行に落ちないように） */}
+              <small className="one-line">出欠入力は不要です（体重のみ記録可）</small>
             </>
           ) : (
             <>

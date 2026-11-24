@@ -738,3 +738,7 @@ svg.chart{touch-action:pan-y}
 .ob-fold-bar b small{font-weight:500;color:var(--sub)}
 .ob-fold-btn{flex:none;font-size:12px;font-weight:700;color:var(--navy);border:1.5px solid var(--line);border-radius:999px;padding:4px 12px;background:#fff}
 .ob-fold.open .ob-fold-btn{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* ホームの「今日は練習日ではありません」：補足は1行に収める（狭い画面では少し小さく） */
+.today .tx small.one-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:400px){.today .tx small.one-line{font-size:11px}}
+.today .tx{min-width:0}
