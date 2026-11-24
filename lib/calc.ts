@@ -299,6 +299,18 @@ export function maxes(m: Member): Record<MetricKey, number | null> {
 }
 
 export type RankRow = { id: string; name: string; v: number };
+// 順位（スポーツの同率順位）：同じ記録は同じ順位、次の人は「それまでの人数 + 1」位（例：1, 2, 2, 2, 5, 6）
+// rows は良い順に並んでいること（大きい順でも、タイムのように小さい順でもよい）
+export function competitionRanks(rows: { v: number }[]): number[] {
+  const out: number[] = [];
+  rows.forEach((r, i) => out.push(i > 0 && Math.abs(r.v - rows[i - 1].v) < 1e-9 ? out[i - 1] : i + 1));
+  return out;
+}
+// その人の順位（いなければ -1）
+export function rankOfId(rows: RankRow[], id: string): number {
+  const i = rows.findIndex((r) => r.id === id);
+  return i < 0 ? -1 : competitionRanks(rows)[i];
+}
 export function ranking(members: Members, key: MetricKey): RankRow[] {
   return playersOf(members)
     .map((m) => ({ id: m.id, name: m.name, v: maxes(m)[key] }))
